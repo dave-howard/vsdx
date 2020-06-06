@@ -1,11 +1,17 @@
 import setuptools
 
+# usage notes - to prepare and upload to PyPI:
+# if missing, install setuptools, wheel and twine using pip
+# delete /build, /dist and /vdx.egg-info directories
+# >>> python setup.py sdist bdist_wheel
+# >>> python -m twine upload dist/*
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="vsdx",
-    version="0.1a1",
+    version="0.1a2",
     author="Dave Howard",
     author_email="dave@copypy.com",
     description="vsdx - A python library for processing .vsdx files",
