@@ -106,6 +106,22 @@ class VisioFile:
                 else:
                     t[0].tail = text
 
+    # context = {'customer_name':'codypy.com', 'year':2020 }
+    # example shape text "For {{customer_name}}  (c){{year}}" -> "For codypy.com (c)2020"
+    @staticmethod
+    def apply_text_context(shapes: Element, context: dict):
+        for shape in shapes:  # type: Element
+            if 'Shapes' in shape.tag:  # then this is a Shapes container
+                VisioFile.apply_text_context(shape, context)  # recursive call
+            if 'Shape' in shape.tag:
+                # check text against all context keys
+                for key in context.keys():
+                    text = VisioFile.get_shape_text(shape)
+                    r_key = "{{" + key + "}}"
+                    if r_key in text:
+                        new_text = text.replace(r_key, str(context[key]))
+                        VisioFile.set_shape_text(shape, new_text)
+
     @staticmethod
     def get_shape_id(shape: ET) -> str:
         return shape.attrib['ID']
