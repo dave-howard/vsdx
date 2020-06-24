@@ -2,7 +2,8 @@
 
 #### Note: this is an early release with limited functionality
 
-example:
+example code to find a shape with specific text, remove it, and then
+save the updated .vsdx file:
 ```python
 from vsdx import VisioFile
 
@@ -20,4 +21,8 @@ with VisioFile(filename) as vis:
         vis.save_vsdx('shape_removed.vsdx')
 ```
 
-Please refer to tests/test.py for usage examples
+Please refer to tests/test.py for more usage examples in the form of
+pytest tests.
+
+
+
