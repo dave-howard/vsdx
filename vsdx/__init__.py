@@ -272,6 +272,10 @@ class VisioFile:
         def value(self):
             return self.xml.attrib.get('V')
 
+        @value.setter
+        def value(self, value: str):
+            self.xml.attrib['V'] = str(value)
+
         @property
         def name(self):
             return self.xml.attrib.get('N')
@@ -306,13 +310,30 @@ class VisioFile:
             cell = self.cells.get(name)
             return cell.value if cell else None
 
+        def set_cell_value(self, name: str, value: str):
+            cell = self.cells.get(name)
+            if cell:  # only set value of existing item
+                cell.value = value
+
         @property
         def x(self):
             return to_float(self.cell_value('PinX'))
 
+        @x.setter
+        def x(self, value: float or str):
+            self.set_cell_value('PinX', str(value))
+
         @property
         def y(self):
             return to_float(self.cell_value('PinY'))
+
+        @y.setter
+        def y(self, value: float or str):
+            self.set_cell_value('PinY', str(value))
+
+        def move(self, x_delta: float, y_delta: float):
+            self.x = self.x + x_delta
+            self.y = self.y + y_delta
 
         @property
         def height(self):

@@ -11,9 +11,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="vsdx",
-    version="0.2.1",
+    version="0.2.2",
     author="Dave Howard",
-    author_email="dave@copypy.com",
+    author_email="dave@codypy.com",
     description="vsdx - A python library for processing .vsdx files",
     long_description=long_description,
     long_description_content_type="text/markdown",

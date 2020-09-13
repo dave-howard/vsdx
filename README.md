@@ -24,5 +24,8 @@ with VisioFile(filename) as vis:
 Please refer to tests/test.py for more usage examples in the form of
 pytest tests.
 
+---
 
-
+###  Change Log
+- 0.2.2: Added x & y location setters to Shape, and move(x_delta,
+  y_delta) method - both with related tests
