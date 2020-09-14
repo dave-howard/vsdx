@@ -1,6 +1,7 @@
 from __future__ import annotations
 import zipfile
 import shutil
+import os
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -254,12 +255,20 @@ class VisioFile:
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
+        print(f"self.directory={self.directory} new_filename={new_filename}")
+        if new_filename.find(os.sep) > 0:
+            directory = new_filename[0:new_filename.find(os.sep)]
+            if directory:
+                print(f"directory={directory}")
+                if not os.path.exists(directory):
+                    os.mkdir(directory)
         shutil.make_archive(base_filename, 'zip', self.directory)
         if not new_filename:
             shutil.move(base_filename + '.zip', base_filename + '_new.vsdx')
         else:
             if new_filename[-5:] != '.vsdx':
                 new_filename += '.vsdx'
+            print(f"save_vsdx() move from {base_filename+'.zip'} to {new_filename}")
             shutil.move(base_filename + '.zip', new_filename)
         self.close_vsdx()
 
@@ -343,28 +352,45 @@ class VisioFile:
         def width(self):
             return to_float(self.cell_value('Width'))
 
+        @staticmethod
+        def get_all_text_from_xml(x: Element, s: str = None) -> str:
+            if s is None:
+                s = ''
+            if x.text:
+                s += x.text
+            if x.tail:
+                s += x.tail
+            for i in x:
+                s = VisioFile.Shape.get_all_text_from_xml(i, s)
+            return s
+
+        @staticmethod
+        def clear_all_text_from_xml(x: Element):
+            x.text = ''
+            x.tail = ''
+            for i in x:
+                VisioFile.Shape.clear_all_text_from_xml(i)
+
         @property
         def text(self):
             text = None
             for t in self.xml:  # type: Element
                 if 'Text' in t.tag:
+                    print(f"tag='{t.tag}' text='{t.text}' tail='{t.tail}'")
                     if t.text:
                         text = t.text
-                    else:
-                        try:
-                            text = t[0].tail if len(t) else ""
-                        except IndexError:
-                            print(f"Error getting t[0] where t={VisioFile.pretty_print_element(t)}")
+                    if not text:
+                        text = self.get_all_text_from_xml(t)
+                        print(VisioFile.pretty_print_element(t))
+                        print(f"text via get_all_text_from_xml()='{text}'")
             return text.replace('\n','') if text else ""
 
         @text.setter
         def text(self, value):
             for t in self.xml:  # type: Element
                 if 'Text' in t.tag:
-                    if t.text:
-                        t.text = value
-                    else:
-                        t[0].tail = value
+                    VisioFile.Shape.clear_all_text_from_xml(t)
+                    t.text = value
 
         def sub_shapes(self):
             shapes = list()

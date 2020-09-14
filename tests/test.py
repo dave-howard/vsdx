@@ -63,37 +63,39 @@ def test_get_shape_with_text(filename: str, shape_id: str):
         assert shape.ID == shape_id
 
 
-@pytest.mark.parametrize("filename", ["test1.vsdx", "test2.vsdx"])
+@pytest.mark.parametrize("filename", ["test1.vsdx", "test2.vsdx", "test3_house.vsdx"])
 def test_apply_context(filename: str):
     date_str = str(datetime.today().date())
     context = {'scenario': 'test',
                'date': date_str}
+    out_file = 'out'+ os.sep + filename[:-5] + '_VISfilter_applied.vsdx'
     with VisioFile(filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
+        #print(VisioFile.pretty_print_element(page.shapes[0].xml))
         original_shape = page.shapes[0].find_shape_by_text('{{date}}')  # type: VisioFile.Shape
         assert original_shape.ID
         page.apply_text_context(context)
-        vis.save_vsdx(filename[:-5] + '_VISfilter_applied.vsdx')
+        vis.save_vsdx(out_file)
 
     # open and find date_str
-    with VisioFile(filename[:-5] + '_VISfilter_applied.vsdx') as vis:
+    with VisioFile(out_file) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
         updated_shape = page.shapes[0].find_shape_by_text(date_str)  # type: VisioFile.Shape
         assert updated_shape.ID == original_shape.ID
 
 
-@pytest.mark.parametrize("filename", ["test2.vsdx"])
+@pytest.mark.parametrize("filename", ["test2.vsdx", "test3_house.vsdx"])
 def test_remove_shape(filename: str):
-    # take first shape from first shapes tag
+    out_file = 'out' + os.sep + filename[:-5] + '_shape_removed.vsdx'
     with VisioFile(filename) as vis:
         shapes = vis.page_objects[0].shapes
         # get shape to remove
         s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
         assert s  # check shape found
         s.remove()
-        vis.save_vsdx(filename[:-5] + '_shape_removed.vsdx')
+        vis.save_vsdx(out_file)
 
-    with VisioFile(filename[:-5] + '_shape_removed.vsdx') as vis:
+    with VisioFile(out_file) as vis:
         shapes = vis.page_objects[0].shapes
         # get shape that should have been removed
         s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
@@ -103,6 +105,7 @@ def test_remove_shape(filename: str):
 @pytest.mark.parametrize(("filename", "shape_names", "shape_locations"),
                          [("test1.vsdx", {"Shape to remove"}, {(1.0,1.0)})])
 def test_set_shape_location(filename: str, shape_names: set, shape_locations: set):
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_set_shape_location.vsdx'
     with VisioFile(filename) as vis:
         shapes = vis.page_objects[0].shapes
         # move shapes in list
@@ -114,10 +117,10 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
             print(f"Moving shape '{shape_name}' from {s.x}, {s.y} to {x_y}")
             s.x = x_y[0]
             s.y = x_y[1]
-        vis.save_vsdx(filename[:-5] + '_test_set_shape_location.vsdx')
+        vis.save_vsdx(out_file)
 
     # re-open saved file and check it is changed as expected
-    with VisioFile(filename[:-5] + '_test_set_shape_location.vsdx') as vis:
+    with VisioFile(out_file) as vis:
         shapes = vis.page_objects[0].shapes
         # get each shape that should have been moved
         for (shape_name, x_y) in zip(shape_names, shape_locations):
@@ -130,7 +133,9 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
 @pytest.mark.parametrize(("filename", "shape_names", "shape_x_y_deltas"),
                          [("test1.vsdx", {"Shape to remove"}, {(1.0,1.0)})])
 def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_move_shape.vsdx'
     expected_shape_locations = dict()
+
     with VisioFile(filename) as vis:
         shapes = vis.page_objects[0].shapes
         # move shapes in list
@@ -142,11 +147,11 @@ def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
             expected_shape_locations[shape_name] = (s.x + x_y[0], s.y + x_y[1])
             s.move(x_y[0], x_y[1])
 
-        vis.save_vsdx(filename[:-5] + '_test_move_shape.vsdx')
+        vis.save_vsdx(out_file)
     print(f"expected_shape_locations={expected_shape_locations}")
 
     # re-open saved file and check it is changed as expected
-    with VisioFile(filename[:-5] + '_test_move_shape.vsdx') as vis:
+    with VisioFile(out_file) as vis:
         shapes = vis.page_objects[0].shapes
         # get each shape that should have been moved
         for shape_name in shape_names:

@@ -5,6 +5,7 @@ import setuptools
 # delete /build, /dist and /vdx.egg-info directories
 # >>> python setup.py sdist bdist_wheel
 # >>> python -m twine upload dist/*
+# note: use __token__ as user and actual token as password
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
