@@ -29,3 +29,5 @@ pytest tests.
 ###  Change Log
 - 0.2.2: Added x & y location setters to Shape, and move(x_delta,
   y_delta) method - both with related tests
+- 0.2.3: Updated tests to output files to an /out folder. Added test
+  vsdx file with compound shape. Updated Shape text getter/setter
