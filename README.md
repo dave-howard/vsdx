@@ -31,3 +31,5 @@ pytest tests.
   y_delta) method - both with related tests
 - 0.2.3: Updated tests to output files to an /out folder. Added test
   vsdx file with compound shape. Updated Shape text getter/setter
+- 0.2.4: Added find_replace(old, new) method to Shape and Page classes
+  to recursively replace old with new

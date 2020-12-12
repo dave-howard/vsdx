@@ -71,7 +71,6 @@ def test_apply_context(filename: str):
     out_file = 'out'+ os.sep + filename[:-5] + '_VISfilter_applied.vsdx'
     with VisioFile(filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        #print(VisioFile.pretty_print_element(page.shapes[0].xml))
         original_shape = page.shapes[0].find_shape_by_text('{{date}}')  # type: VisioFile.Shape
         assert original_shape.ID
         page.apply_text_context(context)
@@ -82,6 +81,28 @@ def test_apply_context(filename: str):
         page = vis.get_page(0)  # type: VisioFile.Page
         updated_shape = page.shapes[0].find_shape_by_text(date_str)  # type: VisioFile.Shape
         assert updated_shape.ID == original_shape.ID
+
+
+@pytest.mark.parametrize("filename", ["test1.vsdx", "test2.vsdx", "test3_house.vsdx"])
+def test_find_replace(filename: str):
+    date_str = str(datetime.today().date())
+    old = 'Shape'
+    new = 'Figure'
+    out_file = 'out'+ os.sep + filename[:-5] + '_VISfind_replace_applied.vsdx'
+    with VisioFile(filename) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        original_shapes = page.find_shapes_by_text(old)  # type: VisioFile.Shape
+        shape_ids = [s.ID for s in original_shapes]
+        page.find_replace(old, new)
+        vis.save_vsdx(out_file)
+
+    # open and find date_str
+    with VisioFile(out_file) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        # test that each shape if has 'new' str in text
+        for shape_id in shape_ids:
+            shape = page.find_shape_by_id(shape_id)
+            assert new in shape.text
 
 
 @pytest.mark.parametrize("filename", ["test2.vsdx", "test3_house.vsdx"])

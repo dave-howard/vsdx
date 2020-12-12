@@ -376,13 +376,10 @@ class VisioFile:
             text = None
             for t in self.xml:  # type: Element
                 if 'Text' in t.tag:
-                    print(f"tag='{t.tag}' text='{t.text}' tail='{t.tail}'")
                     if t.text:
                         text = t.text
                     if not text:
                         text = self.get_all_text_from_xml(t)
-                        print(VisioFile.pretty_print_element(t))
-                        print(f"text via get_all_text_from_xml()='{text}'")
             return text.replace('\n','') if text else ""
 
         @text.setter
@@ -396,7 +393,6 @@ class VisioFile:
             shapes = list()
             # for each shapes tag, look for Shape objects
             for e in self.xml:  # type: Element
-                #print(f"{e.tag}")
                 if e.tag == namespace+'Shapes':
                     for shape in e:  # type: Element
                         if shape.tag == namespace+'Shape':
@@ -405,7 +401,18 @@ class VisioFile:
                     shapes.append(VisioFile.Shape(e, self.xml, self.page))
             return shapes
 
+        def find_shape_by_id(self, shape_id: str) -> VisioFile.Shape:  # returns Shape
+            # recursively search for shapes by text and return first match
+            for shape in self.sub_shapes():  # type: VisioFile.Shape
+                if shape.ID == shape_id:
+                    return shape
+                if shape.type == 'Group':
+                    found = shape.find_shape_by_id(shape_id)
+                    if found:
+                        return found
+
         def find_shape_by_text(self, text: str) -> VisioFile.Shape:  # returns Shape
+            # recursively search for shapes by text and return first match
             for shape in self.sub_shapes():  # type: VisioFile.Shape
                 if text in shape.text:
                     return shape
@@ -413,6 +420,19 @@ class VisioFile:
                     found = shape.find_shape_by_text(text)
                     if found:
                         return found
+
+        def find_shapes_by_text(self, text: str, shapes: list[VisioFile.Shape] = None) -> list[VisioFile.Shape]:
+            # recursively search for shapes by text and return all matches
+            if not shapes:
+                shapes = list()
+            for shape in self.sub_shapes():  # type: VisioFile.Shape
+                if text in shape.text:
+                    shapes.append(shape)
+                if shape.type == 'Group':
+                    found = shape.find_shapes_by_text(text)
+                    if found:
+                        shapes.extend(found)
+            return shapes
 
         def apply_text_filter(self, context: dict):
             # check text against all context keys
@@ -424,6 +444,14 @@ class VisioFile:
                     self.text = new_text
             for s in self.sub_shapes():
                 s.apply_text_filter(context)
+
+        def find_replace(self, old: str, new: str):
+            # find and replace text in this shape and sub shapes
+            text = self.text
+            self.text = text.replace(old, new)
+
+            for s in self.sub_shapes():
+                s.find_replace(old, new)
 
         def remove(self):
             self.parent_xml.remove(self.xml)
@@ -459,6 +487,30 @@ class VisioFile:
         def apply_text_context(self, context: dict):
             for s in self.shapes:
                 s.apply_text_filter(context)
+
+        def find_replace(self, old: str, new: str):
+            for s in self.shapes:
+                s.find_replace(old, new)
+
+        def find_shape_by_id(self, shape_id) -> VisioFile.Shape:
+            for s in self.shapes:
+                found = s.find_shape_by_id(shape_id)
+                if found:
+                    return found
+
+        def find_shape_by_text(self, text: str) -> VisioFile.Shape:
+            for s in self.shapes:
+                found = s.find_shape_by_text(text)
+                if found:
+                    return found
+
+        def find_shapes_by_text(self, text: str) -> list[VisioFile.Shape]:
+            shapes = list()
+            for s in self.shapes:
+                found = s.find_shapes_by_text(text)
+                if found:
+                    shapes.extend(found)
+            return shapes
 
 
 def file_to_xml(filename: str) -> ET.ElementTree:
