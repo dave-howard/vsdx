@@ -85,7 +85,6 @@ def test_apply_context(filename: str):
 
 @pytest.mark.parametrize("filename", ["test1.vsdx", "test2.vsdx", "test3_house.vsdx"])
 def test_find_replace(filename: str):
-    date_str = str(datetime.today().date())
     old = 'Shape'
     new = 'Figure'
     out_file = 'out'+ os.sep + filename[:-5] + '_VISfind_replace_applied.vsdx'
