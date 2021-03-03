@@ -151,7 +151,8 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
 
 
 @pytest.mark.parametrize(("filename", "shape_names", "shape_x_y_deltas"),
-                         [("test1.vsdx", {"Shape to remove"}, {(1.0,1.0)})])
+                         [("test1.vsdx", {"Shape to remove"}, {(1.0,1.0)}),
+                          ("test4_connectors.vsdx", {"Shape B"}, {(1.0,1.0)})])
 def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
     out_file = 'out'+ os.sep + filename[:-5] + '_test_move_shape.vsdx'
     expected_shape_locations = dict()
@@ -179,3 +180,57 @@ def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
             assert s  # check shape found
             assert s.x == expected_shape_locations[shape_name][0]
             assert s.y == expected_shape_locations[shape_name][1]
+
+
+@pytest.mark.parametrize(("filename", "expected_connects"),
+                         [('test4_connectors.vsdx', ["from 7 to 5","from 7 to 2", "from 6 to 2", "from 6 to 1"]),
+                          ])
+def test_find_page_connects(filename: str, expected_connects: list):
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]  # type: VisioFile.Page
+        actual_connects = list()
+        for c in page.connects:  # type: VisioFile.Connect
+            actual_connects.append(f"from {c.from_id} to {c.to_id}")
+            print(VisioFile.pretty_print_element(c.xml))
+        assert sorted(actual_connects) == sorted(expected_connects)
+
+
+@pytest.mark.parametrize(("filename", "shape_id", "expected_shape_ids"),
+                         [
+                             ('test4_connectors.vsdx', "1", ["6"]),
+                             ('test4_connectors.vsdx', "2", ["6", "7"]),
+                          ])
+def test_find_connected_shapes(filename: str, shape_id: str, expected_shape_ids: list):
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]  # type: VisioFile.Page
+        actual_connect_shape_ids = list()
+        shape = page.find_shape_by_id(shape_id)
+        for c_shape in shape.connected_shapes:  # type: VisioFile.Shape
+            actual_connect_shape_ids.append(c_shape.ID)
+        assert sorted(actual_connect_shape_ids) == sorted(expected_shape_ids)
+
+
+@pytest.mark.parametrize(("filename", "shape_id", "expected_shape_ids", "expected_from", "expected_to", "expected_from_rels", "expected_to_rels"),
+                         [
+                             ('test4_connectors.vsdx', "1", ["6"], ["6"], ["1"], ['BeginX'], ['PinX']),
+                             ('test4_connectors.vsdx', "2", ["6", "7"], ["6", "7"], ["2", "2"], ['BeginX', 'EndX'], ['PinX', 'PinX']),
+                             ('test4_connectors.vsdx', "6", ["1", "2"], ["6", "6"], ["1", "2"], ['BeginX', 'EndX'], ['PinX', 'PinX']),
+                             ('test4_connectors.vsdx', "7", ["5", "2"], ["7", "7"], ["5", "2"], ['BeginX', 'EndX'], ['PinX', 'PinX']),
+                          ])
+def test_find_connected_shape_relationships(filename: str, shape_id: str, expected_shape_ids: list, expected_from: list,
+                                            expected_to: list, expected_from_rels: list, expected_to_rels: list):
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]  # type: VisioFile.Page
+
+        shape = page.find_shape_by_id(shape_id)
+        shape_ids = [s.ID for s in shape.connected_shapes]
+        from_ids = [c.from_id for c in shape.connects]
+        to_ids = [c.to_id for c in shape.connects]
+        from_rels = [c.from_rel for c in shape.connects]
+        to_rels = [c.to_rel for c in shape.connects]
+
+        assert sorted(shape_ids) == sorted(expected_shape_ids)
+        assert sorted(from_ids) == sorted(expected_from)
+        assert sorted(to_ids) == sorted(expected_to)
+        assert sorted(from_rels) == sorted(expected_from_rels)
+        assert sorted(to_rels) == sorted(expected_to_rels)

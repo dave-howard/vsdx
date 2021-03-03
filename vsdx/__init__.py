@@ -14,6 +14,8 @@ namespace = "{http://schemas.microsoft.com/office/visio/2012/main}"  # visio fil
 # utility functions
 def to_float(val: str):
     try:
+        if val is None:
+            return
         return float(val)
     except ValueError:
         return 0.0
@@ -33,6 +35,14 @@ class VisioFile:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_vsdx()
+
+    @staticmethod
+    def get_elements_by_tag(xml: Element, tag: str):
+        items = list()
+        for e in xml.iter():
+            if e.tag == tag:
+                items.append(e)
+        return items
 
     @staticmethod
     def pretty_print_element(xml: Element) -> str:
@@ -340,6 +350,38 @@ class VisioFile:
         def y(self, value: float or str):
             self.set_cell_value('PinY', str(value))
 
+        @property
+        def begin_x(self):
+            return to_float(self.cell_value('BeginX'))
+
+        @begin_x.setter
+        def begin_x(self, value: float or str):
+            self.set_cell_value('BeginX', str(value))
+
+        @property
+        def begin_y(self):
+            return to_float(self.cell_value('BeginY'))
+
+        @begin_y.setter
+        def begin_y(self, value: float or str):
+            self.set_cell_value('BeginY', str(value))
+
+        @property
+        def end_x(self):
+            return to_float(self.cell_value('EndX'))
+
+        @end_x.setter
+        def end_x(self, value: float or str):
+            self.set_cell_value('EndX', str(value))
+
+        @property
+        def end_y(self):
+            return to_float(self.cell_value('EndY'))
+
+        @end_y.setter
+        def end_y(self, value: float or str):
+            self.set_cell_value('EndY', str(value))
+
         def move(self, x_delta: float, y_delta: float):
             self.x = self.x + x_delta
             self.y = self.y + y_delta
@@ -348,9 +390,17 @@ class VisioFile:
         def height(self):
             return to_float(self.cell_value('Height'))
 
+        @height.setter
+        def height(self, value: float or str):
+            self.set_cell_value('Height', str(value))
+
         @property
         def width(self):
             return to_float(self.cell_value('Width'))
+
+        @width.setter
+        def width(self, value: float or str):
+            self.set_cell_value('Width', str(value))
 
         @staticmethod
         def get_all_text_from_xml(x: Element, s: str = None) -> str:
@@ -462,12 +512,46 @@ class VisioFile:
             self.page.vis.update_ids(append_shape.xml, id_map)
             self.xml.append(append_shape.xml)
 
+        @property
+        def connects(self):
+            # get list of connect items linking shapes
+            connects = list()
+            for c in self.page.connects:
+                if self.ID in [c.shape_id, c.connector_shape_id]:
+                    connects.append(c)
+            return connects
+
+        @property
+        def connected_shapes(self):
+            # return a list of connected shapes
+            shapes = list()
+            for c in self.connects:
+                if c.connector_shape_id != self.ID:
+                    shapes.append(self.page.find_shape_by_id(c.connector_shape_id))
+                if c.shape_id != self.ID:
+                    shapes.append(self.page.find_shape_by_id(c.shape_id))
+            return shapes
+
+    class Connect:
+        def __init__(self, xml: Element):
+            self.xml = xml
+            self.from_id = xml.attrib.get('FromSheet')  # ref to the connector shape
+            self.connector_shape_id = self.from_id
+            self.to_id = xml.attrib.get('ToSheet')  # ref to the shape where the connector terminates
+            self.shape_id = self.to_id
+            self.from_rel = xml.attrib.get('FromCell')  # i.e. EndX / BeginX
+            self.to_rel = xml.attrib.get('ToCell')  # i.e. PinX
+
+        def __repr__(self):
+            return f"Connect: from={self.from_id} to={self.to_id} connector_id={self.connector_shape_id} shape_id={self.shape_id}"
+
     class Page:
         def __init__(self, xml: ET.ElementTree, filename: str, page_name: str, vis: VisioFile):
             self._xml = xml
             self.filename = filename
             self.name = page_name
             self.vis = vis
+            self.connects = self.get_connects()
 
         def __repr__(self):
             return f"<Page name={self.name} file={self.filename} >"
@@ -481,8 +565,16 @@ class VisioFile:
             # list of Shape objects in Page
             page_shapes = list()
             for shape in self.xml.getroot():
-                page_shapes.append(VisioFile.Shape(shape, self.xml, self))
+                if shape.tag in [namespace + 'Shape', namespace + 'Shapes']:
+                    page_shapes.append(VisioFile.Shape(shape, self.xml, self))
             return page_shapes
+
+        def get_connects(self):
+            connects = list()
+            elements = VisioFile.get_elements_by_tag(self.xml, namespace+'Connect')
+            for e in elements:
+                connects.append(VisioFile.Connect(e))
+            return connects
 
         def apply_text_context(self, context: dict):
             for s in self.shapes:

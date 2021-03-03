@@ -33,3 +33,8 @@ pytest tests.
   vsdx file with compound shape. Updated Shape text getter/setter
 - 0.2.4: Added find_replace(old, new) method to Shape and Page classes
   to recursively replace old with new
+- 0.2.5: Add new Shape properties connected_shapes (list of Shape
+  objects) and connects (list of Connect objects) properties to allow
+  related shapes to be identified (i.e. shapes and connectors) and
+  provide information on the relationship, in new Connect object. Also
+  new properties of shape begin_x/y, end_x/y, plus height/width setters
