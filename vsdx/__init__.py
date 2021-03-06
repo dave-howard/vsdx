@@ -82,7 +82,7 @@ class VisioFile:
         for page in pages:  # type: Element
             rel_id = page[1].attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id']
             page_name = page.attrib['Name']
-            print(f"page_name:{page_name}")
+
             page_filename = relid_page_dict.get(rel_id, None)
             page_path = page_dir + page_filename
             page_dict[page_path] = file_to_xml(page_path)
@@ -575,6 +575,18 @@ class VisioFile:
             for e in elements:
                 connects.append(VisioFile.Connect(e))
             return connects
+
+        def get_connectors_between(self, shape_a_id: str='', shape_a_text: str='',
+                                  shape_b_id: str='', shape_b_text: str=''):
+            shape_a = self.find_shape_by_id(shape_a_id) if shape_a_id else self.find_shape_by_text(shape_a_text)
+            shape_b = self.find_shape_by_id(shape_b_id) if shape_b_id else self.find_shape_by_text(shape_b_text)
+            connector_ids = set(a.ID for a in shape_a.connected_shapes).intersection(
+                set(b.ID for b in shape_b.connected_shapes))
+
+            connectors = set()
+            for id in connector_ids:
+                connectors.add(self.find_shape_by_id(id))
+            return connectors
 
         def apply_text_context(self, context: dict):
             for s in self.shapes:

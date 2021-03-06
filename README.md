@@ -37,4 +37,7 @@ pytest tests.
   objects) and connects (list of Connect objects) properties to allow
   related shapes to be identified (i.e. shapes and connectors) and
   provide information on the relationship, in new Connect object. Also
-  new properties of shape begin_x/y, end_x/y, plus height/width setters
+  new properties of shape begin_x/y, end_x/y, plus height/width
+  setters
+- v0.2.6: added Page.get_connectors_between() to get zero or many
+  connectors between two shapes, by shape id or text

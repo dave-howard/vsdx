@@ -191,7 +191,6 @@ def test_find_page_connects(filename: str, expected_connects: list):
         actual_connects = list()
         for c in page.connects:  # type: VisioFile.Connect
             actual_connects.append(f"from {c.from_id} to {c.to_id}")
-            print(VisioFile.pretty_print_element(c.xml))
         assert sorted(actual_connects) == sorted(expected_connects)
 
 
@@ -234,3 +233,45 @@ def test_find_connected_shape_relationships(filename: str, shape_id: str, expect
         assert sorted(to_ids) == sorted(expected_to)
         assert sorted(from_rels) == sorted(expected_from_rels)
         assert sorted(to_rels) == sorted(expected_to_rels)
+
+
+@pytest.mark.parametrize(("filename", "shape_a_id", "shape_b_id", "expected_connector_ids"),
+                         [
+                             ('test4_connectors.vsdx', "1", "2", ["6"]),
+                             ('test4_connectors.vsdx', "1", "5", []),  # expect no connections
+                          ])
+def test_find_connectors_between_ids(filename: str, shape_a_id: str, shape_b_id: str,  expected_connector_ids: list):
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]  # type: VisioFile.Page
+        connectors = page.get_connectors_between(shape_a_id=shape_a_id, shape_b_id=shape_b_id)
+        actual_connector_ids = sorted([c.ID for c in connectors])
+        assert sorted(expected_connector_ids) == list(actual_connector_ids)
+
+
+@pytest.mark.parametrize(("filename", "shape_a_text", "shape_b_text", "expected_connector_ids"),
+                         [
+                             ('test4_connectors.vsdx', "Shape A", "Shape B", ["6"]),
+                             ('test4_connectors.vsdx', "Shape A", "Shape C", []),  # expect no connections
+                          ])
+def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_b_text: str,  expected_connector_ids: list):
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]  # type: VisioFile.Page
+        connectors = page.get_connectors_between(shape_a_text=shape_a_text, shape_b_text=shape_b_text)
+        actual_connector_ids = sorted([c.ID for c in connectors])
+        assert sorted(expected_connector_ids) == list(actual_connector_ids)
+
+
+@pytest.mark.skip('master inheritence not yet implemented')
+@pytest.mark.parametrize(("filename"),
+                         [('test5_master.vsdx')])
+def test_master_inheritance(filename: str):
+    with VisioFile(os.path.join(filename)) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        shape_a = page.find_shapes_by_text('Shape A')  # type: VisioFile.Shape
+        shape_b = page.find_shapes_by_text('Shape B')  # type: VisioFile.Shape
+
+        for s in page.shapes[0].sub_shapes():
+            print(f"\n\nshape {s.ID} {s.text}")
+            print(VisioFile.pretty_print_element(s.xml))
+        assert shape_a
+        assert shape_b
