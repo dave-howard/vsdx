@@ -41,3 +41,4 @@ pytest tests.
   setters
 - v0.2.6: added Page.get_connectors_between() to get zero or many
   connectors between two shapes, by shape id or text
+- v0.2.7: add Shape.copy() method

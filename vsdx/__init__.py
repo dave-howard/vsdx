@@ -25,8 +25,8 @@ class VisioFile:
     def __init__(self, filename):
         self.filename = filename
         self.directory = f"./{filename.rsplit('.', 1)[0]}"
-        self.pages = dict()   # populated by open_vsdx_file()
-        self.page_objects = list()  # list of Page objects
+        self.pages = dict()   # list of XML objects by page name, populated by open_vsdx_file()
+        self.page_objects = list()  # list of Page objects, populated by open_vsdx_file()
         self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
         self.open_vsdx_file()
 
@@ -54,10 +54,6 @@ class VisioFile:
 
         # load each page file into an ElementTree object
         self.pages = self.load_pages()
-
-        # todo: is this needed? remove
-        #for filename, page in self.pages.items():
-        #    p = VisioFile.Page(page, filename, 'no name', self)
 
         return self.pages
 
@@ -195,7 +191,7 @@ class VisioFile:
         new_shape = ET.fromstring(ET.tostring(shape))
         for shapes_tag in page.getroot():  # type: Element
             if 'Shapes' in shapes_tag.tag:
-                id_map = self.increment_shape_ids(shape, page_path)
+                id_map = self.increment_shape_ids(new_shape, page_path)
                 self.update_ids(new_shape, id_map)
                 shapes_tag.append(new_shape)
         return new_shape
@@ -225,6 +221,7 @@ class VisioFile:
             id_map[current_id] = max_id  # record mappings
             element.attrib['ID'] = str(max_id)
             self.page_max_ids[page_path] = max_id
+            return max_id  # return new id for info
         else:
             print(f"no ID attr in {element.tag}")
 
@@ -324,6 +321,10 @@ class VisioFile:
 
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
+
+        def copy(self):
+            new_shape_xml = self.page.vis.copy_shape(self.xml, self.page.xml, self.page.filename)
+            return VisioFile.Shape(xml=new_shape_xml, parent_xml=self.parent_xml, page=self.page)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
