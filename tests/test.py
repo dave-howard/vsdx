@@ -273,11 +273,12 @@ def test_copy_shape(filename: str, shape_name: str):
         s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
         assert s  # check shape found
         print(f"Found shape id:{s.ID}")
+        max_id = vis.page_max_ids[page.filename]
 
         # note = this does add the shape, but prefer Shape.copy as per next test which wraps this and returns Shape
         new_shape = vis.copy_shape(shape=s.xml, page=page.xml, page_path=page.filename)
         assert new_shape  # check copy_shape returns xml
-        assert new_shape.attrib.get('ID') != s.ID
+        assert new_shape.attrib.get('ID') == str(max_id + 1)
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         new_shape_id = new_shape.attrib['ID']
         vis.save_vsdx(out_file)
@@ -293,7 +294,7 @@ def test_copy_shape(filename: str, shape_name: str):
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
 def test_shape_copy(filename: str, shape_name: str):
-    out_file = 'out'+ os.sep + filename[:-5] + '_test_copy_shape.vsdx'
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_shape_copy.vsdx'
 
     with VisioFile(filename) as vis:
         page =  vis.page_objects[0]  # type: VisioFile.Page
@@ -301,9 +302,11 @@ def test_shape_copy(filename: str, shape_name: str):
         s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
         assert s  # check shape found
         print(f"found {s.ID}")
+        max_id = vis.page_max_ids[page.filename]
+
         new_shape = s.copy()
-        assert new_shape  # check new shspe exists
-        assert s.ID != new_shape.ID
+        assert new_shape  # check new shape exists
+        assert new_shape.ID == str(max_id + 1)
         new_shape.text = new_shape.text + " (new copy)"  # update text of new shape
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.ID}")
         print(f"original shape {type(s)} {s} {s.ID}")
