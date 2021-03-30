@@ -291,6 +291,34 @@ def test_copy_shape(filename: str, shape_name: str):
 
 
 @pytest.mark.parametrize(("filename", "shape_name"),
+                         [("test1.vsdx", "Shape to copy"),])
+def test_copy_shape_other_page(filename: str, shape_name: str):
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_copy_shape_other_page.vsdx'
+
+    with VisioFile(filename) as vis:
+        page =  vis.page_objects[0]  # type: VisioFile.Page
+        page2 = vis.page_objects[1]  # type: VisioFile.Page
+        # find and copy shape by name
+        s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        assert s  # check shape found
+        print(f"Found shape id:{s.ID}")
+        max_id = vis.page_max_ids[page2.filename]
+
+        new_shape = vis.copy_shape(shape=s.xml, page=page2.xml, page_path=page2.filename)
+        assert new_shape  # check copy_shape returns xml
+        assert new_shape.attrib.get('ID') == str(max_id + 1)
+        print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
+        new_shape_id = new_shape.attrib['ID']
+        vis.save_vsdx(out_file)
+
+    # re-open saved file and check it is changed as expected
+    with VisioFile(out_file) as vis:
+        page = vis.page_objects[1]
+        s = page.find_shape_by_id(new_shape_id)
+        assert s
+
+
+@pytest.mark.parametrize(("filename", "shape_name"),
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
 def test_shape_copy(filename: str, shape_name: str):
