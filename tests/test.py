@@ -264,8 +264,8 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
 @pytest.mark.parametrize(("filename", "shape_name"),
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
-def test_copy_shape(filename: str, shape_name: str):
-    out_file = 'out'+ os.sep + filename[:-5] + '_test_copy_shape.vsdx'
+def test_vis_copy_shape(filename: str, shape_name: str):
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_vis_copy_shape.vsdx'
 
     with VisioFile(filename) as vis:
         page =  vis.page_objects[0]  # type: VisioFile.Page
@@ -275,10 +275,13 @@ def test_copy_shape(filename: str, shape_name: str):
         print(f"Found shape id:{s.ID}")
 
         # note = this does add the shape, but prefer Shape.copy as per next test which wraps this and returns Shape
+        page.set_max_ids()
         new_shape = vis.copy_shape(shape=s.xml, page=page.xml, page_path=page.filename)
+
         assert new_shape  # check copy_shape returns xml
-        assert new_shape.attrib.get('ID') != s.ID
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
+        assert new_shape.attrib.get('ID') > s.ID
+
         new_shape_id = new_shape.attrib['ID']
         vis.save_vsdx(out_file)
 
@@ -293,7 +296,7 @@ def test_copy_shape(filename: str, shape_name: str):
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
 def test_shape_copy(filename: str, shape_name: str):
-    out_file = 'out'+ os.sep + filename[:-5] + '_test_copy_shape.vsdx'
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_shape_copy.vsdx'
 
     with VisioFile(filename) as vis:
         page =  vis.page_objects[0]  # type: VisioFile.Page
@@ -302,11 +305,13 @@ def test_shape_copy(filename: str, shape_name: str):
         assert s  # check shape found
         print(f"found {s.ID}")
         new_shape = s.copy()
-        assert new_shape  # check new shspe exists
-        assert s.ID != new_shape.ID
-        new_shape.text = new_shape.text + " (new copy)"  # update text of new shape
-        print(f"created new shape {type(new_shape)} {new_shape} {new_shape.ID}")
+        assert new_shape  # check new shape exists
         print(f"original shape {type(s)} {s} {s.ID}")
+        print(f"created new shape {type(new_shape)} {new_shape} {new_shape.ID}")
+        assert new_shape.ID > s.ID  # and new shape has > ID than original
+        updated_text = s.text + " (new copy)"
+        new_shape.text = updated_text  # update text of new shape
+
         new_shape_id = new_shape.ID
         vis.save_vsdx(out_file)
 
@@ -315,7 +320,24 @@ def test_shape_copy(filename: str, shape_name: str):
         page = vis.page_objects[0]
         s = page.find_shape_by_id(new_shape_id)
         assert s
-        print(s)
+        # check that new shape has expected text
+        assert s.text == updated_text
+
+
+@pytest.mark.parametrize(("filename", "expected_length"),
+                         [('test5_master.vsdx', 1)])
+def test_load_master_file(filename: str, expected_length: int):
+    with VisioFile(os.path.join(filename)) as vis:
+        assert len(vis.master_pages) == expected_length
+
+
+@pytest.mark.parametrize(("filename", "shape_text"),
+                         [('test5_master.vsdx', "Shape B")])
+def test_find_master_shape(filename: str, shape_text: str):
+    with VisioFile(os.path.join(filename)) as vis:
+        master_page =  vis.master_page_objects[0]  # type: VisioFile.Page
+        s = master_page.find_shape_by_text(shape_text)
+        assert s
 
 
 @pytest.mark.skip('master inheritence not yet implemented')
@@ -324,11 +346,18 @@ def test_shape_copy(filename: str, shape_name: str):
 def test_master_inheritance(filename: str):
     with VisioFile(os.path.join(filename)) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
+        master_page = vis.master_page_objects[0]  # type: VisioFile.Page
         shape_a = page.find_shapes_by_text('Shape A')  # type: VisioFile.Shape
         shape_b = page.find_shapes_by_text('Shape B')  # type: VisioFile.Shape
 
         for s in page.shapes[0].sub_shapes():
-            print(f"\n\nshape {s.ID} {s.text}")
-            print(VisioFile.pretty_print_element(s.xml))
+            print(f"\n\nshape {s.ID} '{s.text}' MasterID:{s.master_shape_ID}")
+            for sub in s.sub_shapes():
+                print(f"\nsubshape {sub.ID} '{sub.text}' MasterID:{sub.master_shape_ID}")
+                # nte this is not the correct link to master shape
+                master_shape = master_page.find_shape_by_id(sub.master_shape_ID)
+                print(f"master={master_shape}")
+
+        # these tests fail until master shape link in place for Shape.text
         assert shape_a
         assert shape_b

@@ -42,3 +42,6 @@ pytest tests.
 - v0.2.6: added Page.get_connectors_between() to get zero or many
   connectors between two shapes, by shape id or text
 - v0.2.7: add Shape.copy() method
+- v0.2.8: find max shape ID in Page before creating Shape in
+  Shape.copy(). Find and load master pages when file is opened, store in
+  VisioFile.master_page_objects and .master_pages
