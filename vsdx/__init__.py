@@ -22,12 +22,17 @@ def to_float(val: str):
 
 
 class VisioFile:
-    def __init__(self, filename):
+    def __init__(self, filename, debug: bool = False):
+        self.debug = debug
         self.filename = filename
+        if debug:
+            print(f"VisioFile(filename={filename})")
         self.directory = f"./{filename.rsplit('.', 1)[0]}"
-        self.pages = dict()   # list of XML objects by page name, populated by open_vsdx_file()
+        self.pages = dict()  # list of XML objects by page name, populated by open_vsdx_file()
         self.page_objects = list()  # list of Page objects, populated by open_vsdx_file()
         self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
+        self.master_pages = dict()  # list of XML objects by page name, populated by open_vsdx_file()
+        self.master_page_objects = list()  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
 
     def __enter__(self):
@@ -46,14 +51,18 @@ class VisioFile:
 
     @staticmethod
     def pretty_print_element(xml: Element) -> str:
-        return minidom.parseString(ET.tostring(xml)).toprettyxml()
+        if type(xml) is Element:
+            return minidom.parseString(ET.tostring(xml)).toprettyxml()
+        else:
+            return f"Not an Element. type={type(xml)}"
 
     def open_vsdx_file(self) -> dict:  # returns a dict of each page as ET with filename as key
         with zipfile.ZipFile(self.filename, "r") as zip_ref:
             zip_ref.extractall(self.directory)
 
         # load each page file into an ElementTree object
-        self.pages = self.load_pages()
+        self.load_pages()
+        self.load_master_pages()
 
         for page in self.page_objects:
             self.get_shapes(page.filename)
@@ -64,36 +73,70 @@ class VisioFile:
         rel_dir = '{}/visio/pages/_rels/'.format(self.directory)
         page_dir = '{}/visio/pages/'.format(self.directory)
 
-        rels = file_to_xml(rel_dir + 'pages.xml.rels').getroot()
-        #print(VisioFile.pretty_print_element(rels))  # rels contains map from filename to Id
+        rel_filename = rel_dir + 'pages.xml.rels'
+        rels = file_to_xml(rel_filename).getroot()  # rels contains page filenames
+        if self.debug:
+            print(f"Relationships({rel_filename})", VisioFile.pretty_print_element(rels))
         relid_page_dict = {}
-        #relid_page_name = {}
+
         for rel in rels:
             rel_id=rel.attrib['Id']
             page_file = rel.attrib['Target']
             relid_page_dict[rel_id] = page_file
-            #relid_page_name[rel_id] = page_name
 
-        pages = file_to_xml(page_dir + 'pages.xml').getroot()  # this contains a list of pages with rel_id and filename
-        #print(VisioFile.pretty_print_element(pages))  # pages contains Page name, width, height, mapped to Id
+        pages_filename = page_dir + 'pages.xml'  # pages contains Page name, width, height, mapped to Id
+        pages = file_to_xml(pages_filename).getroot()  # this contains a list of pages with rel_id and filename
+        if self.debug:
+            print(f"Pages({pages_filename})", VisioFile.pretty_print_element(pages))
         page_dict = {}  # dict with filename as index
 
         for page in pages:  # type: Element
             rel_id = page[1].attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id']
             page_name = page.attrib['Name']
 
-            page_filename = relid_page_dict.get(rel_id, None)
-            page_path = page_dir + page_filename
+            page_path = page_dir + relid_page_dict.get(rel_id, None)
             page_dict[page_path] = file_to_xml(page_path)
+
+            if self.debug:
+                print(f"Page({page_path})", VisioFile.pretty_print_element(page_dict[page_path].getroot()))
             self.page_max_ids[page_path] = 0  # initialise page_max_ids dict for each page
 
             self.page_objects.append(VisioFile.Page(file_to_xml(page_path), page_path, page_name, self))
 
-        return page_dict
+        self.pages = page_dict
+
+
+    def load_master_pages(self):
+        # get data from /visio/masters folder
+        master_rel_path = f'{self.directory}/visio/masters/_rels/masters.xml.rels'
+
+        master_rels_data = file_to_xml(master_rel_path)
+        master_rels = master_rels_data.getroot() if master_rels_data else None
+        if self.debug:
+            print(f"Master Relationships({master_rel_path})", VisioFile.pretty_print_element(master_rels))
+        if master_rels:
+            for rel in master_rels:
+                master_id = rel.attrib.get('Id')
+                master_path = f"{self.directory}/visio/masters/{rel.attrib.get('Target')}"  # get path from rel
+                master_data = file_to_xml(master_path)  # contains master page xml
+                master = master_data.getroot() if master_data else None
+                if master:
+                    self.master_pages[master_path] = master  # add master xml to VisioFile.master_pages
+                    master_page = VisioFile.Page(master_data, master_path, master_id, self)
+                    self.master_page_objects.append(master_page)
+                    if self.debug:
+                        print(f"Master({master_path}, id={master_id})", VisioFile.pretty_print_element(master))
+
+        masters_path = f'{self.directory}/visio/masters/masters.xml'
+        masters_data = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
+        masters = masters_data.getroot() if masters_data else None
+        if self.debug:
+            print(f"Masters({masters_path})", VisioFile.pretty_print_element(masters))
+
+        return
 
     def get_page(self, n: int):
         try:
-            # todo: also add get_page_by_name()
             return self.page_objects[n]
         except IndexError:
             return None
@@ -106,7 +149,7 @@ class VisioFile:
             if p.name == name:
                 return p
 
-    def get_shapes(self, page_path) -> ET:
+    def set_page_max_id(self, page_path) -> ET:
         page = self.pages[page_path]  # type: Element
         shapes = None
         # takes pages as an ET and returns a ET containing shapes
@@ -118,7 +161,7 @@ class VisioFile:
                     max_id = self.page_max_ids[page_path]
                     if id > max_id:
                         self.page_max_ids[page_path] = id
-        return shapes
+        return max_id
 
     def get_sub_shapes(self, shape: Element, nth=1):
         for e in shape:
@@ -277,9 +320,6 @@ class VisioFile:
 
     def save_vsdx(self, new_filename=None):
         # write the pages to file
-        #for key in self.pages.keys():
-        #    xml_to_file(self.pages[key], key)
-
         for page in self.page_objects:  # type: VisioFile.Page
             xml_to_file(page.xml, page.filename)
 
@@ -331,7 +371,8 @@ class VisioFile:
             self.xml = xml
             self.parent_xml = parent_xml
             self.tag = xml.tag
-            self.ID = xml.attrib['ID'] if xml.attrib.get('ID') else None
+            self.ID = xml.attrib.get('ID', None)
+            self.master_shape_ID = xml.attrib.get('MasterShape', None)
             self.type = xml.attrib['Type'] if xml.attrib.get('Type') else None
             self.page = page
 
@@ -346,6 +387,7 @@ class VisioFile:
             return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
 
         def copy(self):
+            self.page.set_max_ids()
             new_shape_xml = self.page.vis.copy_shape(self.xml, self.page.xml, self.page.filename)
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=self.parent_xml, page=self.page)
 
@@ -576,6 +618,7 @@ class VisioFile:
             self.name = page_name
             self.vis = vis
             self.connects = self.get_connects()
+            self.max_id = 0
 
         def __repr__(self):
             return f"<Page name={self.name} file={self.filename} >"
@@ -592,6 +635,11 @@ class VisioFile:
                 if shape.tag in [namespace + 'Shape', namespace + 'Shapes']:
                     page_shapes.append(VisioFile.Shape(shape, self.xml, self))
             return page_shapes
+
+        def set_max_ids(self):
+            # get maximum shape id from xml in page
+            self.max_id = self.vis.set_page_max_id(self.filename)
+            return self.max_id
 
         def get_connects(self):
             connects = list()
@@ -642,8 +690,11 @@ class VisioFile:
 
 
 def file_to_xml(filename: str) -> ET.ElementTree:
-    tree = ET.parse(filename)
-    return tree
+    try:
+        tree = ET.parse(filename)
+        return tree
+    except FileNotFoundError:
+        pass  # return None
 
 
 def xml_to_file(xml: ET.ElementTree, filename: str):
