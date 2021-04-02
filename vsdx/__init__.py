@@ -64,9 +64,6 @@ class VisioFile:
         self.load_pages()
         self.load_master_pages()
 
-        for page in self.page_objects:
-            self.get_shapes(page.filename)
-
         return self.pages
 
     def load_pages(self):

@@ -45,3 +45,5 @@ pytest tests.
 - v0.2.8: find max shape ID in Page before creating Shape in
   Shape.copy(). Find and load master pages when file is opened, store in
   VisioFile.master_page_objects and .master_pages
+- v0.2.9: check that Page has shapes tag when in shape_copy(), add test
+  to copy shape to new page
