@@ -64,6 +64,9 @@ class VisioFile:
         self.load_pages()
         self.load_master_pages()
 
+        for page in self.page_objects:
+            self.get_shapes(page.filename)
+
         return self.pages
 
     def load_pages(self):
@@ -230,13 +233,33 @@ class VisioFile:
         return shape.attrib['ID']
 
     def copy_shape(self, shape: Element, page: ET, page_path: str) -> ET:
-        # insert shape into first Shapes tag in page
+        '''Insert shape into first Shapes tag in destination page, and return the copy.
+
+        If destination page does not have a Shapes tag yet, create it.
+
+        Parameters:
+            shape (Element): The source shape to be copied. Use Shape.xml
+            page (ElementTree): The page where the new Shape will be placed. Use Page.xml
+            page_path (str): The filename of the page where the new Shape will be placed. Use Page.filename
+
+        Returns:
+            ElementTree: The new shape
+        '''
+
         new_shape = ET.fromstring(ET.tostring(shape))
+
+        # find or create Shapes tag
         for shapes_tag in page.getroot():  # type: Element
             if 'Shapes' in shapes_tag.tag:
-                id_map = self.increment_shape_ids(new_shape, page_path)
-                self.update_ids(new_shape, id_map)
-                shapes_tag.append(new_shape)
+                break
+        else: #no break
+            shapes_tag = Element(f'{namespace}Shapes')
+            page.getroot().append(shapes_tag)
+
+        id_map = self.increment_shape_ids(new_shape, page_path)
+        self.update_ids(new_shape, id_map)
+        shapes_tag.append(new_shape)
+
         return new_shape
 
     def insert_shape(self, shape: Element, shapes: Element, page: ET, page_path: str) -> ET:
