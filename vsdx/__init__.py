@@ -179,6 +179,151 @@ class VisioFile:
             del self.pages[page.filename]
             del self.page_objects[index]
 
+    def add_page(self, name: Optional[str] = None) -> VisioFile.Page:
+        """Add a new page at the end of the VisioFile
+
+        :param name: The name of the new page
+        :type name: str, optional
+
+        :return: Page object representing the new page
+        """
+
+        # Create visio\pages\pageX.xml file
+        # Add to visio\pages\_rels\pages.xml.rels
+        # Add to visio\pages\pages.xml
+        # Add to [Content_Types].xml
+        # Add to docProps\app.xml
+        # ?? Create visio\pages\_rels\page.xml.rels -> I think this is to refer to masters files for shapes in the page
+
+        rel_dir = f'{self.directory}/visio/pages/_rels/'
+        page_dir = f'{self.directory}/visio/pages/'
+
+        # create page.xml
+        #TODO: figure out the best way to define this default page XML
+        new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
+        new_page_filename = f'page{len(self.pages)+1}.xml'
+        new_page_path = page_dir+new_page_filename
+        xml_to_file(new_page_xml, new_page_path)
+
+        # update pages.xml.rels
+        rel_filename = f'{rel_dir}pages.xml.rels'
+        rels = file_to_xml(rel_filename).getroot()  # rels contains page filenames
+
+        max_relid = max(rels, key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
+        max_relid = int(max_relid.attrib['Id'][3:]) if max_relid is not None else 0
+        new_page_relid = f'rId{max_relid + 1}'  # Most likely will be equal to len(self.pages)+1
+
+        new_page_rel = {
+            'Target': new_page_filename,
+            'Type'  : 'http://schemas.microsoft.com/visio/2010/relationships/page',
+            'Id'    : new_page_relid
+        }
+        rels.append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
+        xml_to_file(ET.ElementTree(rels), rel_filename)
+
+        # update pages.xml
+        page_names = [page.name for page in self.page_objects]
+        new_page_name = name or f'Page-{len(self.pages)+1}'
+        i = 1
+        while new_page_name in page_names:
+            new_page_name = f'{new_page_name}-{i}'  # Page-X-i
+            i += 1
+
+        pages_filename = page_dir + 'pages.xml'
+        pages = file_to_xml(pages_filename).getroot()
+        max_page_id = max(pages, key=lambda page: int(page.attrib['ID']))
+        max_page_id = int(max_page_id.attrib['ID'])
+
+        new_page_attribs = {
+            'ID'   : str(max_page_id + 1),
+            'NameU': new_page_name,
+            'Name' : new_page_name
+        }
+
+        new_pagesheet_attribs = {
+            'FillStyle': '0',
+            'LineStyle': '0',
+            'TextStyle': '0'
+        }
+        new_page_rel = {
+            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id' : new_page_relid
+        }
+
+        new_page_element = Element(f'{namespace}Page', new_page_attribs)
+        # TODO: figure out the best way to define this default pagesheet XML
+        # For example, python-docx has a 'template.docx' file which is copied.
+        new_pagesheet_element = Element(f'{namespace}PageSheet', new_pagesheet_attribs)
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageWidth', 'V':'8.26771653543307'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageHeight', 'V':'11.69291338582677'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'ShdwOffsetX', 'V':'0.1181102362204724'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'ShdwOffsetY', 'V':'-0.1181102362204724'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageScale', 'U':'MM', 'V':'0.03937007874015748'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'DrawingScale', 'U':'MM', 'V':'0.03937007874015748'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'DrawingSizeType', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'DrawingScaleType', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'InhibitSnap', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageLockReplace', 'U':'BOOL', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageLockDuplicate', 'U':'BOOL', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'UIVisibility', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'ShdwType', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'ShdwObliqueAngle', 'V':'0'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'ShdwScaleFactor', 'V':'1'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'DrawingResizeType', 'V':'1'}))
+        new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageShapeSplit', 'V':'1'}))
+
+        new_page_element.append(new_pagesheet_element)
+        new_page_element.append(Element(f'{namespace}Rel', new_page_rel))
+        pages.append(new_page_element)
+        xml_to_file(ET.ElementTree(pages), pages_filename)
+
+        # update [Content_Types].xml
+        content_types_filename = f'{self.directory}/[Content_Types].xml'
+        content_types = file_to_xml(content_types_filename).getroot()
+        content_types_attribs = {
+            'PartName'   : f'/visio/pages/{new_page_filename}',
+            'ContentType': 'application/vnd.ms-visio.page+xml'
+        }
+        cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+        content_types_element = Element(f'{cont_types_namespace}Override', content_types_attribs)
+
+        # add the new element after the last such element
+        # first find the index:
+        all_page_overrides = content_types.findall(
+            f'{cont_types_namespace}Override[@ContentType="application/vnd.ms-visio.page+xml"]'
+        )
+        idx = list(content_types).index(all_page_overrides[-1])
+
+        # then add it:
+        content_types.insert(idx+1, content_types_element)
+        xml_to_file(ET.ElementTree(content_types), content_types_filename)
+
+        # update app.xml
+        # strictly speaking, this is optional, but we're doing what MS Visio does.
+        app_filename = f'{self.directory}/docProps/app.xml'
+        app_xml = file_to_xml(app_filename).getroot()
+
+        ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
+        vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
+
+        TitlesOfParts = app_xml.find(f'{ext_prop_namespace}TitlesOfParts')
+        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+
+        lpstr = Element(f'{vt_namespace}lpstr')
+        lpstr.text = new_page_name
+        vector.append(lpstr)
+        vector_size = int(vector.attrib['size'])
+        vector.set('size', str(vector_size+1))
+        xml_to_file(ET.ElementTree(app_xml), app_filename)
+
+        # Update VisioFile object
+        new_page = VisioFile.Page(new_page_xml, new_page_path, new_page_name, self)
+
+        self.page_objects.append(new_page)
+        self.pages[new_page_path] = new_page_xml
+        self.page_max_ids[new_page_path] = 0
+
+        return new_page
+
     def get_shape_max_id(self, shape_xml: ET.Element):
         max_id = int(self.get_shape_id(shape_xml))
         if shape_xml.attrib['Type'] == 'Group':
