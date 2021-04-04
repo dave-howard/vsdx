@@ -383,7 +383,20 @@ class VisioFile:
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
 
-        def copy(self, page: VisioFile.Page = None) -> VisioFile.Shape:
+        def copy(self, page: Optional[VisioFile.Page] = None) -> VisioFile.Shape:
+            '''Copy this Shape to the specified destination Page, and return the copy.
+            
+            If the destination page is not specified, the Shape is copied to its containing Page.
+            
+            Parameters:
+                page (VisioFile.Page): (Optional) The page where the new Shape will be placed.
+                                       If not specified, the copy will be placed in the original
+                                       shape's page.
+
+            Returns:
+                VisioFile.Shape: The new shape
+            '''
+
             page = page or self.page
             self.page.set_max_ids()
             new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
