@@ -383,10 +383,11 @@ class VisioFile:
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
 
-        def copy(self):
+        def copy(self, page: VisioFile.Page = None) -> VisioFile.Shape:
+            page = page or self.page
             self.page.set_max_ids()
-            new_shape_xml = self.page.vis.copy_shape(self.xml, self.page.xml, self.page.filename)
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=self.parent_xml, page=self.page)
+            new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
+            return VisioFile.Shape(xml=new_shape_xml, parent_xml=page.xml, page=page)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
