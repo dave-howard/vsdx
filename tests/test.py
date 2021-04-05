@@ -345,18 +345,14 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
         assert s  # check shape found
         shape_text = s.text
         print(f"Found shape id:{s.ID}")
-        page2_max_id = page2.max_id
-        page3_max_id = page3.max_id
 
         new_shape = vis.copy_shape(shape=s.xml, page=page2.xml, page_path=page2.filename)
         assert new_shape  # check copy_shape returns xml
-        assert new_shape.attrib.get('ID') == str(page2_max_id + 1)
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         page2_new_shape_id = new_shape.attrib['ID']
 
         new_shape = vis.copy_shape(shape=s.xml, page=page3.xml, page_path=page3.filename)
         assert new_shape  # check copy_shape returns xml
-        assert new_shape.attrib.get('ID') == str(page3_max_id + 1)
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         page3_new_shape_id = new_shape.attrib['ID']
 
@@ -382,24 +378,35 @@ def test_shape_copy_other_page(filename: str, shape_name: str):
     with VisioFile(filename) as vis:
         page =  vis.page_objects[0]  # type: VisioFile.Page
         page2 = vis.page_objects[1]  # type: VisioFile.Page
+        page3 = vis.page_objects[2]  # type: VisioFile.Page
         # find and copy shape by name
         s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
         assert s  # check shape found
+        shape_text = s.text
         print(f"Found shape id:{s.ID}")
-        max_id = page2.max_id
 
         new_shape = s.copy(page2)
         assert new_shape  # check copy_shape returns xml
-        assert new_shape.ID == str(max_id + 1)
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.ID}")
-        new_shape_id = new_shape.ID
+        page2_new_shape_id = new_shape.ID
+
+        new_shape = s.copy(page3)
+        assert new_shape  # check copy_shape returns xml
+        print(f"created new shape {type(new_shape)} {new_shape} {new_shape.ID}")
+        page3_new_shape_id = new_shape.ID
+
         vis.save_vsdx(out_file)
 
     # re-open saved file and check it is changed as expected
     with VisioFile(out_file) as vis:
-        page = vis.page_objects[1]
-        s = page.find_shape_by_id(new_shape_id)
+        page2 = vis.page_objects[1]
+        s = page2.find_shape_by_id(page2_new_shape_id)
         assert s
+        assert s.text == shape_text
+        page3 = vis.page_objects[2]
+        s = page3.find_shape_by_id(page3_new_shape_id)
+        assert s
+        assert s.text == shape_text
 
 
 @pytest.mark.parametrize(("filename", "expected_length"),

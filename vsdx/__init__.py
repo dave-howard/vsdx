@@ -148,16 +148,19 @@ class VisioFile:
 
     def set_page_max_id(self, page_path) -> ET:
         page = self.pages[page_path]  # type: Element
-        shapes = None
+        shapes = None  # this doesn't do anything...?
         # takes pages as an ET and returns a ET containing shapes
+        max_id = self.page_max_ids[page_path]
         for e in page.getroot():  # type: Element
             if 'Shapes' in e.tag:
-                shapes = e
+                shapes = e  # this doesn't do anything...?
                 for shape in e:  # type: Element
                     id = int(self.get_shape_id(shape))
-                    max_id = self.page_max_ids[page_path]
                     if id > max_id:
-                        self.page_max_ids[page_path] = id
+                        max_id = id
+
+        self.page_max_ids[page_path] = max_id
+
         return max_id
 
     def get_sub_shapes(self, shape: Element, nth=1):
@@ -244,6 +247,8 @@ class VisioFile:
         '''
 
         new_shape = ET.fromstring(ET.tostring(shape))
+
+        self.set_page_max_id(page_path)
 
         # find or create Shapes tag
         for shapes_tag in page.getroot():  # type: Element
@@ -398,7 +403,6 @@ class VisioFile:
             '''
 
             page = page or self.page
-            self.page.set_max_ids()
             new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=page.xml, page=page)
 
