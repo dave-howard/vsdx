@@ -2,6 +2,7 @@ from __future__ import annotations
 import zipfile
 import shutil
 import os
+from jinja2 import Template
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -148,7 +149,7 @@ class VisioFile:
 
     def set_page_max_id(self, page_path) -> ET:
         page = self.pages[page_path]  # type: Element
-        shapes = None
+        max_id = 0
         # takes pages as an ET and returns a ET containing shapes
         for e in page.getroot():  # type: Element
             if 'Shapes' in e.tag:
@@ -224,6 +225,24 @@ class VisioFile:
                     if r_key in text:
                         new_text = text.replace(r_key, str(context[key]))
                         VisioFile.set_shape_text(shape, new_text)
+
+    def jinja_render_vsdx(self, context: dict):
+        # parse each shape in each page as Jinja2 template with context
+        for page in self.page_objects:  # type: VisioFile.Page
+            for shape in page.shapes:  # type: VisioFile.Shape
+                VisioFile.jinja_render_shape(shape=shape, context=context)
+
+    @staticmethod
+    def jinja_render_shape(shape: VisioFile.Shape, context: dict):
+        # recursively on each shape, treat shape text as Jinja template
+        if 'Shape' in shape.tag:
+            # treat text as the Jinja2 template
+            source = shape.text
+            template = Template(source)
+            new_text = template.render(context)
+            shape.text = new_text
+        for s in shape.sub_shapes():  # type: Element
+            VisioFile.jinja_render_shape(s, context)  # recursive call
 
     @staticmethod
     def get_shape_id(shape: ET) -> str:
@@ -302,9 +321,9 @@ class VisioFile:
                             f = str(c.attrib['F'])
                             if f.startswith("Sheet."):
                                 # update sheet refs with new ids
-                                id = f.split('!')[0].split('.')[1]
-                                new_id = id_map[id]
-                                new_f = f.replace(f'Sheet.{id}',f'Sheet.{new_id}')
+                                shape_id = f.split('!')[0].split('.')[1]
+                                new_id = id_map[shape_id]
+                                new_f = f.replace(f'Sheet.{shape_id}',f'Sheet.{new_id}')
                                 c.attrib['F'] = new_f
         return shape
 
@@ -384,7 +403,7 @@ class VisioFile:
             return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
 
         def copy(self):
-            self.page.set_max_ids()
+            self.page.set_max_ids()  # set page.max__id for the page, so that new shape get's new id
             new_shape_xml = self.page.vis.copy_shape(self.xml, self.page.xml, self.page.filename)
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=self.parent_xml, page=self.page)
 

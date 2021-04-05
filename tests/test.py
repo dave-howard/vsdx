@@ -83,6 +83,30 @@ def test_apply_context(filename: str):
         assert updated_shape.ID == original_shape.ID
 
 
+@pytest.mark.parametrize(("filename", "context"),
+                         [("test1.vsdx", {"date": datetime.now(), "scenario": "Scenario One"})])
+def test_basic_jinja(filename: str, context: dict):
+
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_jinja.vsdx'
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]
+
+        # each key string in context dict will be replaced with value, record against shape Ids for validation
+        shape_id_values = dict()
+        for k, v in context.items():
+            shape_id = page.find_shape_by_text(k).ID
+            shape_id_values[shape_id] = v
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and validate each shape id has expected text
+    with VisioFile(out_file) as vis:
+        page = vis.page_objects[0]
+        for shape_id, text in shape_id_values.items():
+            print(f"Testing that shape {shape_id} has text '{text}' in: {page.find_shape_by_id(shape_id).text}")
+            assert str(text) in page.find_shape_by_id(shape_id).text
+
+
 @pytest.mark.parametrize("filename", ["test1.vsdx", "test2.vsdx", "test3_house.vsdx"])
 def test_find_replace(filename: str):
     old = 'Shape'
@@ -275,7 +299,7 @@ def test_vis_copy_shape(filename: str, shape_name: str):
         print(f"Found shape id:{s.ID}")
         max_id = page.max_id
 
-        # note = this does add the shape, but prefer Shape.copy as per next test which wraps this and returns Shape
+        # note = this does add the shape, but prefer Shape.copy() as per next test which wraps this and returns Shape
         page.set_max_ids()
         new_shape = vis.copy_shape(shape=s.xml, page=page.xml, page_path=page.filename)
 
