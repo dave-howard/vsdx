@@ -148,9 +148,8 @@ class VisioFile:
 
     def set_page_max_id(self, page_path) -> ET:
         page = self.pages[page_path]  # type: Element
-        shapes = None  # this doesn't do anything...?
+        max_id = 0
         # takes pages as an ET and returns a ET containing shapes
-        max_id = self.page_max_ids[page_path]
         for e in page.getroot():  # type: Element
             if 'Shapes' in e.tag:
                 shapes = e  # this doesn't do anything...?
@@ -404,7 +403,8 @@ class VisioFile:
 
             page = page or self.page
             new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=page.xml, page=page)
+            shapes_xml = page.xml.find(namespace+'Shapes')
+            return VisioFile.Shape(xml=new_shape_xml, parent_xml=shapes_xml, page=page)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
