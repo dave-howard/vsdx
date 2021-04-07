@@ -153,12 +153,14 @@ class VisioFile:
         # takes pages as an ET and returns a ET containing shapes
         for e in page.getroot():  # type: Element
             if 'Shapes' in e.tag:
-                shapes = e
+                shapes = e  # this doesn't do anything...?
                 for shape in e:  # type: Element
                     id = int(self.get_shape_id(shape))
-                    max_id = self.page_max_ids[page_path]
                     if id > max_id:
-                        self.page_max_ids[page_path] = id
+                        max_id = id
+
+        self.page_max_ids[page_path] = max_id
+
         return max_id
 
     def get_sub_shapes(self, shape: Element, nth=1):
@@ -263,6 +265,8 @@ class VisioFile:
         '''
 
         new_shape = ET.fromstring(ET.tostring(shape))
+
+        self.set_page_max_id(page_path)
 
         # find or create Shapes tag
         for shapes_tag in page.getroot():  # type: Element
@@ -403,10 +407,24 @@ class VisioFile:
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
 
-        def copy(self):
-            self.page.set_max_ids()  # set page.max__id for the page, so that new shape get's new id
-            new_shape_xml = self.page.vis.copy_shape(self.xml, self.page.xml, self.page.filename)
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=self.parent_xml, page=self.page)
+        def copy(self, page: Optional[VisioFile.Page] = None) -> VisioFile.Shape:
+            '''Copy this Shape to the specified destination Page, and return the copy.
+            
+            If the destination page is not specified, the Shape is copied to its containing Page.
+            
+            Parameters:
+                page (VisioFile.Page): (Optional) The page where the new Shape will be placed.
+                                       If not specified, the copy will be placed in the original
+                                       shape's page.
+
+            Returns:
+                VisioFile.Shape: The new shape
+            '''
+
+            page = page or self.page
+            new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
+            shapes_xml = page.xml.find(namespace+'Shapes')
+            return VisioFile.Shape(xml=new_shape_xml, parent_xml=shapes_xml, page=page)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
