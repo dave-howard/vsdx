@@ -389,6 +389,7 @@ class VisioFile:
             self.tag = xml.tag
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
+            self.master_ID = xml.attrib.get('Master', None)
             self.type = xml.attrib['Type'] if xml.attrib.get('Type') else None
             self.page = page
 

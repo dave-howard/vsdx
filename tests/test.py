@@ -411,12 +411,14 @@ def test_master_inheritance(filename: str):
         shape_b = page.find_shapes_by_text('Shape B')  # type: VisioFile.Shape
 
         for s in page.shapes[0].sub_shapes():
-            print(f"\n\nshape {s.ID} '{s.text}' MasterID:{s.master_shape_ID}")
+            print(f"\n\nshape {s.ID} '{s.text}' MasterShapeID:{s.master_shape_ID} MasterID:{s.master_ID}")
+            master_shape = master_page.find_shape_by_id(s.master_shape_ID)
+            print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
             for sub in s.sub_shapes():
-                print(f"\nsubshape {sub.ID} '{sub.text}' MasterID:{sub.master_shape_ID}")
+                print(f"\nsubshape {sub.ID} '{sub.text}' MasterShapeID:{sub.master_shape_ID} MasterID:{sub.master_ID}")
                 # nte this is not the correct link to master shape
                 master_shape = master_page.find_shape_by_id(sub.master_shape_ID)
-                print(f"master={master_shape}")
+                print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
 
         # these tests fail until master shape link in place for Shape.text
         assert shape_a
