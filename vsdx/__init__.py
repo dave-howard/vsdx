@@ -45,14 +45,6 @@ class VisioFile:
         self.close_vsdx()
 
     @staticmethod
-    def get_elements_by_tag(xml: Element, tag: str):
-        items = list()
-        for e in xml.iter():
-            if e.tag == tag:
-                items.append(e)
-        return items
-
-    @staticmethod
     def pretty_print_element(xml: Element) -> str:
         if type(xml) is Element:
             return minidom.parseString(ET.tostring(xml)).toprettyxml()
@@ -70,8 +62,8 @@ class VisioFile:
         return self.pages
 
     def load_pages(self):
-        rel_dir = '{}/visio/pages/_rels/'.format(self.directory)
-        page_dir = '{}/visio/pages/'.format(self.directory)
+        rel_dir = f'{self.directory}/visio/pages/_rels/'
+        page_dir = f'{self.directory}/visio/pages/'
 
         rel_filename = rel_dir + 'pages.xml.rels'
         rels = file_to_xml(rel_filename).getroot()  # rels contains page filenames
@@ -161,7 +153,6 @@ class VisioFile:
 
         page = self.pages[page_path]  # type: Element
         max_id = 0
-        # takes pages as an ET and returns a ET containing shapes
         shapes_xml = page.find(namespace+'Shapes')
         if shapes_xml is not None:
             for shape in shapes_xml:
@@ -173,6 +164,7 @@ class VisioFile:
 
         return max_id
 
+    # TODO: dead code - never used
     def get_sub_shapes(self, shape: Element, nth=1):
         for e in shape:
             if 'Shapes' in e.tag:
@@ -183,60 +175,62 @@ class VisioFile:
     @staticmethod
     def get_shape_location(shape: Element) -> (float, float):
         x, y = 0.0, 0.0
-        for cell in shape:  # type: Element
-            if 'Cell' in cell.tag:
-                if cell.attrib.get('N'):
-                    if cell.attrib['N'] == 'PinX':
-                        x = float(cell.attrib['V'])
-                    if cell.attrib['N'] == 'PinY':
-                        y = float(cell.attrib['V'])
+        cell_PinX = shape.find(f'{namepsace}Cell[@N="PinX"]')  # type: Element
+        cell_PinY = shape.find(f'{namepsace}Cell[@N="PinY"]')
+        x = float(cell_PinX.attrib['V'])
+        y = float(cell_PinY.attrib['V'])
+
         return x, y
 
     @staticmethod
     def set_shape_location(shape: Element, x: float, y: float):
-        for cell in shape:  # type: Element
-            if 'Cell' in cell.tag:
-                if cell.attrib.get('N'):
-                    if cell.attrib['N'] == 'PinX':
-                        cell.attrib['V'] = str(x)
-                    if cell.attrib['N'] == 'PinY':
-                        cell.attrib['V'] = str(y)
+        cell_PinX = shape.find(f'{namepsace}Cell[@N="PinX"]')  # type: Element
+        cell_PinY = shape.find(f'{namepsace}Cell[@N="PinY"]')
+        cell_PinX.attrib['V'] = str(x)
+        cell_PinY.attrib['V'] = str(y)
 
     @staticmethod
     def get_shape_text(shape: ET) -> str:
-        text = None
-        for t in shape:  # type: Element
-            if 'Text' in t.tag:
-                if t.text:
-                    text = t.text
-                else:
-                    text = t[0].tail
-        return text if text else ""
+        text = ''
+        t = shape.find(f"{namespace}Text")
+        if t is not None:
+            if t.text:
+                text = t.text
+            else:
+                text = t[0].tail
+        return text
 
     @staticmethod
     def set_shape_text(shape: ET, text: str):
-        for t in shape:  # type: Element
-            if 'Text' in t.tag:
-                if t.text:
-                    t.text = text
-                else:
-                    t[0].tail = text
+        t = shape.find(f"{namespace}Text")  # type: Element
+        if t is not None:
+            if t.text:
+                t.text = text
+            else:
+                t[0].tail = text
 
     # context = {'customer_name':'codypy.com', 'year':2020 }
     # example shape text "For {{customer_name}}  (c){{year}}" -> "For codypy.com (c)2020"
     @staticmethod
     def apply_text_context(shapes: Element, context: dict):
-        for shape in shapes:  # type: Element
-            if 'Shapes' in shape.tag:  # then this is a Shapes container
+
+        def _replace_shape_text(shape: Element, context: dict):
+            text = VisioFile.get_shape_text(shape)
+
+            for key in context.keys():
+                r_key = "{{" + key + "}}"
+                text = text.replace(r_key, str(context[key]))
+
+            VisioFile.set_shape_text(shape, new_text)
+
+
+        for shape in shapes.findall(f"{namespace}Shapes"):
                 VisioFile.apply_text_context(shape, context)  # recursive call
-            if 'Shape' in shape.tag:
-                # check text against all context keys
-                for key in context.keys():
-                    text = VisioFile.get_shape_text(shape)
-                    r_key = "{{" + key + "}}"
-                    if r_key in text:
-                        new_text = text.replace(r_key, str(context[key]))
-                        VisioFile.set_shape_text(shape, new_text)
+                _replace_shape_text(shape, context)
+
+        for shape in shapes.findall(f"{namespace}Shape"):
+            _replace_shape_text(shape, context)
+
 
     def jinja_render_vsdx(self, context: dict):
         # parse each shape in each page as Jinja2 template with context
@@ -345,10 +339,8 @@ class VisioFile:
         self.set_page_max_id(page_path)
 
         # find or create Shapes tag
-        for shapes_tag in page.getroot():  # type: Element
-            if 'Shapes' in shapes_tag.tag:
-                break
-        else:  # no break
+        shapes_tag = page.find(namespace+'Shapes')
+        if shapes_tag is None:
             shapes_tag = Element(f'{namespace}Shapes')
             page.getroot().append(shapes_tag)
 
@@ -396,16 +388,16 @@ class VisioFile:
                 self.update_ids(e, id_map)
             if 'Shape' in e.tag:
                 # look for Cell elements
-                for c in e:  # type: Element
-                    if 'Cell' in c.tag:
-                        if c.attrib.get('F'):
-                            f = str(c.attrib['F'])
-                            if f.startswith("Sheet."):
-                                # update sheet refs with new ids
-                                shape_id = f.split('!')[0].split('.')[1]
-                                new_id = id_map[shape_id]
-                                new_f = f.replace(f'Sheet.{shape_id}',f'Sheet.{new_id}')
-                                c.attrib['F'] = new_f
+                cells = e.findall(f'{namespace}Cell[@F]')
+                for cell in cells:
+                    f = str(cell.attrib['F'])
+                    if f.startswith("Sheet."):
+                        # update sheet refs with new ids
+                        shape_id = f.split('!')[0].split('.')[1]
+                        new_id = id_map[shape_id]
+                        new_f = f.replace(f'Sheet.{shape_id}',f'Sheet.{new_id}')
+                        cell.attrib['F'] = new_f
+
         return shape
 
     def close_vsdx(self):
@@ -473,10 +465,9 @@ class VisioFile:
 
             # get Cells in Shape
             self.cells = dict()
-            for e in self.xml:
-                if e.tag == namespace+"Cell":
-                    cell = VisioFile.Cell(xml=e, shape=self)
-                    self.cells[cell.name] = cell
+            for e in self.xml.findall(namespace+'Cell'):
+                cell = VisioFile.Cell(xml=e, shape=self)
+                self.cells[cell.name] = cell
 
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.shape_type} text='{self.text}' >"
@@ -615,21 +606,24 @@ class VisioFile:
 
         @text.setter
         def text(self, value):
-            for t in self.xml:  # type: Element
-                if 'Text' in t.tag:
-                    VisioFile.Shape.clear_all_text_from_xml(t)
-                    t.text = value
+            t = self.xml.find(namespace+'Text')  # type: Element
+            if t is not None:
+                VisioFile.Shape.clear_all_text_from_xml(t)
+                t.text = value
 
         def sub_shapes(self):
             shapes = list()
             # for each shapes tag, look for Shape objects
-            for e in self.xml:  # type: Element
-                if e.tag == namespace+'Shapes':
-                    for shape in e:  # type: Element
-                        if shape.tag == namespace+'Shape':
-                            shapes.append(VisioFile.Shape(shape, e, self.page))
-                if e.tag == namespace+'Shape':
-                    shapes.append(VisioFile.Shape(e, self.xml, self.page))
+            # self can be either a Shapes or a Shape
+            # a Shapes has a list of Shape
+            # a Shape can have 0 or 1 Shapes (1 if type is Group)
+
+            if self.shape_type == 'Group':
+                parent_element = self.xml.find(f'{namespace}Shapes')
+            else:  # a Shapes
+                parent_element = self.xml
+
+            shapes = [VisioFile.Shape(shape, parent_element, self.page) for shape in parent_element]
             return shapes
 
         def find_shape_by_id(self, shape_id: str) -> VisioFile.Shape:  # returns Shape
@@ -773,10 +767,8 @@ class VisioFile:
             return self.max_id
 
         def get_connects(self):
-            connects = list()
-            elements = VisioFile.get_elements_by_tag(self.xml, namespace+'Connect')
-            for e in elements:
-                connects.append(VisioFile.Connect(e))
+            elements = self.xml.findall(f".//{namespace}Connect")  # search recursively
+            connects = [VisioFile.Connect(e) for e in elements]
             return connects
 
         def get_connectors_between(self, shape_a_id: str='', shape_a_text: str='',
