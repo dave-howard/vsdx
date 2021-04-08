@@ -755,11 +755,7 @@ class VisioFile:
         @property
         def shapes(self):
             # list of Shape objects in Page
-            page_shapes = list()
-            for shape in self.xml.getroot():
-                if shape.tag in [namespace + 'Shape', namespace + 'Shapes']:
-                    page_shapes.append(VisioFile.Shape(shape, self.xml, self))
-            return page_shapes
+            return [VisioFile.Shape(shapes, self.xml, self) for shapes in self.xml.findall(namespace+'Shapes')]
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
