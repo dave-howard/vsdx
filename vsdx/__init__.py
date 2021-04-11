@@ -147,17 +147,26 @@ class VisioFile:
             if p.name == name:
                 return p
 
+    def get_shape_max_id(self, shape_xml: ET.Element):
+        max_id = int(self.get_shape_id(shape_xml))
+        if shape_xml.attrib['Type'] == 'Group':
+            for shape in shape_xml.find(namespace+'Shapes'):
+                new_max = self.get_shape_max_id(shape)
+                if new_max > max_id:
+                    max_id = new_max
+        return max_id
+
     def set_page_max_id(self, page_path) -> ET:
+
         page = self.pages[page_path]  # type: Element
         max_id = 0
         # takes pages as an ET and returns a ET containing shapes
-        for e in page.getroot():  # type: Element
-            if 'Shapes' in e.tag:
-                shapes = e  # this doesn't do anything...?
-                for shape in e:  # type: Element
-                    id = int(self.get_shape_id(shape))
-                    if id > max_id:
-                        max_id = id
+        shapes_xml = page.find(namespace+'Shapes')
+        if shapes_xml is not None:
+            for shape in shapes_xml:
+                id = self.get_shape_max_id(shape)
+                if id > max_id:
+                    max_id = id
 
         self.page_max_ids[page_path] = max_id
 
@@ -280,6 +289,7 @@ class VisioFile:
         self.update_ids(new_shape, id_map)
         shapes_tag.append(new_shape)
 
+        self.pages[page_path] = page
         return new_shape
 
     def insert_shape(self, shape: Element, shapes: Element, page: ET, page_path: str) -> ET:
