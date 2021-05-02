@@ -1,5 +1,5 @@
 import pytest
-from vsdx import VisioFile
+from vsdx import VisioFile, namespace
 from datetime import datetime
 import os
 
@@ -81,30 +81,6 @@ def test_apply_context(filename: str):
         page = vis.get_page(0)  # type: VisioFile.Page
         updated_shape = page.shapes[0].find_shape_by_text(date_str)  # type: VisioFile.Shape
         assert updated_shape.ID == original_shape.ID
-
-
-@pytest.mark.parametrize(("filename", "context"),
-                         [("test1.vsdx", {"date": datetime.now(), "scenario": "Scenario One"})])
-def test_basic_jinja(filename: str, context: dict):
-
-    out_file = 'out'+ os.sep + filename[:-5] + '_test_jinja.vsdx'
-    with VisioFile(filename) as vis:
-        page = vis.page_objects[0]
-
-        # each key string in context dict will be replaced with value, record against shape Ids for validation
-        shape_id_values = dict()
-        for k, v in context.items():
-            shape_id = page.find_shape_by_text(k).ID
-            shape_id_values[shape_id] = v
-        vis.jinja_render_vsdx(context=context)
-        vis.save_vsdx(out_file)
-
-    # open file and validate each shape id has expected text
-    with VisioFile(out_file) as vis:
-        page = vis.page_objects[0]
-        for shape_id, text in shape_id_values.items():
-            print(f"Testing that shape {shape_id} has text '{text}' in: {page.find_shape_by_id(shape_id).text}")
-            assert str(text) in page.find_shape_by_id(shape_id).text
 
 
 @pytest.mark.parametrize("filename", ["test1.vsdx", "test2.vsdx", "test3_house.vsdx"])
@@ -447,6 +423,109 @@ def test_find_master_shape(filename: str, shape_text: str):
         master_page =  vis.master_page_objects[0]  # type: VisioFile.Page
         s = master_page.find_shape_by_text(shape_text)
         assert s
+
+
+@pytest.mark.parametrize(("filename", "context"),
+                         [("test_jinja.vsdx", {"date": datetime.now(), "scenario": "Scenario One", "x": 2, "y": 2}),
+                          ("test_jinja.vsdx", {"date": datetime.now(), "scenario": "Scenario Two", "x": 2, "y": 2}),
+                          ("test_jinja.vsdx", {"date": datetime.now(), "scenario": "Scenario Three", "x": 2, "y": 2}),
+                          ])
+def test_basic_jinja(filename: str, context: dict):
+
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_basic_jinja.vsdx'
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]
+
+        # each key string in context dict will be replaced with value, record against shape Ids for validation
+        shape_id_values = dict()
+        for k, v in context.items():
+            shape_id = page.find_shape_by_text(k).ID
+            shape_id_values[shape_id] = v
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and validate each shape id has expected text
+    with VisioFile(out_file) as vis:
+        page = vis.page_objects[0]
+        for shape_id, text in shape_id_values.items():
+            if type(text) is str:
+                print(f"Testing that shape {shape_id} has text '{text}' in: {page.find_shape_by_id(shape_id).text}")
+                assert str(text) in page.find_shape_by_id(shape_id).text
+
+
+@pytest.mark.parametrize(("filename", "context"),
+                         [("test_jinja.vsdx", {"x": 2, "y": 2}),
+                          ("test_jinja.vsdx", {"x": 3, "y": 4}),
+                          ("test_jinja.vsdx", {"x": 12, "y": 9}),
+                          ])
+def test_jinja_calc(filename: str, context: dict):
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_jinja_calc.vsdx'
+    with VisioFile(filename) as vis:
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and validate each shape id has expected text
+    with VisioFile(out_file) as vis:
+        page = vis.page_objects[0]
+        # check a shape exists with product of x and y values
+        x_y = str(context['x'] * context['y'])
+        assert page.find_shape_by_text(x_y)
+
+
+@pytest.mark.parametrize(("filename", "context"),
+                         [("test_jinja_loop.vsdx", {"date": datetime.now(), "scenario": "Scenario One", "test_list":[1,2,3]}),
+                          ("test_jinja_loop.vsdx", {"date": datetime.now(), "scenario": "Scenario Two", "test_list":["One", "Two","Three"]}),
+                          ("test_jinja_loop.vsdx", {"date": datetime.now(), "scenario": "Scenario Three", "test_list":[1,2,3,4,5,6]}),
+                          ])
+def test_basic_jinja_loop(filename: str, context: dict):
+
+    out_file = 'out'+ os.sep + filename[:-5] + '_test_basic_jinja.vsdx'
+    with VisioFile(filename) as vis:
+        page = vis.page_objects[0]
+
+        # each key string in context dict will be replaced with value, record against shape Ids for validation
+        shape_id_values = dict()
+        for k, v in context.items():
+            shape_id = page.find_shape_by_text(k).ID
+            shape_id_values[shape_id] = v
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and validate each shape id has expected text, and that a shape exists with each loop value
+    with VisioFile(out_file) as vis:
+        page = vis.page_objects[0]
+        for shape_id, text in shape_id_values.items():
+            if type(text) is str:
+                print(f"Testing that shape {shape_id} has text '{text}' in: {page.find_shape_by_id(shape_id).text}")
+                assert str(text) in page.find_shape_by_id(shape_id).text
+            if type(text) is list:
+                for item in text:
+                    print(f"Testing that shape with text '{item}' exists")
+                    assert page.find_shape_by_text(str(item))
+
+
+@pytest.mark.parametrize(("filename", "shape_elements"), [("test1.vsdx", 4), ("test2.vsdx", 14), ("test3_house.vsdx", 10)])
+def test_xml_findall_shapes(filename: str, shape_elements: int):
+    with VisioFile(filename) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        # find all Shape elements
+        xml = page.xml.getroot()
+        xpath = f".//{namespace}Shape"
+        elements = xml.findall(xpath)
+        print(f"{xpath} returns {len(elements)} elements vs {shape_elements}")
+        assert len(elements) == shape_elements
+
+
+@pytest.mark.parametrize(("filename", "group_shape_elements"), [("test1.vsdx", 0), ("test2.vsdx", 3), ("test3_house.vsdx", 2)])
+def test_xml_findall_group_shapes(filename: str, group_shape_elements: int):
+    with VisioFile(filename) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        # find all Shape elements where attribute Type='Group'
+        xml = page.xml.getroot()
+        xpath = f".//{namespace}Shape[@Type='Group']"
+        elements = xml.findall(xpath)
+        print(f"{xpath} returns {len(elements)} elements vs {group_shape_elements}")
+        assert len(elements) == group_shape_elements
 
 
 @pytest.mark.skip('master inheritence not yet implemented')

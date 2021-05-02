@@ -27,6 +27,10 @@ pytest tests.
 ---
 
 ###  Change Log
+- v0.3.0: update jinja rendering to support for loops, where for
+  statement is at start of group shape text, endfor is automatically
+  inserted before processing. Refer to test.py::test_basic_jinja_loop()
+  for code and test_jinja_loop.vsdx for content.
 - v0.2.10: add VisioFile.jinja_render_vsdx() - applying jinja processing
   to Shape.text only
 - v0.2.9: check that Page has shapes tag when in shape_copy(), add test
