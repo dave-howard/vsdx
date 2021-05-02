@@ -332,7 +332,8 @@ def test_shape_copy(filename: str, shape_name: str):
 
 
 @pytest.mark.parametrize(("filename", "shape_name"),
-                         [("test1.vsdx", "Shape to copy"),])
+                         [("test1.vsdx", "Shape to copy"),
+                          ("test2.vsdx", "Shape to copy")])
 def test_copy_shape_other_page(filename: str, shape_name: str):
     out_file = 'out'+ os.sep + filename[:-5] + '_test_copy_shape_other_page.vsdx'
 
@@ -371,7 +372,8 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
 
 
 @pytest.mark.parametrize(("filename", "shape_name"),
-                         [("test1.vsdx", "Shape to copy"),])
+                         [("test1.vsdx", "Shape to copy"),
+                          ("test2.vsdx", "Shape to copy")])
 def test_shape_copy_other_page(filename: str, shape_name: str):
     out_file = 'out'+ os.sep + filename[:-5] + '_test_shape_copy_other_page.vsdx'
 
