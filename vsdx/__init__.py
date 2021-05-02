@@ -3,6 +3,7 @@ import zipfile
 import shutil
 import os
 from jinja2 import Template
+from typing import Optional, List
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -240,27 +241,67 @@ class VisioFile:
     def jinja_render_vsdx(self, context: dict):
         # parse each shape in each page as Jinja2 template with context
         for page in self.page_objects:  # type: VisioFile.Page
-            for shape in page.shapes:  # type: VisioFile.Shape
-                VisioFile.jinja_render_shape(shape=shape, context=context)
+            loop_shape_ids = list()
+            for shapes in page.shapes:  # type: VisioFile.Shape
+                prev_shape = None
+                for shape in shapes.sub_shapes():  # type: VisioFile.Shape
+                    loop_shape_id = VisioFile.jinja_create_for_loop(shape, prev_shape)
+                    if loop_shape_id:
+                        loop_shape_ids.append(loop_shape_id)
+                    prev_shape = shape
+
+            source = ET.tostring(page.xml.getroot(), encoding='unicode')
+            template = Template(source)
+            output = template.render(context)
+            page.xml = ET.ElementTree(ET.fromstring(output))  # create ElementTree from Element created from output
+
+            # update loop shape IDs
+            page.set_max_ids()
+            for shape_id in loop_shape_ids:
+                shapes = page.find_shapes_by_id(shape_id)
+                if shapes and len(shapes) > 1:
+                    delta = 0
+                    for shape in shapes[1:]:  # from the 2nd onwards - leaving original unchanged
+                        # increment each new shape duplicated by the jinja loop
+                        self.increment_sub_shape_ids(shape, page.filename)
+                        delta += shape.height  # automatically move each duplicate down
+                        shape.move(0, -delta)  # move duplicated shapes so they are visible
+
+    def increment_sub_shape_ids(self, shape: VisioFile.Shape, page_path, id_map: dict=None):
+        id_map = self.increment_shape_ids(shape.xml, page_path, id_map)
+        self.update_ids(shape.xml, id_map)
+        for s in shape.sub_shapes():
+            id_map = self.increment_shape_ids(s.xml, page_path, id_map)
+            self.update_ids(s.xml, id_map)
+            if s.sub_shapes():
+                id_map = self.increment_sub_shape_ids(s, page_path, id_map)
+        return id_map
 
     @staticmethod
-    def jinja_render_shape(shape: VisioFile.Shape, context: dict):
-        # recursively on each shape, treat shape text as Jinja template
-        if 'Shape' in shape.tag:
-            # treat text as the Jinja2 template
-            source = shape.text
-            template = Template(source)
-            new_text = template.render(context)
-            shape.text = new_text
-        for s in shape.sub_shapes():  # type: Element
-            VisioFile.jinja_render_shape(s, context)  # recursive call
+    def jinja_create_for_loop(shape: VisioFile.Shape, previous_shape:VisioFile):
+        # update a Shapes tag where text looks like a jinja {% for xxxx %} loop
+        # move text to start of Shapes tag and add {% endfor %} at end of tag
+        text = shape.text
+        jinja_loop_text = text[:text.find(' %}') + 3] if text.startswith('{% for ') and text.find(' %}') else ''
+        if jinja_loop_text:
+            # move the for loop to start of shapes element (just before first Shape element)
+            if previous_shape:
+                previous_shape.xml.tail = jinja_loop_text  # add jinja loop text after previous shape, before this element
+            else:
+                shape.parent_xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
+            shape.text = text.lstrip(jinja_loop_text)  # remove jinja loop from <Text> tag in element
+
+            # add closing 'endfor' to just inside the shapes element, after last shape
+            shape.xml.tail = '{% endfor %}'  # add text at end of Shape element
+
+            return shape.ID  # return shape ID if it is a loop
 
     @staticmethod
     def get_shape_id(shape: ET) -> str:
         return shape.attrib['ID']
 
     def copy_shape(self, shape: Element, page: ET, page_path: str) -> ET:
-        '''Insert shape into first Shapes tag in destination page, and return the copy.
+        """Insert shape into first Shapes tag in destination page, and return the copy.
 
         If destination page does not have a Shapes tag yet, create it.
 
@@ -270,8 +311,8 @@ class VisioFile:
             page_path (str): The filename of the page where the new Shape will be placed. Use Page.filename
 
         Returns:
-            ElementTree: The new shape
-        '''
+            ElementTree: The new shape ElementTree
+        """
 
         new_shape = ET.fromstring(ET.tostring(shape))
 
@@ -281,7 +322,7 @@ class VisioFile:
         for shapes_tag in page.getroot():  # type: Element
             if 'Shapes' in shapes_tag.tag:
                 break
-        else: #no break
+        else:  # no break
             shapes_tag = Element(f'{namespace}Shapes')
             page.getroot().append(shapes_tag)
 
@@ -396,7 +437,7 @@ class VisioFile:
         def __repr__(self):
             return f"Cell: name={self.name} val={self.value} func={self.func}"
 
-    class Shape:  # or page
+    class Shape:
         def __init__(self, xml: Element, parent_xml: Element, page: VisioFile.Page):
             self.xml = xml
             self.parent_xml = parent_xml
@@ -404,7 +445,7 @@ class VisioFile:
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
             self.master_ID = xml.attrib.get('Master', None)
-            self.type = xml.attrib['Type'] if xml.attrib.get('Type') else None
+            self.shape_type = xml.attrib.get('Type', None)
             self.page = page
 
             # get Cells in Shape
@@ -415,13 +456,13 @@ class VisioFile:
                     self.cells[cell.name] = cell
 
         def __repr__(self):
-            return f"<Shape tag={self.tag} ID={self.ID} type={self.type} text='{self.text}' >"
+            return f"<Shape tag={self.tag} ID={self.ID} type={self.shape_type} text='{self.text}' >"
 
         def copy(self, page: Optional[VisioFile.Page] = None) -> VisioFile.Shape:
-            '''Copy this Shape to the specified destination Page, and return the copy.
-            
+            """Copy this Shape to the specified destination Page, and return the copy.
+
             If the destination page is not specified, the Shape is copied to its containing Page.
-            
+
             Parameters:
                 page (VisioFile.Page): (Optional) The page where the new Shape will be placed.
                                        If not specified, the copy will be placed in the original
@@ -429,12 +470,18 @@ class VisioFile:
 
             Returns:
                 VisioFile.Shape: The new shape
-            '''
+            """
+            # set parent_xml: location for new shape tag to be added
+            if page:
+                # set parent_xml to first page Shapes tag if destination page passed
+                parent_xml = page.xml.find(namespace+'Shapes')
+            else:
+                # or set parent_xml to source shapes own parent
+                parent_xml = self.parent_xml
 
             page = page or self.page
             new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
-            shapes_xml = page.xml.find(namespace+'Shapes')
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=shapes_xml, page=page)
+            return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=page)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
@@ -567,17 +614,29 @@ class VisioFile:
             for shape in self.sub_shapes():  # type: VisioFile.Shape
                 if shape.ID == shape_id:
                     return shape
-                if shape.type == 'Group':
+                if shape.shape_type == 'Group':
                     found = shape.find_shape_by_id(shape_id)
                     if found:
                         return found
+
+        def find_shapes_by_id(self, shape_id: str) -> List[VisioFile.Shape]:
+            # recursively search for shapes by text and return first match
+            found = list()
+            for shape in self.sub_shapes():  # type: VisioFile.Shape
+                if shape.ID == shape_id:
+                    found.append(shape)
+                if shape.shape_type == 'Group':
+                    sub_found = shape.find_shapes_by_id(shape_id)
+                    if sub_found:
+                        found.extend(sub_found)
+            return found  # return list of matching shapes
 
         def find_shape_by_text(self, text: str) -> VisioFile.Shape:  # returns Shape
             # recursively search for shapes by text and return first match
             for shape in self.sub_shapes():  # type: VisioFile.Shape
                 if text in shape.text:
                     return shape
-                if shape.type == 'Group':
+                if shape.shape_type == 'Group':
                     found = shape.find_shape_by_text(text)
                     if found:
                         return found
@@ -589,7 +648,7 @@ class VisioFile:
             for shape in self.sub_shapes():  # type: VisioFile.Shape
                 if text in shape.text:
                     shapes.append(shape)
-                if shape.type == 'Group':
+                if shape.shape_type == 'Group':
                     found = shape.find_shapes_by_text(text)
                     if found:
                         shapes.extend(found)
@@ -672,6 +731,10 @@ class VisioFile:
         def xml(self):
             return self._xml
 
+        @xml.setter
+        def xml(self, value):
+            self._xml = value
+
         @property
         def shapes(self):
             # list of Shape objects in Page
@@ -718,6 +781,15 @@ class VisioFile:
                 found = s.find_shape_by_id(shape_id)
                 if found:
                     return found
+
+        def find_shapes_by_id(self, shape_id) -> List[VisioFile.Shape]:
+            # return all shapes by ID
+            found = list()
+            for s in self.shapes:
+                found = s.find_shapes_by_id(shape_id)
+                if found:
+                    return found
+            return found
 
         def find_shape_by_text(self, text: str) -> VisioFile.Shape:
             for s in self.shapes:
