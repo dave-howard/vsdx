@@ -2,6 +2,7 @@ from __future__ import annotations
 import zipfile
 import shutil
 import os
+import re
 from jinja2 import Template
 from typing import Optional, List
 
@@ -245,12 +246,13 @@ class VisioFile:
             for shapes in page.shapes:  # type: VisioFile.Shape
                 prev_shape = None
                 for shape in shapes.sub_shapes():  # type: VisioFile.Shape
-                    loop_shape_id = VisioFile.jinja_create_for_loop(shape, prev_shape)
+                    loop_shape_id = VisioFile.jinja_create_for_loop_if(shape, prev_shape)
                     if loop_shape_id:
                         loop_shape_ids.append(loop_shape_id)
                     prev_shape = shape
 
             source = ET.tostring(page.xml.getroot(), encoding='unicode')
+            source = VisioFile.unescape_jinja_statements(source)  # unescape chars like < and > inside {%...%}
             template = Template(source)
             output = template.render(context)
             page.xml = ET.ElementTree(ET.fromstring(output))  # create ElementTree from Element created from output
@@ -267,6 +269,16 @@ class VisioFile:
                         delta += shape.height  # automatically move each duplicate down
                         shape.move(0, -delta)  # move duplicated shapes so they are visible
 
+    @staticmethod
+    def unescape_jinja_statements(jinja_source):
+        # unescape any text between {% ... %}
+        jinja_source_out = jinja_source
+        matches = re.findall('{%(.*?)%}', jinja_source)  # non-greedy search for all {%...%} strings
+        for m in matches:
+            unescaped = m.replace('&gt;', '>').replace('&lt;', '<')
+            jinja_source_out = jinja_source_out.replace(m, unescaped)
+        return jinja_source_out
+
     def increment_sub_shape_ids(self, shape: VisioFile.Shape, page_path, id_map: dict=None):
         id_map = self.increment_shape_ids(shape.xml, page_path, id_map)
         self.update_ids(shape.xml, id_map)
@@ -278,7 +290,7 @@ class VisioFile:
         return id_map
 
     @staticmethod
-    def jinja_create_for_loop(shape: VisioFile.Shape, previous_shape:VisioFile):
+    def jinja_create_for_loop_if(shape: VisioFile.Shape, previous_shape:VisioFile):
         # update a Shapes tag where text looks like a jinja {% for xxxx %} loop
         # move text to start of Shapes tag and add {% endfor %} at end of tag
         text = shape.text
@@ -295,6 +307,21 @@ class VisioFile:
             shape.xml.tail = '{% endfor %}'  # add text at end of Shape element
 
             return shape.ID  # return shape ID if it is a loop
+
+        # jinja_show_if - translate non-standard {% showif statement %} to valid jinja if statement
+        jinja_show_if = text[:text.find(' %}') + 3] if text.startswith('{% showif ') and text.find(' %}') else ''
+        if jinja_show_if:
+            jinja_show_if = jinja_show_if.replace('{% showif ', '{% if ')  # translate to actual jinja if statement
+            # move the for loop to start of shapes element (just before first Shape element)
+            if previous_shape:
+                previous_shape.xml.tail = str(previous_shape.xml.tail or '')+jinja_show_if  # add jinja loop text after previous shape, before this element
+            else:
+                shape.parent_xml.text = str(shape.parent_xml.text or '')+jinja_show_if  # add jinja loop at start of parent, just before this element
+
+            shape.text = ''  # remove jinja loop from <Text> tag in element
+
+            # add closing 'endfor' to just inside the shapes element, after last shape
+            shape.xml.tail = '{% endif %}'  # add text at end of Shape element
 
     @staticmethod
     def get_shape_id(shape: ET) -> str:

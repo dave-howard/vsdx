@@ -1,9 +1,10 @@
-# vsdx - A python library for processing Visio .vsdx files
+## vsdx - A python library for processing Visio .vsdx files
 
-#### Note: this is an early release with limited functionality
+__.vsdx files can processed in two ways, directly via python code as in
+example 1 below, or indirectly using a jinja template as in example 2__
 
-example code to find a shape with specific text, remove it, and then
-save the updated .vsdx file:
+__Example 1__ code to find a shape with specific text, remove it, and
+then save the updated .vsdx file:
 ```python
 from vsdx import VisioFile
 
@@ -21,18 +22,40 @@ with VisioFile(filename) as vis:
         vis.save_vsdx('shape_removed.vsdx')
 ```
 
-Please refer to tests/test.py for more usage examples in the form of
-pytest tests.
+__Example 2__ creating a new vsdx file from a template and context data
+using jinja.  
+Note that as vsdx does not lend itself well to ordered statements like
+`{% if something %}my content{% endif %}` or `{% for x in list_value
+%}x={{ x }}{% endfor %}` this package provides mechanisms to help -
+refer to tests for more details.
+
+```python
+filename = 'my_template_file.vsdx'  # file containing jinja code
+context = {'value1': 10, 'list_value': [1,2,3]}  # data for the template
+with VisioFile('my_template_file.vsdx') as vis: 
+    vis.jinja_render_vsdx(context=context)
+    vis.save_vsdx('my_new_file.vsdx')
+```
+
+Please refer to tests/test.py for more usage
+examples in the form of pytest tests.
 
 ---
 
 ###  Change Log
+- v0.3.1: add jinja rendering support for if statements, via
+  `VisioFile.jinja_render_vsdx()` - similar to for loops but using a `{%
+  showif statement %}` in text of group shape controls whether that
+  group shape is included in vsdx file rendered. Note that the showif
+  statement is replaced with a standard if statement around the group
+  shape prior to rendering. Refer to test.py::test_jinja_if() for an
+  example
 - v0.3.0: update jinja rendering to support for loops, where for
   statement is at start of group shape text, endfor is automatically
   inserted before processing. Refer to test.py::test_basic_jinja_loop()
   for code and test_jinja_loop.vsdx for content.
-- v0.2.10: add VisioFile.jinja_render_vsdx() - applying jinja processing
-  to Shape.text only
+- v0.2.10: add `VisioFile.jinja_render_vsdx()` - applying jinja
+  processing to Shape.text only
 - v0.2.9: check that Page has shapes tag when in shape_copy(), add test
   to copy shape to new page
 - v0.2.8: find max shape ID in Page before creating Shape in

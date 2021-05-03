@@ -455,6 +455,26 @@ def test_basic_jinja(filename: str, context: dict):
                 assert str(text) in page.find_shape_by_id(shape_id).text
 
 
+@pytest.mark.parametrize(("filename", "context", "shape_count"),
+                         [("test_jinja.vsdx", {"date": datetime.now(), "scenario": "One", "x": 0, "y": 2}, 1),
+                          ("test_jinja.vsdx", {"date": datetime.now(), "scenario": "Two", "x": 5, "y": 2}, 2),
+                          ("test_jinja.vsdx", {"date": datetime.now(), "scenario": "Three", "x": 20, "y": 2}, 3),
+                          ])
+def test_jinja_if(filename: str, context: dict, shape_count: int):
+
+    out_file = 'out'+ os.sep + filename[:-5] + f'_test_jinja_if_{context["scenario"]}.vsdx'
+    with VisioFile(filename) as vis:
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and validate each shape id has expected text
+    with VisioFile(out_file) as vis:
+        page = vis.page_objects[1]  # second page has the shapes with if statements
+        count = len(page.shapes[0].sub_shapes())
+        print(f"expected {shape_count} and found {count}")
+        assert count == shape_count
+
+
 @pytest.mark.parametrize(("filename", "context"),
                          [("test_jinja.vsdx", {"x": 2, "y": 2}),
                           ("test_jinja.vsdx", {"x": 3, "y": 4}),
