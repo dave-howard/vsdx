@@ -105,7 +105,6 @@ class VisioFile:
 
         self.pages = page_dict
 
-
     def load_master_pages(self):
         # get data from /visio/masters folder
         master_rel_path = f'{self.directory}/visio/masters/_rels/masters.xml.rels'
@@ -423,11 +422,9 @@ class VisioFile:
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
-        print(f"self.directory={self.directory} new_filename={new_filename}")
         if new_filename.find(os.sep) > 0:
-            directory = new_filename[0:new_filename.find(os.sep)]
+            directory = new_filename[0:new_filename.rfind(os.sep)]
             if directory:
-                print(f"directory={directory}")
                 if not os.path.exists(directory):
                     os.mkdir(directory)
         shutil.make_archive(base_filename, 'zip', self.directory)
@@ -436,7 +433,6 @@ class VisioFile:
         else:
             if new_filename[-5:] != '.vsdx':
                 new_filename += '.vsdx'
-            print(f"save_vsdx() move from {base_filename+'.zip'} to {new_filename}")
             shutil.move(base_filename + '.zip', new_filename)
         self.close_vsdx()
 
