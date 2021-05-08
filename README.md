@@ -2,6 +2,7 @@
 
 ![PyPI](https://img.shields.io/pypi/v/vsdx)
 [![pytest](https://github.com/dave-howard/vsdx/actions/workflows/test.yaml/badge.svg)](https://github.com/dave-howard/vsdx/actions/workflows/test.yaml)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/vsdx)
 
 __.vsdx files can processed in two ways, directly via python code as in
 example 1 below, or indirectly using a jinja template as in example 2__
@@ -33,6 +34,8 @@ Note that as vsdx does not lend itself well to ordered statements like
 refer to tests for more details.
 
 ```python
+from vsdx import VisioFile
+
 filename = 'my_template_file.vsdx'  # file containing jinja code
 context = {'value1': 10, 'list_value': [1,2,3]}  # data for the template
 with VisioFile('my_template_file.vsdx') as vis: 
@@ -46,6 +49,7 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.3.2: updated README and updated tests for improved compatibility
 - v0.3.1: add jinja rendering support for if statements, via
   `VisioFile.jinja_render_vsdx()` - similar to for loops but using a `{%
   showif statement %}` in text of group shape controls whether that
