@@ -53,6 +53,7 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.3.3: Added code of conduct and contributing guides
 - v0.3.2: updated README and updated tests for improved compatibility
 - v0.3.1: add jinja rendering support for if statements, via
   `VisioFile.jinja_render_vsdx()` - similar to for loops but using a `{%
