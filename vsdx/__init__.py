@@ -615,7 +615,7 @@ class VisioFile:
                         text = t.text
                     if not text:
                         text = self.get_all_text_from_xml(t)
-            return text.replace('\n','') if text else ""
+            return text if text else ""
 
         @text.setter
         def text(self, value):
