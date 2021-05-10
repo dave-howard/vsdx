@@ -1,10 +1,11 @@
 ## vsdx - A python library for processing Visio .vsdx files
 
 ![PyPI](https://img.shields.io/pypi/v/vsdx)
-![PyPI - Wheel](https://img.shields.io/pypi/wheel/vsdx)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/vsdx)
 
 [![pytest](https://github.com/dave-howard/vsdx/actions/workflows/test.yaml/badge.svg)](https://github.com/dave-howard/vsdx/actions/workflows/test.yaml)
+[![Documentation Status](https://readthedocs.org/projects/vsdx/badge/?version=latest)](https://vsdx.readthedocs.io/en/latest/?badge=latest)
+
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/vsdx)
 [![vsdx](https://snyk.io/advisor/python/vsdx/badge.svg)](https://snyk.io/advisor/python/vsdx)
 
