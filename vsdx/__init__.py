@@ -190,17 +190,17 @@ class VisioFile:
         cell_PinY.attrib['V'] = str(y)
 
     @staticmethod
+    # TODO: is this never used?
     def get_shape_text(shape: ET) -> str:
-        text = ''
-        t = shape.find(f"{namespace}Text")
-        if t is not None:
-            if t.text:
-                text = t.text
-            else:
-                text = t[0].tail
+        # technically the below is not an exact replacement of the above...
+        text = ""
+        text_elem = shape.find(f"{namespace}Text")
+        if text_elem is not None:
+            text = "".join(text_elem.itertext())
         return text
 
     @staticmethod
+    # TODO: is this never used?
     def set_shape_text(shape: ET, text: str):
         t = shape.find(f"{namespace}Text")  # type: Element
         if t is not None:
@@ -575,18 +575,6 @@ class VisioFile:
             self.set_cell_value('Width', str(value))
 
         @staticmethod
-        def get_all_text_from_xml(x: Element, s: str = None) -> str:
-            if s is None:
-                s = ''
-            if x.text:
-                s += x.text
-            if x.tail:
-                s += x.tail
-            for i in x:
-                s = VisioFile.Shape.get_all_text_from_xml(i, s)
-            return s
-
-        @staticmethod
         def clear_all_text_from_xml(x: Element):
             x.text = ''
             x.tail = ''
@@ -595,18 +583,15 @@ class VisioFile:
 
         @property
         def text(self):
-            text = None
-            for t in self.xml:  # type: Element
-                if 'Text' in t.tag:
-                    if t.text:
-                        text = t.text
-                    if not text:
-                        text = self.get_all_text_from_xml(t)
-            return text if text else ""
+            text = ""
+            t = self.xml.find(f"{namespace}Text")
+            if t is not None:
+                text = "".join(t.itertext())
+            return text
 
         @text.setter
         def text(self, value):
-            t = self.xml.find(namespace+'Text')  # type: Element
+            t = self.xml.find(f"{namespace}Text")  # type: Element
             if t is not None:
                 VisioFile.Shape.clear_all_text_from_xml(t)
                 t.text = value
