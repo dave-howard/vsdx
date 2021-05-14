@@ -362,11 +362,11 @@ class VisioFile:
         if id_map is None:
             id_map = dict()
         self.set_new_id(shape, page_path, id_map)
-        for e in shape:  # type: Element
-            if 'Shapes' in e.tag:
-                self.increment_shape_ids(e, page_path, id_map)
-            if 'Shape' in e.tag:
-                self.set_new_id(e, page_path, id_map)
+        for e in shape.findall(f"{namespace}Shapes"):
+            self.increment_shape_ids(e, page_path, id_map)
+        for e in shape.findall(f"{namespace}Shape"):
+            self.set_new_id(e, page_path, id_map)
+
         return id_map
 
     def set_new_id(self, element: Element, page_path: str, id_map: dict):
@@ -383,21 +383,19 @@ class VisioFile:
     def update_ids(self, shape: Element, id_map: dict):
         # update: <ns0:Cell F="Sheet.15! replacing 15 with new id using prepopulated id_map
         # cycle through shapes looking for Cell tag inside a Shape tag, which may be inside a Shapes tag
-        for e in shape:
-            if 'Shapes' in e.tag:
-                self.update_ids(e, id_map)
-            if 'Shape' in e.tag:
-                # look for Cell elements
-                cells = e.findall(f'{namespace}Cell[@F]')
-                for cell in cells:
-                    f = str(cell.attrib['F'])
-                    if f.startswith("Sheet."):
-                        # update sheet refs with new ids
-                        shape_id = f.split('!')[0].split('.')[1]
-                        new_id = id_map[shape_id]
-                        new_f = f.replace(f'Sheet.{shape_id}',f'Sheet.{new_id}')
-                        cell.attrib['F'] = new_f
-
+        for e in shape.findall(f"{namespace}Shapes"):
+            self.update_ids(e, id_map)
+        for e in shape.findall(f"{namespace}Shape"):
+            # look for Cell elements
+            cells = e.findall(f"{namespace}Cell[@F]")
+            for cell in cells:
+                f = str(cell.attrib['F'])
+                if f.startswith("Sheet."):
+                    # update sheet refs with new ids
+                    shape_id = f.split('!')[0].split('.')[1]
+                    new_id = id_map[shape_id]
+                    new_f = f.replace(f"Sheet.{shape_id}",f"Sheet.{new_id}")
+                    cell.attrib['F'] = new_f
         return shape
 
     def close_vsdx(self):
@@ -658,12 +656,12 @@ class VisioFile:
 
         def apply_text_filter(self, context: dict):
             # check text against all context keys
+            text = self.text
             for key in context.keys():
-                text = self.text
                 r_key = "{{" + key + "}}"
-                if r_key in text:
-                    new_text = text.replace(r_key, str(context[key]))
-                    self.text = new_text
+                text = text.replace(r_key, str(context[key]))
+            self.text = text
+
             for s in self.sub_shapes():
                 s.apply_text_filter(context)
 
