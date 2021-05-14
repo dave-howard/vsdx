@@ -175,8 +175,8 @@ class VisioFile:
     @staticmethod
     def get_shape_location(shape: Element) -> (float, float):
         x, y = 0.0, 0.0
-        cell_PinX = shape.find(f'{namepsace}Cell[@N="PinX"]')  # type: Element
-        cell_PinY = shape.find(f'{namepsace}Cell[@N="PinY"]')
+        cell_PinX = shape.find(f'{namespace}Cell[@N="PinX"]')  # type: Element
+        cell_PinY = shape.find(f'{namespace}Cell[@N="PinY"]')
         x = float(cell_PinX.attrib['V'])
         y = float(cell_PinY.attrib['V'])
 
@@ -184,8 +184,8 @@ class VisioFile:
 
     @staticmethod
     def set_shape_location(shape: Element, x: float, y: float):
-        cell_PinX = shape.find(f'{namepsace}Cell[@N="PinX"]')  # type: Element
-        cell_PinY = shape.find(f'{namepsace}Cell[@N="PinY"]')
+        cell_PinX = shape.find(f'{namespace}Cell[@N="PinX"]')  # type: Element
+        cell_PinY = shape.find(f'{namespace}Cell[@N="PinY"]')
         cell_PinX.attrib['V'] = str(x)
         cell_PinY.attrib['V'] = str(y)
 
@@ -221,7 +221,7 @@ class VisioFile:
                 r_key = "{{" + key + "}}"
                 text = text.replace(r_key, str(context[key]))
 
-            VisioFile.set_shape_text(shape, new_text)
+            VisioFile.set_shape_text(shape, text)
 
 
         for shape in shapes.findall(f"{namespace}Shapes"):
