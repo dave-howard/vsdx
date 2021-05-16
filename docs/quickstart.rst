@@ -23,10 +23,40 @@ Your first two lines of code will open a vsdx file.
 
    vis = VisioFile('diagram.vsdx')  # create a VisioFile object from a file
 
-making some changes
+
+Making some changes
 -------------------
+You might want to open a page, find a shape with the text 'foo' and replace it with 'bar'
+but first - let's use a context manager to make sure the file is closed when we are done
 
-a bit more work
+.. code-block:: python
+
+    from vsdx import VisioFile  # import the package
+
+    with VisioFile('diagram.vsdx') as vis:
+        # open first page
+        page = vis.pages_objects[0]  # type: VisioFile.Page
+        # find a shape by text
+        shape = page.find_shape_by_text('foo')  # type: VisioFile.Shape
+        shape.text = 'bar'
 
 
-saving a copy
+Saving a copy
+-------------
+You'll want save your changes - lets just add that one line
+
+.. code-block:: python
+
+    from vsdx import VisioFile  # import the package
+
+    with VisioFile('diagram.vsdx') as vis:
+        # open first page
+        page = vis.pages_objects[0]  # type: VisioFile.Page
+        # find a shape by text
+        shape = page.find_shape_by_text('foo')  # type: VisioFile.Shape
+        shape.text = 'bar'
+        vis.save_vsdx('copy_of_diagram.vsdx')  # save to a new file
+
+and that's that.
+
+For more detailed examples please have a look at the tests.py file

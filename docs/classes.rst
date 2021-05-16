@@ -8,7 +8,7 @@ vsdx.VisioFile
 --------------
 
 .. autoclass:: vsdx.VisioFile
-   :members: apply_text_context, jinja_render_vsdx, save_vsdx
+   :members: apply_text_context, jinja_render_vsdx, remove_page_by_index, save_vsdx
    :special-members: __init__
 
 vsdx.VisioFile.Page
