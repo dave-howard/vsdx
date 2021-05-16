@@ -143,7 +143,7 @@ class VisioFile:
     def get_shape_max_id(self, shape_xml: ET.Element):
         max_id = int(self.get_shape_id(shape_xml))
         if shape_xml.attrib['Type'] == 'Group':
-            for shape in shape_xml.find(namespace+'Shapes'):
+            for shape in shape_xml.find(f"{namespace}Shapes"):
                 new_max = self.get_shape_max_id(shape)
                 if new_max > max_id:
                     max_id = new_max
@@ -153,7 +153,7 @@ class VisioFile:
 
         page = self.pages[page_path]  # type: Element
         max_id = 0
-        shapes_xml = page.find(namespace+'Shapes')
+        shapes_xml = page.find(f"{namespace}Shapes")
         if shapes_xml is not None:
             for shape in shapes_xml:
                 id = self.get_shape_max_id(shape)
@@ -339,9 +339,9 @@ class VisioFile:
         self.set_page_max_id(page_path)
 
         # find or create Shapes tag
-        shapes_tag = page.find(namespace+'Shapes')
+        shapes_tag = page.find(f"{namespace}Shapes")
         if shapes_tag is None:
-            shapes_tag = Element(f'{namespace}Shapes')
+            shapes_tag = Element(f"{namespace}Shapes")
             page.getroot().append(shapes_tag)
 
         id_map = self.increment_shape_ids(new_shape, page_path)
@@ -463,7 +463,7 @@ class VisioFile:
 
             # get Cells in Shape
             self.cells = dict()
-            for e in self.xml.findall(namespace+'Cell'):
+            for e in self.xml.findall(f"{namespace}Cell"):
                 cell = VisioFile.Cell(xml=e, shape=self)
                 self.cells[cell.name] = cell
 
@@ -486,7 +486,7 @@ class VisioFile:
             # set parent_xml: location for new shape tag to be added
             if page:
                 # set parent_xml to first page Shapes tag if destination page passed
-                parent_xml = page.xml.find(namespace+'Shapes')
+                parent_xml = page.xml.find(f"{namespace}Shapes")
             else:
                 # or set parent_xml to source shapes own parent
                 parent_xml = self.parent_xml
@@ -602,7 +602,7 @@ class VisioFile:
             # a Shape can have 0 or 1 Shapes (1 if type is Group)
 
             if self.shape_type == 'Group':
-                parent_element = self.xml.find(f'{namespace}Shapes')
+                parent_element = self.xml.find(f"{namespace}Shapes")
             else:  # a Shapes
                 parent_element = self.xml
 
@@ -738,7 +738,7 @@ class VisioFile:
         @property
         def shapes(self):
             # list of Shape objects in Page
-            return [VisioFile.Shape(shapes, self.xml, self) for shapes in self.xml.findall(namespace+'Shapes')]
+            return [VisioFile.Shape(shapes, self.xml, self) for shapes in self.xml.findall(f"{namespace}Shapes")]
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
