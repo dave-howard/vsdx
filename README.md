@@ -54,6 +54,8 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.3.4: Added `VisioFile.remove_page_by_index()` method to remove a
+  page, with associated test
 - v0.3.3: Added code of conduct and contributing guides
 - v0.3.2: updated README and updated tests for improved compatibility
 - v0.3.1: add jinja rendering support for if statements, via

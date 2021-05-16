@@ -25,13 +25,29 @@ def to_float(val: str):
 
 
 class VisioFile:
-    """Represents a vsdx file"""
+    """Represents a vsdx file
+
+    Attributes:
+        filename (str): the vsdx file the VisioFile has been created from
+        pages (dict): dictionary of XML objects by page name
+        page_objects (list): list of Page objects
+        master_pages (dict): ist of XML objects by page name
+        master_page_objects (list): list of Page objects
+
+    Contains Page, Shape and Connect sub-classes
+    """
     def __init__(self, filename, debug: bool = False):
+        """VisioFile constructor
+
+        Args:
+            filename: the vsdx file to load and create the VisioFile object from
+        """
         self.debug = debug
         self.filename = filename
         if debug:
             print(f"VisioFile(filename={filename})")
         self.directory = f"./{filename.rsplit('.', 1)[0]}"
+        self.pages_xml = None
         self.pages = dict()  # list of XML objects by page name, populated by open_vsdx_file()
         self.page_objects = list()  # list of Page objects, populated by open_vsdx_file()
         self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
@@ -62,6 +78,11 @@ class VisioFile:
 
         return self.pages
 
+    def _pages_filename(self):
+        page_dir = f'{self.directory}/visio/pages/'
+        pages_filename = page_dir + 'pages.xml'  # pages.xml contains Page name, width, height, mapped to Id
+        return pages_filename
+
     def load_pages(self):
         rel_dir = f'{self.directory}/visio/pages/_rels/'
         page_dir = f'{self.directory}/visio/pages/'
@@ -79,6 +100,7 @@ class VisioFile:
 
         pages_filename = page_dir + 'pages.xml'  # pages contains Page name, width, height, mapped to Id
         pages = file_to_xml(pages_filename).getroot()  # this contains a list of pages with rel_id and filename
+        self.pages_xml = file_to_xml(pages_filename)  # store xml so pages can be removed
         if self.debug:
             print(f"Pages({pages_filename})", VisioFile.pretty_print_element(pages))
         page_dict = {}  # dict with filename as index
@@ -140,6 +162,16 @@ class VisioFile:
         for p in self.page_objects:
             if p.name == name:
                 return p
+
+    def remove_page_by_index(self, index: int):
+        # remove Page element from pages.xml file - zero based index
+        # todo:  similar function by page id, and by page title
+        page = self.pages_xml.find(f"{namespace}Page[{index+1}]")
+        if page:
+            self.pages_xml.getroot().remove(page)
+            page = self.page_objects[index]  # type: VisioFile.Page
+            del self.pages[page.filename]
+            del self.page_objects[index]
 
     def get_shape_max_id(self, shape_xml: ET.Element):
         max_id = int(self.get_shape_id(shape_xml))
@@ -333,6 +365,7 @@ class VisioFile:
 
         Returns:
             ElementTree: The new shape ElementTree
+
         """
 
         new_shape = ET.fromstring(ET.tostring(shape))
@@ -407,6 +440,15 @@ class VisioFile:
             pass
 
     def save_vsdx(self, new_filename=None):
+        """save the VisioFile object as new vsdx file
+
+        Args:
+            new_filename (str): file location to write the new file
+
+        """
+        # write pages.xml file - in case pages added removed
+        xml_to_file(self.pages_xml, self._pages_filename())
+
         # write the pages to file
         for page in self.page_objects:  # type: VisioFile.Page
             xml_to_file(page.xml, page.filename)
@@ -717,6 +759,14 @@ class VisioFile:
             return f"Connect: from={self.from_id} to={self.to_id} connector_id={self.connector_shape_id} shape_id={self.shape_id}"
 
     class Page:
+        """Represents a page in a vsdx file
+
+        Attributes:
+            name (str): the name of the page
+            vis (VisioFile): the VisioFile object the page belongs to
+            connects (list): a list of Connect objects in the page
+
+        """
         def __init__(self, xml: ET.ElementTree, filename: str, page_name: str, vis: VisioFile):
             self._xml = xml
             self.filename = filename

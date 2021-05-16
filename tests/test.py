@@ -502,7 +502,6 @@ def test_jinja_calc(filename: str, context: dict):
                           ("test_jinja_loop.vsdx", {"date": datetime.now(), "scenario": "Scenario Three", "test_list":[1,2,3,4,5,6]}),
                           ])
 def test_basic_jinja_loop(filename: str, context: dict):
-
     out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_basic_jinja.vsdx'
     with VisioFile(basedir+filename) as vis:
         page = vis.page_objects[0]
@@ -550,6 +549,19 @@ def test_xml_findall_group_shapes(filename: str, group_shape_elements: int):
         elements = xml.findall(xpath)
         print(f"{xpath} returns {len(elements)} elements vs {group_shape_elements}")
         assert len(elements) == group_shape_elements
+
+
+@pytest.mark.parametrize(("filename", "page_index"), [("test1.vsdx", 0)])
+def test_remove_page_by_index(filename: str, page_index: int):
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_remove_page.vsdx'
+    with VisioFile(basedir+filename) as vis:
+        page_count = len(vis.pages)
+        vis.remove_page_by_index(page_index)
+        vis.save_vsdx(out_file)
+
+    # re-open file and confirm it has one less page
+    with VisioFile(out_file) as vis:
+        assert len(vis.pages) == page_count-1
 
 
 @pytest.mark.skip('master inheritence not yet implemented')
