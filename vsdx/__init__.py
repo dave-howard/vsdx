@@ -25,6 +25,7 @@ def to_float(val: str):
 
 
 class VisioFile:
+    """Represents a vsdx file"""
     def __init__(self, filename, debug: bool = False):
         self.debug = debug
         self.filename = filename
@@ -830,6 +831,7 @@ class VisioFile:
 
 
 def file_to_xml(filename: str) -> ET.ElementTree:
+    """Import a file as an ElementTree"""
     try:
         tree = ET.parse(filename)
         return tree
@@ -838,4 +840,5 @@ def file_to_xml(filename: str) -> ET.ElementTree:
 
 
 def xml_to_file(xml: ET.ElementTree, filename: str):
+    """Save an ElementTree to a file"""
     xml.write(filename)
