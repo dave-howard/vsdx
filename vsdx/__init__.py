@@ -49,7 +49,7 @@ class VisioFile:
         self.directory = f"./{filename.rsplit('.', 1)[0]}"
         self.pages_xml = None
         self.pages_xml_rels = None
-        self.content_type_xml = None
+        self.content_types_xml = None
         self.app_xml = None
         self.pages = dict()  # list of XML objects by page name, populated by open_vsdx_file()
         self.page_objects = list()  # list of Page objects, populated by open_vsdx_file()
@@ -123,6 +123,13 @@ class VisioFile:
             self.page_objects.append(VisioFile.Page(file_to_xml(page_path), page_path, page_name, self))
 
         self.pages = page_dict
+
+        self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml')
+        # TODO: add correctness cross-check. Or maybe the other way round, start from [Content_Types].xml
+        #       to get page_dir and other paths...
+
+        self.app_xml = file_to_xml(f'{self.directory}/docProps/app.xml')
+
 
     def load_master_pages(self):
         # get data from /visio/masters folder
@@ -272,8 +279,7 @@ class VisioFile:
         self.pages_xml.getroot().append(new_page_element)
 
         # update [Content_Types].xml
-        content_types_filename = f'{self.directory}/[Content_Types].xml'
-        content_types = file_to_xml(content_types_filename).getroot()
+        content_types = self.content_types_xml.getroot()
         content_types_attribs = {
             'PartName'   : f'/visio/pages/{new_page_filename}',
             'ContentType': 'application/vnd.ms-visio.page+xml'
@@ -290,17 +296,13 @@ class VisioFile:
 
         # then add it:
         content_types.insert(idx+1, content_types_element)
-        xml_to_file(ET.ElementTree(content_types), content_types_filename)
 
         # update app.xml
         # strictly speaking, this is optional, but we're doing what MS Visio does.
-        app_filename = f'{self.directory}/docProps/app.xml'
-        app_xml = file_to_xml(app_filename).getroot()
-
         ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
         vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
 
-        TitlesOfParts = app_xml.find(f'{ext_prop_namespace}TitlesOfParts')
+        TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
         vector = TitlesOfParts.find(f'{vt_namespace}vector')
 
         lpstr = Element(f'{vt_namespace}lpstr')
@@ -308,7 +310,6 @@ class VisioFile:
         vector.append(lpstr)
         vector_size = int(vector.attrib['size'])
         vector.set('size', str(vector_size+1))
-        xml_to_file(ET.ElementTree(app_xml), app_filename)
 
         # Update VisioFile object
         new_page = VisioFile.Page(new_page_xml, new_page_path, new_page_name, self)
@@ -601,6 +602,13 @@ class VisioFile:
         # write the pages to file
         for page in self.page_objects:  # type: VisioFile.Page
             xml_to_file(page.xml, page.filename)
+
+        # write [content_Types].xml
+        xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml')
+
+        # write app.xml
+        xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
+
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
