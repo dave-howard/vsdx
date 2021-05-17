@@ -48,6 +48,9 @@ class VisioFile:
             print(f"VisioFile(filename={filename})")
         self.directory = f"./{filename.rsplit('.', 1)[0]}"
         self.pages_xml = None
+        self.pages_xml_rels = None
+        self.content_type_xml = None
+        self.app_xml = None
         self.pages = dict()  # list of XML objects by page name, populated by open_vsdx_file()
         self.page_objects = list()  # list of Page objects, populated by open_vsdx_file()
         self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
@@ -89,6 +92,7 @@ class VisioFile:
 
         rel_filename = rel_dir + 'pages.xml.rels'
         rels = file_to_xml(rel_filename).getroot()  # rels contains page filenames
+        self.pages_xml_rels = file_to_xml(rel_filename)  # store pages.xml.rels so pages can be added or removed
         if self.debug:
             print(f"Relationships({rel_filename})", VisioFile.pretty_print_element(rels))
         relid_page_dict = {}
@@ -195,21 +199,17 @@ class VisioFile:
         # Add to docProps\app.xml
         # ?? Create visio\pages\_rels\page.xml.rels -> I think this is to refer to masters files for shapes in the page
 
-        rel_dir = f'{self.directory}/visio/pages/_rels/'
+        # rel_dir = f'{self.directory}/visio/pages/_rels/'
         page_dir = f'{self.directory}/visio/pages/'
 
         # create page.xml
         #TODO: figure out the best way to define this default page XML
-        new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
+        new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
         new_page_filename = f'page{len(self.pages)+1}.xml'
         new_page_path = page_dir+new_page_filename
-        xml_to_file(new_page_xml, new_page_path)
 
         # update pages.xml.rels
-        rel_filename = f'{rel_dir}pages.xml.rels'
-        rels = file_to_xml(rel_filename).getroot()  # rels contains page filenames
-
-        max_relid = max(rels, key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
+        max_relid = max(self.pages_xml_rels.getroot(), key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
         max_relid = int(max_relid.attrib['Id'][3:]) if max_relid is not None else 0
         new_page_relid = f'rId{max_relid + 1}'  # Most likely will be equal to len(self.pages)+1
 
@@ -218,8 +218,7 @@ class VisioFile:
             'Type'  : 'http://schemas.microsoft.com/visio/2010/relationships/page',
             'Id'    : new_page_relid
         }
-        rels.append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
-        xml_to_file(ET.ElementTree(rels), rel_filename)
+        self.pages_xml_rels.getroot().append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
 
         # update pages.xml
         page_names = [page.name for page in self.page_objects]
@@ -229,9 +228,7 @@ class VisioFile:
             new_page_name = f'{new_page_name}-{i}'  # Page-X-i
             i += 1
 
-        pages_filename = page_dir + 'pages.xml'
-        pages = file_to_xml(pages_filename).getroot()
-        max_page_id = max(pages, key=lambda page: int(page.attrib['ID']))
+        max_page_id = max(self.pages_xml.getroot(), key=lambda page: int(page.attrib['ID']))
         max_page_id = int(max_page_id.attrib['ID'])
 
         new_page_attribs = {
@@ -273,8 +270,7 @@ class VisioFile:
 
         new_page_element.append(new_pagesheet_element)
         new_page_element.append(Element(f'{namespace}Rel', new_page_rel))
-        pages.append(new_page_element)
-        xml_to_file(ET.ElementTree(pages), pages_filename)
+        self.pages_xml.getroot().append(new_page_element)
 
         # update [Content_Types].xml
         content_types_filename = f'{self.directory}/[Content_Types].xml'
@@ -597,6 +593,9 @@ class VisioFile:
             new_filename (str): file location to write the new file
 
         """
+        # write pages.xml.rels
+        xml_to_file(self.pages_xml_rels, f'{self.directory}/visio/pages/_rels/pages.xml.rels')
+
         # write pages.xml file - in case pages added removed
         xml_to_file(self.pages_xml, self._pages_filename())
 
