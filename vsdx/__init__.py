@@ -199,7 +199,6 @@ class VisioFile:
         # Add to docProps\app.xml
         # ?? Create visio\pages\_rels\page.xml.rels -> I think this is to refer to masters files for shapes in the page
 
-        # rel_dir = f'{self.directory}/visio/pages/_rels/'
         page_dir = f'{self.directory}/visio/pages/'
 
         # create page.xml
