@@ -12,6 +12,9 @@
 __.vsdx files can processed in two ways, directly via python code as in
 example 1 below, or indirectly using a jinja template as in example 2__
 
+For quick start documentation please see
+[https://vsdx.readthedocs.io/en/latest/quickstart.html](https://vsdx.readthedocs.io/en/latest/quickstart.html)
+
 __Example 1__ code to find a shape with specific text, remove it, and
 then save the updated .vsdx file:
 ```python

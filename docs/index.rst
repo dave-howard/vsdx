@@ -58,11 +58,12 @@ vsdx allow you to create vsdx files from vsdx templates, with just a few lines o
    from vsdx import VisioFile  # import the package
 
    with VisioFile('template_diagram.vsdx') as vis:  # open file using context manager
-      context = {'author':'dave', 'numbers':[1,2,3] }
+      context = {'author':'Dave', 'numbers':[1,2,3] }
       vis.jinja_render_vsdx(context=context)
       vis.save_vsdx('my_new_file.vsdx')
 
-... it's as simple as that. The data pass in
+... it's as simple as that. The data passed in the 'context' dictionary is available to the Jinja template.
+For example `{{ author }}` would result in 'dave', and `{{ author|lower }}` would result in 'dave'.
 
 
 Attribute Manipulation
