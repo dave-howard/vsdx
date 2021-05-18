@@ -267,7 +267,7 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
 def test_vis_copy_shape(filename: str, shape_name: str):
-    out_file = 'out'+ os.sep + filename[:-5] + '_test_vis_copy_shape.vsdx'
+    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_vis_copy_shape.vsdx'
 
     with VisioFile(basedir+filename) as vis:
         page =  vis.page_objects[0]  # type: VisioFile.Page
@@ -587,3 +587,45 @@ def test_master_inheritance(filename: str):
         # these tests fail until master shape link in place for Shape.text
         assert shape_a
         assert shape_b
+
+
+@pytest.mark.parametrize(('filename'),
+                         [('test1.vsdx')])
+def test_add_page(filename: str):
+    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_add_page.vsdx'
+    with VisioFile(basedir+os.path.join(filename)) as vis:
+        number_pages = len(vis.page_objects)
+
+        new_page = vis.add_page()
+        assert new_page
+        assert len(vis.page_objects) == number_pages + 1
+
+        new_page_name = new_page.name
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page_by_name(new_page_name)
+        assert page
+
+
+@pytest.mark.parametrize(('filename', 'page_name'),
+                         [
+                            ('test1.vsdx', 'newname'),
+                            ('test1.vsdx', 'Page-1'),
+                         ])
+def test_add_page_name(filename: str, page_name: str):
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_add_page_name_{page_name}.vsdx'
+    with VisioFile(basedir+os.path.join(filename)) as vis:
+        number_pages = len(vis.page_objects)
+
+        new_page = vis.add_page(page_name)
+        assert new_page
+        assert len(vis.page_objects) == number_pages + 1
+
+        new_page_name = new_page.name
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page_by_name(new_page_name)
+        assert page
+
