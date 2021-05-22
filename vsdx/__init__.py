@@ -177,10 +177,12 @@ class VisioFile:
     def remove_page_by_index(self, index: int):
         """Remove zero-based nth page from VisioFile object
 
-        Args:
-            index (int): zero-based index
+        :param index: Zero-based index of the page
+        :type index: int
 
+        :return: None
         """
+
         # remove Page element from pages.xml file - zero based index
         # todo:  similar function by page id, and by page title
         page = self.pages_xml.find(f"{namespace}Page[{index+1}]")

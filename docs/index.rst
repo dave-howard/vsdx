@@ -13,14 +13,7 @@ Welcome to vsdx's documentation!
    quickstart
    classes
 
-
-Indices and tables
-==================
-
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 
 Project
 -------
