@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.3.5: Added `VisioFile.add_page()` method and tests
 - v0.3.4: Added `VisioFile.remove_page_by_index()` method to remove a
   page, with associated test
 - v0.3.3: Added code of conduct and contributing guides
@@ -77,10 +78,10 @@ examples in the form of pytest tests.
 - v0.2.9: check that Page has shapes tag when in shape_copy(), add test
   to copy shape to new page
 - v0.2.8: find max shape ID in Page before creating Shape in
-  Shape.copy(). Find and load master pages when file is opened, store in
-  VisioFile.master_page_objects and .master_pages
-- v0.2.7: add Shape.copy() method
-- v0.2.6: added Page.get_connectors_between() to get zero or many
+  `Shape.copy()`. Find and load master pages when file is opened, store
+  in VisioFile.master_page_objects and .master_pages
+- v0.2.7: add `Shape.copy()` method
+- v0.2.6: added `Page.get_connectors_between()` to get zero or many
   connectors between two shapes, by shape id or text
 - 0.2.5: Add new Shape properties connected_shapes (list of Shape
   objects) and connects (list of Connect objects) properties to allow
