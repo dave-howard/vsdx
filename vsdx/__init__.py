@@ -340,7 +340,7 @@ class VisioFile:
 
         :return: Page object representing the new page
         """
-        end_of_file = len(self.page_objects)
+        end_of_file = len(self.pages)
         return self.add_page_at(end_of_file, name)
 
     def get_shape_max_id(self, shape_xml: ET.Element):

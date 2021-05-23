@@ -667,11 +667,11 @@ def test_add_page_name(filename: str, page_name: str):
 def test_add_page_at(filename: str, index: int, page_name: str):
     out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_add_page_at_{page_name}.vsdx'
     with VisioFile(basedir+os.path.join(filename)) as vis:
-        number_pages = len(vis.page_objects)
+        number_pages = len(vis.pages)
 
         new_page = vis.add_page_at(index, page_name)
         assert new_page
-        assert len(vis.page_objects) == number_pages + 1
+        assert len(vis.pages) == number_pages + 1
 
         new_page_name = new_page.name
         vis.save_vsdx(out_file)
