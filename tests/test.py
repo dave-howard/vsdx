@@ -708,3 +708,27 @@ def test_add_page_at(filename: str, index: int, page_name: str):
         page = vis.get_page_by_name(new_page_name)
         assert page
 
+@pytest.mark.parametrize(('filename', 'index', 'page_name'),
+                         [
+                            ('test1.vsdx', -1, None),
+                            ('test1.vsdx', 0, 'newname'),
+                            ('test1.vsdx', 2, 'Page-1'),
+                            ('test2.vsdx', 2, 'Page-1'),
+                            ('test4_connectors.vsdx', 0, 'Page-1'),
+                         ])
+def test_copy_page(filename: str, index: int, page_name: str):
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_copy_page_{page_name}.vsdx'
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        number_pages = len(vis.pages)
+
+        page = vis.pages[0]  # type: VisioFile.Page
+        new_page = vis.copy_page(page, index=index, name=page_name)
+        assert new_page
+        assert len(vis.pages) == number_pages + 1
+
+        new_page_name = new_page.name
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page_by_name(new_page_name)
+        assert page

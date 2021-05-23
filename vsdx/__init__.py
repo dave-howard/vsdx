@@ -3,6 +3,7 @@ import zipfile
 import shutil
 import os
 import re
+from enum import IntEnum
 from jinja2 import Template
 from typing import Optional, List
 
@@ -22,6 +23,13 @@ def to_float(val: str):
         return float(val)
     except ValueError:
         return 0.0
+
+
+class PagePosition(IntEnum):
+    FIRST =  0
+    LAST  = -1
+    END   = -1
+    AFTER = -2
 
 
 class VisioFile:
@@ -200,6 +208,126 @@ class VisioFile:
             del self.page_xml_by_file_path[page.filename]
             del self.pages[index]
 
+    def _update_pages_xml_rels(self, new_page_filename: str) -> int:
+        '''Updates the pages.xml.rels file with a reference to the new page and returns the new relid
+        '''
+
+        max_relid = max(self.pages_xml_rels.getroot(), key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
+        max_relid = int(max_relid.attrib['Id'][3:]) if max_relid is not None else 0
+        new_page_relid = f'rId{max_relid + 1}'  # Most likely will be equal to len(self.pages)+1
+
+        new_page_rel = {
+            'Target': new_page_filename,
+            'Type'  : 'http://schemas.microsoft.com/visio/2010/relationships/page',
+            'Id'    : new_page_relid
+        }
+        self.pages_xml_rels.getroot().append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
+
+        return new_page_relid
+
+    def _get_new_page_name(self, new_page_name: str) -> str:
+        i = 1
+        while new_page_name in self.get_page_names():
+            new_page_name = f'{new_page_name}-{i}'  # Page-X-i
+            i += 1
+
+        return new_page_name
+
+    def _get_max_page_id(self) -> int:
+        page_with_max_id = max(self.pages_xml.getroot(), key=lambda page: int(page.attrib['ID']))
+        max_page_id = int(page_with_max_id.attrib['ID'])
+
+        return max_page_id
+
+    def _get_index(self, *, index: int, page: VisioFile.Page):
+
+        if index == PagePosition.LAST:
+            index = len(self.pages)
+
+        elif index == PagePosition.AFTER:
+            # insert new page after the original page
+            # TODO: add error checking - page must be defined
+            orig_page_idx = self.pages.index(page)
+            index = orig_page_idx + 1
+
+        return index
+
+    def _update_content_types_xml(self, new_page_filename: str):
+        content_types = self.content_types_xml.getroot()
+
+        content_types_attribs = {
+            'PartName'   : f'/visio/pages/{new_page_filename}',
+            'ContentType': 'application/vnd.ms-visio.page+xml'
+        }
+        cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+        content_types_element = Element(f'{cont_types_namespace}Override', content_types_attribs)
+
+        # add the new element after the last such element
+        # first find the index:
+        all_page_overrides = content_types.findall(
+            f'{cont_types_namespace}Override[@ContentType="application/vnd.ms-visio.page+xml"]'
+        )
+        idx = list(content_types).index(all_page_overrides[-1])
+
+        # then add it:
+        content_types.insert(idx+1, content_types_element)
+
+    def _update_app_xml(self, new_page_name: str):
+        ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
+        vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
+
+        TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+
+        lpstr = Element(f'{vt_namespace}lpstr')
+        lpstr.text = new_page_name
+        vector.append(lpstr)
+        vector_size = int(vector.attrib['size'])
+        vector.set('size', str(vector_size+1))
+
+    def _create_page(
+        self,
+        *,
+        new_page_xml_str: str,
+        page_name: str,
+        new_page_element: Element,
+        index: int,
+    ) -> VisioFile.Page:
+        # Create visio\pages\pageX.xml file
+        # Add to visio\pages\_rels\pages.xml.rels
+        # Add to visio\pages\pages.xml
+        # Add to [Content_Types].xml
+        # Add to docProps\app.xml
+
+        page_dir = f'{self.directory}/visio/pages/'  # TODO: better concatenation
+
+        # create pageX.xml
+        new_page_xml = ET.ElementTree(ET.fromstring(new_page_xml_str))
+        new_page_filename = f'page{len(self.pages) + 1}.xml'
+        new_page_path = page_dir+new_page_filename  # TODO: better concatenation
+
+        # update pages.xml.rels - add rel for the new page
+        # done by the caller
+
+        # update pages.xml - insert the PageElement Element in it's correct location
+        index = self._get_index(index=index, page=None)
+        self.pages_xml.getroot().insert(index, new_page_element)
+
+        # update [Content_Types].xml - insert reference to the new page
+        self._update_content_types_xml(new_page_filename)
+
+        # update app.xml - strictly speaking, this is optional, but we're doing what MS Visio does.
+        self._update_app_xml(page_name)
+
+        # Update VisioFile object
+        new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)
+
+        self.pages.append(new_page)
+        self.page_xml_by_file_path[new_page_path] = new_page_xml
+        self.page_max_ids[new_page_path] = 0
+
+        return new_page
+
     def add_page_at(self, index: int, name: Optional[str] = None) -> VisioFile.Page:
         """Add a new page at the specified index of the VisioFile
 
@@ -212,61 +340,23 @@ class VisioFile:
         :return: :class:`Page` object representing the new page
         """
 
-        # Create visio\pages\pageX.xml file
-        # Add to visio\pages\_rels\pages.xml.rels
-        # Add to visio\pages\pages.xml
-        # Add to [Content_Types].xml
-        # Add to docProps\app.xml
+        # Determine the new page's name
+        new_page_name = self._get_new_page_name(name or f'Page-{len(self.pages) + 1}')
 
-        page_dir = f'{self.directory}/visio/pages/'
+        # Determine the new page's filename
+        new_page_filename = f'page{len(self.pages) + 1}.xml'
 
-        # create page.xml
-        #TODO: figure out the best way to define this default page XML
-        new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
-        new_page_filename = f'page{len(self.page_xml_by_file_path) + 1}.xml'
-        new_page_path = page_dir+new_page_filename
+        # Add reference to the new page in pages.xml.rels and get new relid
+        new_page_relid = self._update_pages_xml_rels(new_page_filename)
 
-        # update pages.xml.rels
-        max_relid = max(self.pages_xml_rels.getroot(), key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
-        max_relid = int(max_relid.attrib['Id'][3:]) if max_relid is not None else 0
-        new_page_relid = f'rId{max_relid + 1}'  # Most likely will be equal to len(self.pages)+1
-
-        new_page_rel = {
-            'Target': new_page_filename,
-            'Type'  : 'http://schemas.microsoft.com/visio/2010/relationships/page',
-            'Id'    : new_page_relid
-        }
-        self.pages_xml_rels.getroot().append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
-
-        # update pages.xml
-        page_names = [page.name for page in self.pages]
-        new_page_name = name or f'Page-{len(self.page_xml_by_file_path) + 1}'
-        i = 1
-        while new_page_name in page_names:
-            new_page_name = f'{new_page_name}-{i}'  # Page-X-i
-            i += 1
-
-        max_page_id = max(self.pages_xml.getroot(), key=lambda page: int(page.attrib['ID']))
-        max_page_id = int(max_page_id.attrib['ID'])
-
-        new_page_attribs = {
-            'ID'   : str(max_page_id + 1),
-            'NameU': new_page_name,
-            'Name' : new_page_name
-        }
-
+        # Create default empty page xml
+        # TODO: figure out the best way to define this default pagesheet XML
+        # For example, python-docx has a 'template.docx' file which is copied.
         new_pagesheet_attribs = {
             'FillStyle': '0',
             'LineStyle': '0',
             'TextStyle': '0'
         }
-        new_page_rel = {
-            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id' : new_page_relid
-        }
-
-        new_page_element = Element(f'{namespace}Page', new_page_attribs)
-        # TODO: figure out the best way to define this default pagesheet XML
-        # For example, python-docx has a 'template.docx' file which is copied.
         new_pagesheet_element = Element(f'{namespace}PageSheet', new_pagesheet_attribs)
         new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageWidth', 'V':'8.26771653543307'}))
         new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageHeight', 'V':'11.69291338582677'}))
@@ -286,49 +376,26 @@ class VisioFile:
         new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'DrawingResizeType', 'V':'1'}))
         new_pagesheet_element.append(Element(f'{namespace}Cell', {'N':'PageShapeSplit', 'V':'1'}))
 
-        new_page_element.append(new_pagesheet_element)
-        new_page_element.append(Element(f'{namespace}Rel', new_page_rel))
-        self.pages_xml.getroot().insert(index, new_page_element)
-
-        # update [Content_Types].xml
-        content_types = self.content_types_xml.getroot()
-        content_types_attribs = {
-            'PartName'   : f'/visio/pages/{new_page_filename}',
-            'ContentType': 'application/vnd.ms-visio.page+xml'
+        new_page_attribs = {
+            'ID'   : str(self._get_max_page_id() + 1),
+            'NameU': new_page_name,
+            'Name' : new_page_name,
         }
-        cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
-        content_types_element = Element(f'{cont_types_namespace}Override', content_types_attribs)
+        new_page_element = Element(f'{namespace}Page', new_page_attribs)
+        new_page_element.append(new_pagesheet_element)
 
-        # add the new element after the last such element
-        # first find the index:
-        all_page_overrides = content_types.findall(
-            f'{cont_types_namespace}Override[@ContentType="application/vnd.ms-visio.page+xml"]'
+        new_page_rel = {
+            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id' : new_page_relid
+        }
+        new_page_element.append(Element(f'{namespace}Rel', new_page_rel))
+
+        # create the new page
+        new_page =  self._create_page(
+            new_page_xml_str = f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>",
+            page_name = new_page_name,
+            new_page_element = new_page_element,
+            index = index
         )
-        idx = list(content_types).index(all_page_overrides[-1])
-
-        # then add it:
-        content_types.insert(idx+1, content_types_element)
-
-        # update app.xml
-        # strictly speaking, this is optional, but we're doing what MS Visio does.
-        ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
-        vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
-
-        TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
-        vector = TitlesOfParts.find(f'{vt_namespace}vector')
-
-        lpstr = Element(f'{vt_namespace}lpstr')
-        lpstr.text = new_page_name
-        vector.append(lpstr)
-        vector_size = int(vector.attrib['size'])
-        vector.set('size', str(vector_size+1))
-
-        # Update VisioFile object
-        new_page = VisioFile.Page(new_page_xml, new_page_path, new_page_name, self)
-
-        self.pages.append(new_page)
-        self.page_xml_by_file_path[new_page_path] = new_page_xml
-        self.page_max_ids[new_page_path] = 0
 
         return new_page
 
@@ -340,8 +407,48 @@ class VisioFile:
 
         :return: Page object representing the new page
         """
-        end_of_file = len(self.pages)
-        return self.add_page_at(end_of_file, name)
+
+        return self.add_page_at(PagePosition.LAST, name)
+
+    def copy_page(self, page: VisioFile.Page, *, index: Optional[int] = PagePosition.AFTER, name: Optional[str] = None) -> VisioFile.Page:
+
+        # Determine the new page's name
+        new_page_name = self._get_new_page_name(name or page.name)
+
+        # Determine the new page's filename
+        new_page_filename = f'page{len(self.pages) + 1}.xml'
+
+        # Add reference to the new page in pages.xml.rels and get new relid
+        new_page_relid = self._update_pages_xml_rels(new_page_filename)
+
+        # Copy the source page and update relevant attributes
+        page_element = self.pages_xml.find(f"{namespace}Page[@Name='{page.name}']")
+        new_page_element = ET.fromstring(ET.tostring(page_element))
+
+        new_page_element.attrib['ID']    = str(self._get_max_page_id() + 1)
+        new_page_element.attrib['NameU'] = new_page_name
+        new_page_element.attrib['Name']  = new_page_name
+        new_page_element.find(f'{namespace}Rel').attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id'] = new_page_relid
+
+        # create the new page
+        new_page = self._create_page(
+            new_page_xml_str = ET.tostring(page.xml.getroot()),
+            page_name = new_page_name,
+            new_page_element = new_page_element,
+            index = index,
+        )
+
+        # copy pageX.xml.rels if it exists
+        # from testing, this does not actually seem to make a difference
+        _, original_filename = os.path.split(page.filename)
+        page_xml_rels_file = f'{self.directory}/visio/pages/_rels/{original_filename}.rels'  # TODO: better concatenation
+        new_page_xml_rels_file = f'{self.directory}/visio/pages/_rels/{new_page_filename}.rels'  # TODO: better concatenation
+        try:
+            shutil.copy(page_xml_rels_file, new_page_xml_rels_file)
+        except FileNotFoundError:
+            pass
+
+        return new_page
 
     def get_shape_max_id(self, shape_xml: ET.Element):
         max_id = int(self.get_shape_id(shape_xml))
