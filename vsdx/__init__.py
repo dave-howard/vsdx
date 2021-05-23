@@ -410,9 +410,7 @@ class VisioFile:
             for key in context.keys():
                 r_key = "{{" + key + "}}"
                 text = text.replace(r_key, str(context[key]))
-
             VisioFile.set_shape_text(shape, text)
-
 
         for shape in shapes.findall(f"{namespace}Shapes"):
                 VisioFile.apply_text_context(shape, context)  # recursive call
@@ -421,7 +419,6 @@ class VisioFile:
         for shape in shapes.findall(f"{namespace}Shape"):
             _replace_shape_text(shape, context)
 
-
     def jinja_render_vsdx(self, context: dict):
         # parse each shape in each page as Jinja2 template with context
         for page in self.pages:  # type: VisioFile.Page
@@ -429,10 +426,13 @@ class VisioFile:
             for shapes in page.shapes:  # type: VisioFile.Shape
                 prev_shape = None
                 for shape in shapes.sub_shapes():  # type: VisioFile.Shape
+                    # manage for loops in template
                     loop_shape_id = VisioFile.jinja_create_for_loop_if(shape, prev_shape)
                     if loop_shape_id:
                         loop_shape_ids.append(loop_shape_id)
                     prev_shape = shape
+                    # manage 'set self' statements
+                    VisioFile.jinja_set_selfs(shape)
 
             source = ET.tostring(page.xml.getroot(), encoding='unicode')
             source = VisioFile.unescape_jinja_statements(source)  # unescape chars like < and > inside {%...%}
@@ -451,6 +451,26 @@ class VisioFile:
                         self.increment_sub_shape_ids(shape, page.filename)
                         delta += shape.height  # automatically move each duplicate down
                         shape.move(0, -delta)  # move duplicated shapes so they are visible
+
+    @staticmethod
+    def jinja_set_selfs(shape: VisioFile.Shape):
+        # apply any {% self self.xxx = yyy %} statements in shape properties
+        jinja_source = shape.text
+        matches = re.findall('{% set self.(.*?)\s?=\s?(.*?) %}', jinja_source)  # non-greedy search for all {%...%} strings
+        for m in matches:  # type: tuple  # expect ('property', 'value') such as ('x', '10') or ('y', 'n*2')
+            property_name = m[0]
+            value = "{{ "+m[1]+" }}"  # Jinja to be processed
+            # todo: replace any self references in value with actual value - i.e. {% set self.x = self.x+1 %}
+            if property_name in ['x', 'y']:
+                print(f"DEBUG: setting prop:{property_name}={value} for shape id={shape.ID}")
+                shape.__setattr__(property_name, value)
+
+        # remove any {% set self %} statements, leaving any remaining text
+        matches = re.findall('{% set self.*?%}', jinja_source)
+        for m in matches:
+            jinja_source = jinja_source.replace(m, '')  # remove Jinja 'set self' statement
+            print(f"DEBUG: removed '{m}' from shape.text id={shape.ID}")
+        shape.text = jinja_source
 
     @staticmethod
     def unescape_jinja_statements(jinja_source):

@@ -57,6 +57,10 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.4.0: Added `VisioFile.jinja_set_selfs` to allow setting shape x and
+  y properties in Jinja template. Setting values, calculations, or if
+  statements are supported e.g. `{% set self.x = 1.5 %}` or `{% set
+  self.y = n * 3 %}` or `{% set self.x = 1.0 if n else 2.0 %}`
 - v0.3.5: Added `VisioFile.add_page()` method and tests
 - v0.3.4: Added `VisioFile.remove_page_by_index()` method to remove a
   page, with associated test
