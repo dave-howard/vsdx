@@ -200,8 +200,11 @@ class VisioFile:
             del self.page_xml_by_file_path[page.filename]
             del self.pages[index]
 
-    def add_page(self, name: Optional[str] = None) -> VisioFile.Page:
-        """Add a new page at the end of the VisioFile
+    def add_page_at(self, index: int, name: Optional[str] = None) -> VisioFile.Page:
+        """Add a new page at the specified index of the VisioFile
+
+        :param index: zero-based index where the new page will be placed
+        :type index: int
 
         :param name: The name of the new page
         :type name: str, optional
@@ -214,7 +217,6 @@ class VisioFile:
         # Add to visio\pages\pages.xml
         # Add to [Content_Types].xml
         # Add to docProps\app.xml
-        # ?? Create visio\pages\_rels\page.xml.rels -> I think this is to refer to masters files for shapes in the page
 
         page_dir = f'{self.directory}/visio/pages/'
 
@@ -286,7 +288,7 @@ class VisioFile:
 
         new_page_element.append(new_pagesheet_element)
         new_page_element.append(Element(f'{namespace}Rel', new_page_rel))
-        self.pages_xml.getroot().append(new_page_element)
+        self.pages_xml.getroot().insert(index, new_page_element)
 
         # update [Content_Types].xml
         content_types = self.content_types_xml.getroot()
@@ -329,6 +331,17 @@ class VisioFile:
         self.page_max_ids[new_page_path] = 0
 
         return new_page
+
+    def add_page(self, name: Optional[str] = None) -> VisioFile.Page:
+        """Add a new page at the end of the VisioFile
+
+        :param name: The name of the new page
+        :type name: str, optional
+
+        :return: Page object representing the new page
+        """
+        end_of_file = len(self.page_objects)
+        return self.add_page_at(end_of_file, name)
 
     def get_shape_max_id(self, shape_xml: ET.Element):
         max_id = int(self.get_shape_id(shape_xml))
