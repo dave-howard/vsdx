@@ -30,16 +30,11 @@ class VisioFile:
     :param filename: filename the :class:`VisioFile` was created from
     :type filename: str
     :param pages: a list of pages in the VisioFile
-    :type page_xml_by_name: list of :class:`Page`
+    :type pages: list of :class:`Page`
+    :param master_pages: a list of master pages in the VisioFile
+    :type master_pages: list of :class:`Page`
 
-    Attributes:
-        filename (str): the vsdx file the VisioFile has been created from
-        pages (dict): dictionary of XML objects by page name
-        page_objects (list): list of Page objects
-        master_pages (dict): ist of XML objects by page name
-        master_page_objects (list): list of Page objects
-
-    Contains Page, Shape and Connect sub-classes
+    Contains :class:`Page`, :class:`Shape`, :class:`Connect` and :class:`Cell` sub-classes
     """
     def __init__(self, filename, debug: bool = False):
         """VisioFile constructor
@@ -58,10 +53,10 @@ class VisioFile:
         self.pages_xml_rels = None
         self.content_types_xml = None
         self.app_xml = None
-        self.page_xml_by_name = dict()  # list of XML objects by page name, populated by open_vsdx_file()
+        self.page_xml_by_file_path = dict()  # list of XML objects by file path, populated by open_vsdx_file()
         self.pages = list()  # list of Page objects, populated by open_vsdx_file()
         self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
-        self.master_page_xml_by_name = dict()  # list of XML objects by page name, populated by open_vsdx_file()
+        self.master_page_xml_by_file_path = dict()  # list of XML objects by file path, populated by open_vsdx_file()
         self.master_pages = list()  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
 
@@ -86,7 +81,7 @@ class VisioFile:
         self.load_pages()
         self.load_master_pages()
 
-        return self.page_xml_by_name
+        return self.page_xml_by_file_path
 
     def _pages_filename(self):
         page_dir = f'{self.directory}/visio/pages/'
@@ -129,7 +124,7 @@ class VisioFile:
 
             self.pages.append(VisioFile.Page(file_to_xml(page_path), page_path, page_name, self))
 
-        self.page_xml_by_name = page_dict
+        self.page_xml_by_file_path = page_dict
 
         self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml')
         # TODO: add correctness cross-check. Or maybe the other way round, start from [Content_Types].xml
@@ -152,7 +147,7 @@ class VisioFile:
                 master_data = file_to_xml(master_path)  # contains master page xml
                 master = master_data.getroot() if master_data else None
                 if master:
-                    self.master_page_xml_by_name[master_path] = master  # add master xml to VisioFile.master_pages
+                    self.master_page_xml_by_file_path[master_path] = master  # add master xml to VisioFile.master_pages
                     master_page = VisioFile.Page(master_data, master_path, master_id, self)
                     self.master_pages.append(master_page)
                     if self.debug:
@@ -202,7 +197,7 @@ class VisioFile:
         if page:
             self.pages_xml.getroot().remove(page)
             page = self.pages[index]  # type: VisioFile.Page
-            del self.page_xml_by_name[page.filename]
+            del self.page_xml_by_file_path[page.filename]
             del self.pages[index]
 
     def add_page(self, name: Optional[str] = None) -> VisioFile.Page:
@@ -226,7 +221,7 @@ class VisioFile:
         # create page.xml
         #TODO: figure out the best way to define this default page XML
         new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
-        new_page_filename = f'page{len(self.page_xml_by_name) + 1}.xml'
+        new_page_filename = f'page{len(self.page_xml_by_file_path) + 1}.xml'
         new_page_path = page_dir+new_page_filename
 
         # update pages.xml.rels
@@ -243,7 +238,7 @@ class VisioFile:
 
         # update pages.xml
         page_names = [page.name for page in self.pages]
-        new_page_name = name or f'Page-{len(self.page_xml_by_name) + 1}'
+        new_page_name = name or f'Page-{len(self.page_xml_by_file_path) + 1}'
         i = 1
         while new_page_name in page_names:
             new_page_name = f'{new_page_name}-{i}'  # Page-X-i
@@ -330,7 +325,7 @@ class VisioFile:
         new_page = VisioFile.Page(new_page_xml, new_page_path, new_page_name, self)
 
         self.pages.append(new_page)
-        self.page_xml_by_name[new_page_path] = new_page_xml
+        self.page_xml_by_file_path[new_page_path] = new_page_xml
         self.page_max_ids[new_page_path] = 0
 
         return new_page
@@ -346,7 +341,7 @@ class VisioFile:
 
     def set_page_max_id(self, page_path) -> ET:
 
-        page = self.page_xml_by_name[page_path]  # type: Element
+        page = self.page_xml_by_file_path[page_path]  # type: Element
         max_id = 0
         shapes_xml = page.find(f"{namespace}Shapes")
         if shapes_xml is not None:
@@ -544,7 +539,7 @@ class VisioFile:
         self.update_ids(new_shape, id_map)
         shapes_tag.append(new_shape)
 
-        self.page_xml_by_name[page_path] = page
+        self.page_xml_by_file_path[page_path] = page
         return new_shape
 
     def insert_shape(self, shape: Element, shapes: Element, page: ET, page_path: str) -> ET:
