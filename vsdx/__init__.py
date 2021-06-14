@@ -445,7 +445,7 @@ class VisioFile:
                         loop_shape_ids.append(loop_shape_id)
                     prev_shape = shape
                     # manage 'set self' statements
-                    VisioFile.jinja_set_selfs(shape)
+                    VisioFile.jinja_set_selfs(shape, context)
 
             source = ET.tostring(page.xml.getroot(), encoding='unicode')
             source = VisioFile.unescape_jinja_statements(source)  # unescape chars like < and > inside {%...%}
@@ -466,7 +466,7 @@ class VisioFile:
                         shape.move(0, -delta)  # move duplicated shapes so they are visible
 
     @staticmethod
-    def jinja_set_selfs(shape: VisioFile.Shape):
+    def jinja_set_selfs(shape: VisioFile.Shape, context: dict):
         # apply any {% self self.xxx = yyy %} statements in shape properties
         jinja_source = shape.text
         matches = re.findall('{% set self.(.*?)\s?=\s?(.*?) %}', jinja_source)  # non-greedy search for all {%...%} strings
@@ -474,15 +474,20 @@ class VisioFile:
             property_name = m[0]
             value = "{{ "+m[1]+" }}"  # Jinja to be processed
             # todo: replace any self references in value with actual value - i.e. {% set self.x = self.x+1 %}
+            self_refs = re.findall('self.(.*)[\s+-/*//]?', m[1])  # greedy search for all self.? between +, -, *, or /
+            for self_ref in self_refs:  # type: tuple  # expect ('property', 'value') such as ('x', '10') or ('y', 'n*2')
+                ref_val = str(shape.__getattribute__(self_ref[0]))
+                value = value.replace('self.'+self_ref[0], ref_val)
+            # use Jinja template to calculate any self refs found
+            template = Template(value)  # value might be '{{ 1.0+2.4*3 }}'
+            value = template.render(context)
             if property_name in ['x', 'y']:
-                print(f"DEBUG: setting prop:{property_name}={value} for shape id={shape.ID}")
                 shape.__setattr__(property_name, value)
 
         # remove any {% set self %} statements, leaving any remaining text
         matches = re.findall('{% set self.*?%}', jinja_source)
         for m in matches:
             jinja_source = jinja_source.replace(m, '')  # remove Jinja 'set self' statement
-            print(f"DEBUG: removed '{m}' from shape.text id={shape.ID}")
         shape.text = jinja_source
 
     @staticmethod

@@ -555,6 +555,34 @@ def test_jinja_self_refs(filename: str, context: dict, shape_id, expected_x, exp
         assert shape.text == expected_text
 
 
+@pytest.mark.parametrize(
+    ("filename", "context", "shape_id", "expected_y", "expected_text"),
+    [("test_jinja_self_refs.vsdx", {"n": 2}, "4", 10.12368731806121, "This shape should move down by 1.0\n"),
+     ("test_jinja_self_refs.vsdx", {"n": 1}, "5", 8.726049539918966, "This shape should move down by n\n"),
+     ("test_jinja_self_refs.vsdx", {"n": 2}, "5", 7.726049539918966, "This shape should move down by n\n"),
+     ])
+def test_jinja_self_ref_calculations(filename: str, context: dict, shape_id, expected_y, expected_text):
+    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_jinja_self_ref_calcs.vsdx'
+    with VisioFile(basedir+filename) as vis:
+        page = vis.pages[0]  # type: VisioFile.Page
+        # there should be one shape on page 0
+        shape = page.find_shape_by_id(shape_id)  # type: VisioFile.Shape
+        if shape:
+            print(f"DEBUG: ID={shape.ID} shape.text={shape.text}")
+            print(f"DEBUG: ID={shape.ID} shape.y={shape.y}")
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and check shape has moved
+    with VisioFile(out_file) as vis:
+        page = vis.pages[0]
+        shape = page.find_shape_by_id(shape_id)  # type: VisioFile.Shape
+        print(f"DEBUG: ID={shape.ID} shape.text='{shape.text}' expected='{expected_text}'")
+        print(f"DEBUG: ID={shape.ID} shape.x={shape.y}")
+        assert shape.y == expected_y
+        assert shape.text == expected_text
+
+
 @pytest.mark.parametrize(("filename", "shape_elements"), [("test1.vsdx", 4), ("test2.vsdx", 14), ("test3_house.vsdx", 10)])
 def test_xml_findall_shapes(filename: str, shape_elements: int):
     with VisioFile(basedir+filename) as vis:
