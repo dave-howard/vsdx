@@ -57,6 +57,8 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.4.1: Added support for self referencing calculations in Jinja statements, 
+  such as `{% set self.x = self x + n * 3.2 %}`
 - v0.4.0: Added `VisioFile.jinja_set_selfs` to allow setting shape x and
   y properties in Jinja template. Setting values, calculations, or if
   statements are supported e.g. `{% set self.x = 1.5 %}` or `{% set

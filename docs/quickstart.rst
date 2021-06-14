@@ -6,11 +6,11 @@ You can start using vdsx in just a few lines of code!
 Installation
 ------------
 
-vsdx is a python package - so like any package you can install along with any missing dependencies using pip.
+vsdx is a python package - so like any package you can install from the terminal along with any missing dependencies using pip.
 
-pip install vsdx
+``pip install vsdx``
 
-note: You will need python 3.7+ to use vsdx
+**Note:** You will need `Python 3.7+` to use vsdx
 
 Opening your first vsdx file
 ----------------------------
