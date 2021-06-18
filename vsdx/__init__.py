@@ -61,7 +61,6 @@ class VisioFile:
         self.pages_xml_rels = None
         self.content_types_xml = None
         self.app_xml = None
-        self.page_xml_by_file_path = dict()  # list of XML objects by file path, populated by open_vsdx_file()
         self.pages = list()  # list of Page objects, populated by open_vsdx_file()
         self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
         self.master_page_xml_by_file_path = dict()  # list of XML objects by file path, populated by open_vsdx_file()
@@ -88,8 +87,6 @@ class VisioFile:
         # load each page file into an ElementTree object
         self.load_pages()
         self.load_master_pages()
-
-        return self.page_xml_by_file_path
 
     def _pages_filename(self):
         page_dir = f'{self.directory}/visio/pages/'
@@ -132,7 +129,6 @@ class VisioFile:
 
             self.pages.append(VisioFile.Page(file_to_xml(page_path), page_path, page_name, self))
 
-        self.page_xml_by_file_path = page_dict
 
         self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml')
         # TODO: add correctness cross-check. Or maybe the other way round, start from [Content_Types].xml
@@ -205,13 +201,24 @@ class VisioFile:
         if page:
             self.pages_xml.getroot().remove(page)
             page = self.pages[index]  # type: VisioFile.Page
-            del self.page_xml_by_file_path[page.filename]
             del self.pages[index]
 
     def _update_pages_xml_rels(self, new_page_filename: str) -> int:
         '''Updates the pages.xml.rels file with a reference to the new page and returns the new relid
         '''
 
+<<<<<<< HEAD
+=======
+        page_dir = f'{self.directory}/visio/pages/'
+
+        # create page.xml
+        #TODO: figure out the best way to define this default page XML
+        new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
+        new_page_filename = f'page{len(self.pages) + 1}.xml'
+        new_page_path = page_dir+new_page_filename
+
+        # update pages.xml.rels
+>>>>>>> 39d3dd9 (Remove or replace references to page_xml_by_file_path)
         max_relid = max(self.pages_xml_rels.getroot(), key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
         max_relid = int(max_relid.attrib['Id'][3:]) if max_relid is not None else 0
         new_page_relid = f'rId{max_relid + 1}'  # Most likely will be equal to len(self.pages)+1
@@ -223,9 +230,15 @@ class VisioFile:
         }
         self.pages_xml_rels.getroot().append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
 
+<<<<<<< HEAD
         return new_page_relid
 
     def _get_new_page_name(self, new_page_name: str) -> str:
+=======
+        # update pages.xml
+        page_names = [page.name for page in self.pages]
+        new_page_name = name or f'Page-{len(self.pages) + 1}'
+>>>>>>> 39d3dd9 (Remove or replace references to page_xml_by_file_path)
         i = 1
         while new_page_name in self.get_page_names():
             new_page_name = f'{new_page_name}-{i}'  # Page-X-i
@@ -323,7 +336,6 @@ class VisioFile:
         new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)
 
         self.pages.append(new_page)
-        self.page_xml_by_file_path[new_page_path] = new_page_xml
         self.page_max_ids[new_page_path] = 0
 
         return new_page
@@ -461,7 +473,10 @@ class VisioFile:
 
     def set_page_max_id(self, page_path) -> ET:
 
-        page = self.page_xml_by_file_path[page_path]  # type: Element
+        for page in self.pages:
+            if page.filename == page_path:
+                break
+        page = page.xml  # type: Element
         max_id = 0
         shapes_xml = page.find(f"{namespace}Shapes")
         if shapes_xml is not None:
@@ -684,7 +699,6 @@ class VisioFile:
         self.update_ids(new_shape, id_map)
         shapes_tag.append(new_shape)
 
-        self.page_xml_by_file_path[page_path] = page
         return new_shape
 
     def insert_shape(self, shape: Element, shapes: Element, page: ET, page_path: str) -> ET:

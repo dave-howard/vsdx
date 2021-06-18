@@ -611,13 +611,13 @@ def test_xml_findall_group_shapes(filename: str, group_shape_elements: int):
 def test_remove_page_by_index(filename: str, page_index: int):
     out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_remove_page.vsdx'
     with VisioFile(basedir+filename) as vis:
-        page_count = len(vis.page_xml_by_file_path)
+        page_count = len(vis.pages)
         vis.remove_page_by_index(page_index)
         vis.save_vsdx(out_file)
 
     # re-open file and confirm it has one less page
     with VisioFile(out_file) as vis:
-        assert len(vis.page_xml_by_file_path) == page_count - 1
+        assert len(vis.pages) == page_count - 1
 
 
 @pytest.mark.skip('master inheritence not yet implemented')
