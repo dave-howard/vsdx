@@ -158,16 +158,17 @@ class VisioFile:
         masters_path = f'{self.directory}/visio/masters/masters.xml'
         masters_data = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
         masters = masters_data.getroot() if masters_data else None
-        master_elements = masters.findall(f"{namespace}Master")
-        r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
-        # dict comprehension
-        self.master_id_to_path = {
-            m.attrib['ID']: relid_to_path[m.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]]
-            for m in master_elements
-        }
+        if masters is not None:
+            master_elements = masters.findall(f"{namespace}Master")
+            r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+            # dict comprehension
+            self.master_id_to_path = {
+                m.attrib['ID']: relid_to_path[m.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]]
+                for m in master_elements
+            }
 
-        if self.debug:
-            print(f"Masters({masters_path})", VisioFile.pretty_print_element(masters))
+            if self.debug:
+                print(f"Masters({masters_path})", VisioFile.pretty_print_element(masters))
 
         return
 
@@ -902,7 +903,7 @@ class VisioFile:
                 return master_cell.attrib['V']
 
             if self.master_shape_ID is not None:
-                breakpoint()
+                pass
 
         def set_cell_value(self, name: str, value: str):
             cell = self.cells.get(name)
