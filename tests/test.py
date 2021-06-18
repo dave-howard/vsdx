@@ -650,7 +650,7 @@ def test_remove_page_by_index(filename: str, page_index: int):
         assert len(vis.pages) == page_count - 1
 
 
-@pytest.mark.skip('master inheritence not yet implemented')
+#@pytest.mark.skip('master inheritence not yet implemented')
 @pytest.mark.parametrize(("filename"),
                          [('test5_master.vsdx')])
 def test_master_inheritance(filename: str):
@@ -669,6 +669,7 @@ def test_master_inheritance(filename: str):
                 # nte this is not the correct link to master shape
                 master_shape = master_page.find_shape_by_id(sub.master_shape_ID)
                 print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
+            print('---------------')
 
         # these tests fail until master shape link in place for Shape.text
         assert shape_a

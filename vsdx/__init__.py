@@ -158,10 +158,11 @@ class VisioFile:
         masters_path = f'{self.directory}/visio/masters/masters.xml'
         masters_data = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
         masters = masters_data.getroot() if masters_data else None
-        master_elements = masters.findall(namespace+'Master')
-        r = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+        master_elements = masters.findall(f"{namespace}Master")
+        r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+        # dict comprehension
         self.master_id_to_path = {
-            m.attrib['ID']: relid_to_path[m.find(namespace+'Rel').attrib[r+'id']]
+            m.attrib['ID']: relid_to_path[m.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]]
             for m in master_elements
         }
 
@@ -885,12 +886,12 @@ class VisioFile:
             new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
 
-        
+
         def get_cell_from_master(self, name:str) -> ET.Element:
             master_path = self.page.vis.master_id_to_path[self.master_ID]
-            master_xml = self.page.vis.master_pages[master_path]
+            master_xml = self.page.vis.master_page_xml_by_file_path[master_path]
             return master_xml.find(f'.//{namespace}Shape/{namespace}Cell[@N="{name}"]')
-            
+
         def cell_value(self, name: str):
             cell = self.cells.get(name)
             if cell:
@@ -898,44 +899,15 @@ class VisioFile:
 
             if self.master_ID is not None:
                 master_cell = self.get_cell_from_master(name)
-                cell = VisioFile.Cell(xml=master_cell, shape=None)  # shape=None is enough for a temp. instance for easier interface
-                return cell.value
+                return master_cell.attrib['V']
 
-            # TODO: if self.master_Shape_ID
+            if self.master_shape_ID is not None:
+                breakpoint()
 
         def set_cell_value(self, name: str, value: str):
             cell = self.cells.get(name)
             if cell:  # only set value of existing item
                 cell.value = value
-
-            elif self.master_ID is not None:
-                # copy the cell from the master
-                # change the relevant value
-                master_cell = self.get_cell_from_master(name)
-                new_cell_xml = ET.fromstring(ET.tostring(master_cell))
-                new_cell = VisioFile.Cell(xml=new_cell_xml, shape=self)
-                new_cell.value = value
-                self.cells[new_cell.name] = new_cell
-                self.xml.append(new_cell.xml)
-                
-                # the below is probably useful only for Height and Width. tbc.
-                # find ALL cells with a formula that uses the updated cell
-                # update each cell with the new value
-                #   - this means getting the relevant ancestors, creating them for the Shape, etc
-                #   - for every updated cell, see if there are reference to that, etc
-                # note: it might also be a text entry which refers to the given Cell
-                master_path = self.page.vis.master_id_to_path[self.master_ID]
-                master_xml = self.page.vis.master_pages[master_path]
-                cells_with_F = master_xml.findall(f'.//{namespace}Cell[@F]')
-                for cell in cells_with_F:
-                    if name in cell.attrib.get('F'):
-                        print(VisioFile.Cell(cell, None))
-                        ancestors = list()
-                        parent = cell.find()
-                        while parent is not None:
-                            
-                        # AND NOW PARSE IT!
-                        
 
         @property
         def x(self):
@@ -1016,6 +988,15 @@ class VisioFile:
         def text(self):
             text = ""
             t = self.xml.find(f"{namespace}Text")
+
+            if t is None:
+                if self.master_ID is not None:
+                    master_path = self.page.vis.master_id_to_path[self.master_ID]
+                    master_xml = self.page.vis.master_page_xml_by_file_path[master_path]
+                    t = master_xml.find(f'.//{namespace}Shape/{namespace}Text')
+
+                    # TODO: elif self.master_Shape_ID is  not None:
+
             if t is not None:
                 text = "".join(t.itertext())
             return text
