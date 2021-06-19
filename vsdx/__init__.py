@@ -80,7 +80,7 @@ class VisioFile:
         else:
             return f"Not an Element. type={type(xml)}"
 
-    def open_vsdx_file(self) -> dict:  # returns a dict of each page as ET with filename as key
+    def open_vsdx_file(self):
         with zipfile.ZipFile(self.filename, "r") as zip_ref:
             zip_ref.extractall(self.directory)
 
@@ -207,18 +207,6 @@ class VisioFile:
         '''Updates the pages.xml.rels file with a reference to the new page and returns the new relid
         '''
 
-<<<<<<< HEAD
-=======
-        page_dir = f'{self.directory}/visio/pages/'
-
-        # create page.xml
-        #TODO: figure out the best way to define this default page XML
-        new_page_xml = ET.ElementTree(ET.fromstring(f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>"))
-        new_page_filename = f'page{len(self.pages) + 1}.xml'
-        new_page_path = page_dir+new_page_filename
-
-        # update pages.xml.rels
->>>>>>> 39d3dd9 (Remove or replace references to page_xml_by_file_path)
         max_relid = max(self.pages_xml_rels.getroot(), key=lambda rel: int(rel.attrib['Id'][3:]), default=None)  # 'rIdXX' -> XX
         max_relid = int(max_relid.attrib['Id'][3:]) if max_relid is not None else 0
         new_page_relid = f'rId{max_relid + 1}'  # Most likely will be equal to len(self.pages)+1
@@ -230,15 +218,9 @@ class VisioFile:
         }
         self.pages_xml_rels.getroot().append(Element('{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', new_page_rel))
 
-<<<<<<< HEAD
         return new_page_relid
 
     def _get_new_page_name(self, new_page_name: str) -> str:
-=======
-        # update pages.xml
-        page_names = [page.name for page in self.pages]
-        new_page_name = name or f'Page-{len(self.pages) + 1}'
->>>>>>> 39d3dd9 (Remove or replace references to page_xml_by_file_path)
         i = 1
         while new_page_name in self.get_page_names():
             new_page_name = f'{new_page_name}-{i}'  # Page-X-i
@@ -476,9 +458,9 @@ class VisioFile:
         for page in self.pages:
             if page.filename == page_path:
                 break
-        page = page.xml  # type: Element
+
         max_id = 0
-        shapes_xml = page.find(f"{namespace}Shapes")
+        shapes_xml = page.xml.find(f"{namespace}Shapes")
         if shapes_xml is not None:
             for shape in shapes_xml:
                 id = self.get_shape_max_id(shape)
