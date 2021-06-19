@@ -419,7 +419,17 @@ class VisioFile:
         return self.add_page_at(PagePosition.LAST, name)
 
     def copy_page(self, page: VisioFile.Page, *, index: Optional[int] = PagePosition.AFTER, name: Optional[str] = None) -> VisioFile.Page:
+        """Copy an existing page and insert in VisioFile
 
+        :param page: the :class Page: to copy
+        :type page: VisioFile.Page
+        :param index: the specific int or relation PagePosition location for new page
+        :type index: int or PagePosition
+        :param name: name of new page (note this may be altered if name already exists)
+        :type name: str
+
+        :return: the newly created page
+        """
         # Determine the new page's name
         new_page_name = self._get_new_page_name(name or page.name)
 
@@ -549,6 +559,15 @@ class VisioFile:
             _replace_shape_text(shape, context)
 
     def jinja_render_vsdx(self, context: dict):
+        """Transform a template VisioFile object using the Jinja language
+        The method updates the VisioFile object loaded from the template file, so does not return any value
+        Note: vsdx specific extensions are available such as `{% for item in list %}` statements with no `{% endfor %}`
+
+        :param context: A dictionary containing values that can be accessed by the Jinja processor
+        :type context: dict
+
+        :return: None
+        """
         # parse each shape in each page as Jinja2 template with context
         for page in self.pages:  # type: VisioFile.Page
             loop_shape_ids = list()
