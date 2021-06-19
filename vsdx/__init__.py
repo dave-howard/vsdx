@@ -30,6 +30,7 @@ class PagePosition(IntEnum):
     LAST  = -1
     END   = -1
     AFTER = -2
+    BEFORE= -3
 
 
 class VisioFile:
@@ -108,7 +109,7 @@ class VisioFile:
         relid_page_dict = {}
 
         for rel in rels:
-            rel_id=rel.attrib['Id']
+            rel_id = rel.attrib['Id']
             page_file = rel.attrib['Target']
             relid_page_dict[rel_id] = page_file
 
@@ -208,7 +209,7 @@ class VisioFile:
             del self.page_xml_by_file_path[page.filename]
             del self.pages[index]
 
-    def _update_pages_xml_rels(self, new_page_filename: str) -> int:
+    def _update_pages_xml_rels(self, new_page_filename: str) -> str:
         '''Updates the pages.xml.rels file with a reference to the new page and returns the new relid
         '''
 
@@ -239,16 +240,22 @@ class VisioFile:
 
         return max_page_id
 
-    def _get_index(self, *, index: int, page: VisioFile.Page):
-
-        if index == PagePosition.LAST:
-            index = len(self.pages)
-
-        elif index == PagePosition.AFTER:
-            # insert new page after the original page
-            # TODO: add error checking - page must be defined
-            orig_page_idx = self.pages.index(page)
-            index = orig_page_idx + 1
+    def _get_index(self, *, index: int, page: VisioFile.Page or None):
+        if type(index) is PagePosition:  # only update index if it is relative to source page
+            if index == PagePosition.LAST:
+                index = len(self.pages)
+            elif index == PagePosition.FIRST:
+                index = 0
+            elif page:  # need page for BEFORE or AFTER
+                orig_page_idx = self.pages.index(page)
+                if index == PagePosition.BEFORE:
+                    # insert new page at the original page's index
+                    index = orig_page_idx
+                elif index == PagePosition.AFTER:
+                    # insert new page after the original page
+                    index = orig_page_idx + 1
+            else:
+                index = len(self.pages)  # default to LAST if invalid Position/page combination
 
         return index
 
@@ -291,7 +298,8 @@ class VisioFile:
         new_page_xml_str: str,
         page_name: str,
         new_page_element: Element,
-        index: int,
+        index: int or PagePosition,
+        source_page: Optional[VisioFile.Page] = None,
     ) -> VisioFile.Page:
         # Create visio\pages\pageX.xml file
         # Add to visio\pages\_rels\pages.xml.rels
@@ -310,7 +318,7 @@ class VisioFile:
         # done by the caller
 
         # update pages.xml - insert the PageElement Element in it's correct location
-        index = self._get_index(index=index, page=None)
+        index = self._get_index(index=index, page=source_page)
         self.pages_xml.getroot().insert(index, new_page_element)
 
         # update [Content_Types].xml - insert reference to the new page
@@ -322,7 +330,7 @@ class VisioFile:
         # Update VisioFile object
         new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)
 
-        self.pages.append(new_page)
+        self.pages.insert(index, new_page)  # insert new page at defined index
         self.page_xml_by_file_path[new_page_path] = new_page_xml
         self.page_max_ids[new_page_path] = 0
 
@@ -390,7 +398,7 @@ class VisioFile:
         new_page_element.append(Element(f'{namespace}Rel', new_page_rel))
 
         # create the new page
-        new_page =  self._create_page(
+        new_page = self._create_page(
             new_page_xml_str = f"<?xml version='1.0' encoding='utf-8' ?><PageContents xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'/>",
             page_name = new_page_name,
             new_page_element = new_page_element,
@@ -436,6 +444,7 @@ class VisioFile:
             page_name = new_page_name,
             new_page_element = new_page_element,
             index = index,
+            source_page = page,
         )
 
         # copy pageX.xml.rels if it exists
@@ -543,9 +552,9 @@ class VisioFile:
         # parse each shape in each page as Jinja2 template with context
         for page in self.pages:  # type: VisioFile.Page
             loop_shape_ids = list()
-            for shapes in page.shapes:  # type: VisioFile.Shape
+            for shapes_by_id in page.shapes:  # type: VisioFile.Shape
                 prev_shape = None
-                for shape in shapes.sub_shapes():  # type: VisioFile.Shape
+                for shape in shapes_by_id.sub_shapes():  # type: VisioFile.Shape
                     # manage for loops in template
                     loop_shape_id = VisioFile.jinja_create_for_loop_if(shape, prev_shape)
                     if loop_shape_id:
@@ -563,10 +572,10 @@ class VisioFile:
             # update loop shape IDs
             page.set_max_ids()
             for shape_id in loop_shape_ids:
-                shapes = page.find_shapes_by_id(shape_id)
-                if shapes and len(shapes) > 1:
+                shapes_by_id = page.find_shapes_by_id(shape_id)  # type: List[VisioFile.Shape]
+                if shapes_by_id and len(shapes_by_id) > 1:
                     delta = 0
-                    for shape in shapes[1:]:  # from the 2nd onwards - leaving original unchanged
+                    for shape in shapes_by_id[1:]:  # from the 2nd onwards - leaving original unchanged
                         # increment each new shape duplicated by the jinja loop
                         self.increment_sub_shape_ids(shape, page.filename)
                         delta += shape.height  # automatically move each duplicate down
@@ -618,7 +627,7 @@ class VisioFile:
         return id_map
 
     @staticmethod
-    def jinja_create_for_loop_if(shape: VisioFile.Shape, previous_shape:VisioFile):
+    def jinja_create_for_loop_if(shape: VisioFile.Shape, previous_shape:VisioFile.Shape or None):
         # update a Shapes tag where text looks like a jinja {% for xxxx %} loop
         # move text to start of Shapes tag and add {% endfor %} at end of tag
         text = shape.text
@@ -738,7 +747,7 @@ class VisioFile:
         try:
             # Remove extracted folder
             shutil.rmtree(self.directory)
-        except FileNotFoundError:
+        except (FileNotFoundError, PermissionError):
             pass
 
     def save_vsdx(self, new_filename=None):
@@ -995,7 +1004,7 @@ class VisioFile:
                     if found:
                         return found
 
-        def find_shapes_by_text(self, text: str, shapes: list[VisioFile.Shape] = None) -> list[VisioFile.Shape]:
+        def find_shapes_by_text(self, text: str, shapes: List[VisioFile.Shape] = None) -> List[VisioFile.Shape]:
             # recursively search for shapes by text and return all matches
             if not shapes:
                 shapes = list()
@@ -1160,7 +1169,7 @@ class VisioFile:
                 if found:
                     return found
 
-        def find_shapes_by_text(self, text: str) -> list[VisioFile.Shape]:
+        def find_shapes_by_text(self, text: str) -> List[VisioFile.Shape]:
             shapes = list()
             for s in self.shapes:
                 found = s.find_shapes_by_text(text)
