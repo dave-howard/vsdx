@@ -9,7 +9,7 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/vsdx)
 [![vsdx](https://snyk.io/advisor/python/vsdx/badge.svg)](https://snyk.io/advisor/python/vsdx)
 
-__.vsdx files can processed in two ways, directly via python code as in
+__.vsdx files can be processed in two ways, directly via python code as in
 example 1 below, or indirectly using a jinja template as in example 2__
 
 For quick start documentation please see
