@@ -417,7 +417,7 @@ def test_shape_copy_other_page(filename: str, shape_name: str):
                          [('test5_master.vsdx', 1)])
 def test_load_master_file(filename: str, expected_length: int):
     with VisioFile(basedir+filename) as vis:
-        assert len(vis.master_page_xml_by_file_path) == expected_length
+        assert len(vis.master_pages) == expected_length
 
 
 @pytest.mark.parametrize(("filename", "shape_text"),

@@ -62,7 +62,6 @@ class VisioFile:
         self.content_types_xml = None
         self.app_xml = None
         self.pages = list()  # list of Page objects, populated by open_vsdx_file()
-        self.master_page_xml_by_file_path = dict()  # list of XML objects by file path, populated by open_vsdx_file()
         self.master_pages = list()  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
 
@@ -149,7 +148,6 @@ class VisioFile:
                 master_data = file_to_xml(master_path)  # contains master page xml
                 master = master_data.getroot() if master_data else None
                 if master:
-                    self.master_page_xml_by_file_path[master_path] = master  # add master xml to VisioFile.master_pages
                     master_page = VisioFile.Page(master_data, master_path, master_id, self)
                     self.master_pages.append(master_page)
                     if self.debug:
