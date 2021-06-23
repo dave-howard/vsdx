@@ -112,19 +112,18 @@ class VisioFile:
         self.pages_xml = file_to_xml(pages_filename)  # store xml so pages can be removed
         if self.debug:
             print(f"Pages({pages_filename})", VisioFile.pretty_print_element(pages))
-        page_dict = {}  # dict with filename as index
 
         for page in pages:  # type: Element
             rel_id = page[1].attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id']
             page_name = page.attrib['Name']
 
             page_path = page_dir + relid_page_dict.get(rel_id, None)
-            page_dict[page_path] = file_to_xml(page_path)
+
+            new_page = VisioFile.Page(file_to_xml(page_path), page_path, page_name, self)
+            self.pages.append(new_page)
 
             if self.debug:
-                print(f"Page({page_path})", VisioFile.pretty_print_element(page_dict[page_path].getroot()))
-
-            self.pages.append(VisioFile.Page(file_to_xml(page_path), page_path, page_name, self))
+                print(f"Page({new_page.filename})", VisioFile.pretty_print_element(new_page.xml.getroot()))
 
 
         self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml')
@@ -654,9 +653,13 @@ class VisioFile:
 
         return new_shape
 
-    def insert_shape(self, shape: Element, shapes: Element, page: VisioFile.Page) -> ET:
+    def insert_shape(self, shape: Element, shapes: Element, page: ET, page_path: str) -> ET:
         # insert shape into shapes tag, and return updated shapes tag
-        id_map = self.increment_shape_ids(shape, page)
+        for page_obj in self.pages:
+            if page_obj.filename == page_path:
+                break
+
+        id_map = self.increment_shape_ids(shape, page_obj)
         self.update_ids(shape, id_map)
         shapes.append(shape)
         return shapes
