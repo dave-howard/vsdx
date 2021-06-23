@@ -1011,7 +1011,7 @@ class VisioFile:
 
         def append_shape(self, append_shape: VisioFile.Shape):
             # insert shape into shapes tag, and return updated shapes tag
-            id_map = self.page.vis.increment_shape_ids(append_shape.xml, self.page.filename)
+            id_map = self.page.vis.increment_shape_ids(append_shape.xml, self.page)
             self.page.vis.update_ids(append_shape.xml, id_map)
             self.xml.append(append_shape.xml)
 
