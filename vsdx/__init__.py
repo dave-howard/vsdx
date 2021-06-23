@@ -62,7 +62,6 @@ class VisioFile:
         self.content_types_xml = None
         self.app_xml = None
         self.pages = list()  # list of Page objects, populated by open_vsdx_file()
-        self.page_max_ids = dict()  # maximum shape id, used to add new shapes with a unique Id
         self.master_page_xml_by_file_path = dict()  # list of XML objects by file path, populated by open_vsdx_file()
         self.master_pages = list()  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
@@ -125,7 +124,6 @@ class VisioFile:
 
             if self.debug:
                 print(f"Page({page_path})", VisioFile.pretty_print_element(page_dict[page_path].getroot()))
-            self.page_max_ids[page_path] = 0  # initialise page_max_ids dict for each page
 
             self.pages.append(VisioFile.Page(file_to_xml(page_path), page_path, page_name, self))
 
@@ -318,7 +316,6 @@ class VisioFile:
         new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)
 
         self.pages.append(new_page)
-        self.page_max_ids[new_page_path] = 0
 
         return new_page
 
@@ -444,33 +441,6 @@ class VisioFile:
 
         return new_page
 
-    def get_shape_max_id(self, shape_xml: ET.Element):
-        max_id = int(self.get_shape_id(shape_xml))
-        if shape_xml.attrib['Type'] == 'Group':
-            for shape in shape_xml.find(f"{namespace}Shapes"):
-                new_max = self.get_shape_max_id(shape)
-                if new_max > max_id:
-                    max_id = new_max
-        return max_id
-
-    def set_page_max_id(self, page_path) -> ET:
-
-        for page in self.pages:
-            if page.filename == page_path:
-                break
-
-        max_id = 0
-        shapes_xml = page.xml.find(f"{namespace}Shapes")
-        if shapes_xml is not None:
-            for shape in shapes_xml:
-                id = self.get_shape_max_id(shape)
-                if id > max_id:
-                    max_id = id
-
-        self.page_max_ids[page_path] = max_id
-
-        return max_id
-
     # TODO: dead code - never used
     def get_sub_shapes(self, shape: Element, nth=1):
         for e in shape:
@@ -565,7 +535,7 @@ class VisioFile:
                     delta = 0
                     for shape in shapes[1:]:  # from the 2nd onwards - leaving original unchanged
                         # increment each new shape duplicated by the jinja loop
-                        self.increment_sub_shape_ids(shape, page.filename)
+                        self.increment_sub_shape_ids(shape, page)
                         delta += shape.height  # automatically move each duplicate down
                         shape.move(0, -delta)  # move duplicated shapes so they are visible
 
@@ -604,14 +574,14 @@ class VisioFile:
             jinja_source_out = jinja_source_out.replace(m, unescaped)
         return jinja_source_out
 
-    def increment_sub_shape_ids(self, shape: VisioFile.Shape, page_path, id_map: dict=None):
-        id_map = self.increment_shape_ids(shape.xml, page_path, id_map)
+    def increment_sub_shape_ids(self, shape: VisioFile.Shape, page, id_map: dict=None):
+        id_map = self.increment_shape_ids(shape.xml, page, id_map)
         self.update_ids(shape.xml, id_map)
         for s in shape.sub_shapes():
-            id_map = self.increment_shape_ids(s.xml, page_path, id_map)
+            id_map = self.increment_shape_ids(s.xml, page, id_map)
             self.update_ids(s.xml, id_map)
             if s.sub_shapes():
-                id_map = self.increment_sub_shape_ids(s, page_path, id_map)
+                id_map = self.increment_sub_shape_ids(s, page, id_map)
         return id_map
 
     @staticmethod
@@ -669,7 +639,10 @@ class VisioFile:
 
         new_shape = ET.fromstring(ET.tostring(shape))
 
-        self.set_page_max_id(page_path)
+        for page_obj in self.pages:
+            if page_obj.filename == page_path:
+                break
+        page_obj.set_max_ids()
 
         # find or create Shapes tag
         shapes_tag = page.find(f"{namespace}Shapes")
@@ -677,37 +650,37 @@ class VisioFile:
             shapes_tag = Element(f"{namespace}Shapes")
             page.getroot().append(shapes_tag)
 
-        id_map = self.increment_shape_ids(new_shape, page_path)
+        id_map = self.increment_shape_ids(new_shape, page_obj)
         self.update_ids(new_shape, id_map)
         shapes_tag.append(new_shape)
 
         return new_shape
 
-    def insert_shape(self, shape: Element, shapes: Element, page: ET, page_path: str) -> ET:
+    def insert_shape(self, shape: Element, shapes: Element, page: VisioFile.Page) -> ET:
         # insert shape into shapes tag, and return updated shapes tag
-        id_map = self.increment_shape_ids(shape, page_path)
+        id_map = self.increment_shape_ids(shape, page)
         self.update_ids(shape, id_map)
         shapes.append(shape)
         return shapes
 
-    def increment_shape_ids(self, shape: Element, page_path: str, id_map: dict=None):
+    def increment_shape_ids(self, shape: Element, page: VisioFile.Page, id_map: dict=None):
         if id_map is None:
             id_map = dict()
-        self.set_new_id(shape, page_path, id_map)
+        self.set_new_id(shape, page, id_map)
         for e in shape.findall(f"{namespace}Shapes"):
-            self.increment_shape_ids(e, page_path, id_map)
+            self.increment_shape_ids(e, page, id_map)
         for e in shape.findall(f"{namespace}Shape"):
-            self.set_new_id(e, page_path, id_map)
+            self.set_new_id(e, page, id_map)
 
         return id_map
 
-    def set_new_id(self, element: Element, page_path: str, id_map: dict):
+    def set_new_id(self, element: Element, page: VisioFile.Page, id_map: dict):
         if element.attrib.get('ID'):
             current_id = element.attrib['ID']
-            max_id = self.page_max_ids[page_path] + 1
+            page.max_id += 1
+            max_id = page.max_id
             id_map[current_id] = max_id  # record mappings
             element.attrib['ID'] = str(max_id)
-            self.page_max_ids[page_path] = max_id
             return max_id  # return new id for info
         else:
             print(f"no ID attr in {element.tag}")
@@ -841,9 +814,9 @@ class VisioFile:
                 # or set parent_xml to source shapes own parent
                 parent_xml = self.parent_xml
 
-            page = page or self.page
-            new_shape_xml = self.page.vis.copy_shape(self.xml, page.xml, page.filename)
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=page)
+            dst_page = page or self.page
+            new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
+            return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
@@ -958,6 +931,15 @@ class VisioFile:
 
             shapes = [VisioFile.Shape(shape, parent_element, self.page) for shape in parent_element]
             return shapes
+
+        def get_max_id(self):
+            max_id = int(self.ID)
+            if self.shape_type == 'Group':
+                for shape in self.sub_shapes():
+                    new_max = shape.get_max_id()
+                    if new_max > max_id:
+                        max_id = new_max
+            return max_id
 
         def find_shape_by_id(self, shape_id: str) -> VisioFile.Shape:  # returns Shape
             # recursively search for shapes by text and return first match
@@ -1107,7 +1089,12 @@ class VisioFile:
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
-            self.max_id = self.vis.set_page_max_id(self.filename)
+            for shapes in self.shapes:
+                for shape in shapes.sub_shapes():
+                    id = shape.get_max_id()
+                    if id > self.max_id:
+                        self.max_id = id
+
             return self.max_id
 
         def get_connects(self):
