@@ -1,7 +1,8 @@
 import pytest
-from vsdx import VisioFile, namespace
+from vsdx import VisioFile, namespace, PagePosition
 from datetime import datetime
 import os
+from typing import List
 
 basedir = os.path.relpath(__file__)[:-7]  # remove last 7 chars to get directory
 
@@ -9,14 +10,14 @@ basedir = os.path.relpath(__file__)[:-7]  # remove last 7 chars to get directory
 def test_file_closure():
     filename = basedir+'test1.vsdx'
     directory = f"./{filename.rsplit('.', 1)[0]}"
-    with VisioFile(filename) as vis:
+    with VisioFile(filename):
         # confirm directory exists
         assert os.path.exists(directory)
     # confirm directory is gone
     assert not os.path.exists(directory)
 
 
-@pytest.mark.parametrize("filename, page_name", [("test1.vsdx","Page-1"), ("test2.vsdx", "Page-1")])
+@pytest.mark.parametrize("filename, page_name", [("test1.vsdx", "Page-1"), ("test2.vsdx", "Page-1")])
 def test_get_page(filename: str, page_name: str):
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
@@ -42,8 +43,8 @@ def test_get_page_sub_shapes(filename: str, count: int):
 
 
 @pytest.mark.parametrize("filename, expected_locations",
-                         [("test1.vsdx","1.33,10.66 4.13,10.66 6.94,10.66 2.33,9.02 "),
-                          ("test2.vsdx","2.33,8.72 1.33,10.66 4.13,10.66 5.91,8.72 1.61,8.58 3.25,8.65 ")])
+                         [("test1.vsdx", "1.33,10.66 4.13,10.66 6.94,10.66 2.33,9.02 "),
+                          ("test2.vsdx", "2.33,8.72 1.33,10.66 4.13,10.66 5.91,8.72 1.61,8.58 3.25,8.65 ")])
 def test_shape_locations(filename: str, expected_locations: str):
     print("=== list_shape_locations ===")
     with VisioFile(basedir+filename) as vis:
@@ -51,7 +52,7 @@ def test_shape_locations(filename: str, expected_locations: str):
         shapes = page.shapes[0].sub_shapes()
         locations = ""
         for s in shapes:  # type: VisioFile.Shape
-            locations+=f"{s.x:.2f},{s.y:.2f} "
+            locations += f"{s.x:.2f},{s.y:.2f} "
         print(f"Expected:{expected_locations}")
         print(f"  Actual:{locations}")
     assert locations == expected_locations
@@ -70,7 +71,7 @@ def test_apply_context(filename: str):
     date_str = str(datetime.today().date())
     context = {'scenario': 'test',
                'date': date_str}
-    out_file = basedir+'out'+ os.sep + filename[:-5] + '_VISfilter_applied.vsdx'
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_VISfilter_applied.vsdx'
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
         original_shape = page.shapes[0].find_shape_by_text('{{date}}')  # type: VisioFile.Shape
@@ -89,10 +90,10 @@ def test_apply_context(filename: str):
 def test_find_replace(filename: str):
     old = 'Shape'
     new = 'Figure'
-    out_file = basedir+'out'+ os.sep + filename[:-5] + '_VISfind_replace_applied.vsdx'
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_VISfind_replace_applied.vsdx'
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        original_shapes = page.find_shapes_by_text(old)  # type: VisioFile.Shape
+        original_shapes = page.find_shapes_by_text(old)  # type: List[VisioFile.Shape]
         shape_ids = [s.ID for s in original_shapes]
         page.find_replace(old, new)
         vis.save_vsdx(out_file)
@@ -125,9 +126,9 @@ def test_remove_shape(filename: str):
 
 
 @pytest.mark.parametrize(("filename", "shape_names", "shape_locations"),
-                         [("test1.vsdx", {"Shape to remove"}, {(1.0,1.0)})])
+                         [("test1.vsdx", {"Shape to remove"}, {(1.0, 1.0)})])
 def test_set_shape_location(filename: str, shape_names: set, shape_locations: set):
-    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_set_shape_location.vsdx'
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_set_shape_location.vsdx'
     with VisioFile(basedir+filename) as vis:
         shapes = vis.pages[0].shapes
         # move shapes in list
@@ -153,10 +154,10 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
 
 
 @pytest.mark.parametrize(("filename", "shape_names", "shape_x_y_deltas"),
-                         [("test1.vsdx", {"Shape to remove"}, {(1.0,1.0)}),
-                          ("test4_connectors.vsdx", {"Shape B"}, {(1.0,1.0)})])
+                         [("test1.vsdx", {"Shape to remove"}, {(1.0, 1.0)}),
+                          ("test4_connectors.vsdx", {"Shape B"}, {(1.0, 1.0)})])
 def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
-    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_move_shape.vsdx'
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_move_shape.vsdx'
     expected_shape_locations = dict()
 
     with VisioFile(basedir+filename) as vis:
@@ -185,7 +186,7 @@ def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
 
 
 @pytest.mark.parametrize(("filename", "expected_connects"),
-                         [('test4_connectors.vsdx', ["from 7 to 5","from 7 to 2", "from 6 to 2", "from 6 to 1"]),
+                         [('test4_connectors.vsdx', ["from 7 to 5", "from 7 to 2", "from 6 to 2", "from 6 to 1"]),
                           ])
 def test_find_page_connects(filename: str, expected_connects: list):
     with VisioFile(basedir+filename) as vis:
@@ -267,10 +268,10 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
 def test_vis_copy_shape(filename: str, shape_name: str):
-    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_vis_copy_shape.vsdx'
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_vis_copy_shape.vsdx'
 
     with VisioFile(basedir+filename) as vis:
-        page =  vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: VisioFile.Page
         # find and copy shape by name
         s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
         assert s  # check shape found
@@ -627,8 +628,8 @@ def test_master_inheritance(filename: str):
     with VisioFile(basedir+os.path.join(filename)) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
         master_page = vis.master_pages[0]  # type: VisioFile.Page
-        shape_a = page.find_shapes_by_text('Shape A')  # type: VisioFile.Shape
-        shape_b = page.find_shapes_by_text('Shape B')  # type: VisioFile.Shape
+        shape_a = page.find_shapes_by_text('Shape A')  # type: List[VisioFile.Shape]
+        shape_b = page.find_shapes_by_text('Shape B')  # type: List[VisioFile.Shape]
 
         for s in page.shapes[0].sub_shapes():
             print(f"\n\nshape {s.ID} '{s.text}' MasterShapeID:{s.master_shape_ID} MasterID:{s.master_ID}")
@@ -708,6 +709,7 @@ def test_add_page_at(filename: str, index: int, page_name: str):
         page = vis.get_page_by_name(new_page_name)
         assert page
 
+
 @pytest.mark.parametrize(('filename', 'index', 'page_name'),
                          [
                             ('test1.vsdx', -1, None),
@@ -732,3 +734,51 @@ def test_copy_page(filename: str, index: int, page_name: str):
     with VisioFile(out_file) as vis:
         page = vis.get_page_by_name(new_page_name)
         assert page
+
+
+@pytest.mark.parametrize(('filename', 'page_index_to_copy', 'in_page_name', 'out_page_name'),
+                         [
+                             ('test1.vsdx', 0, None, 'Page-1-1'),
+                             ('test1.vsdx', 0,  'newname', 'newname'),
+                             ('test1.vsdx', 0, 'Page-1', 'Page-1-1'),
+                             ('test1.vsdx', 1, None, 'Page-2-1'),
+                             ('test1.vsdx', 1,  'newname', 'newname'),
+                             ('test1.vsdx', 1, 'Page-1', 'Page-1-1'),
+                         ])
+def test_copy_page_naming(filename: str, page_index_to_copy:int, in_page_name: str, out_page_name: str):
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_copy_page_naming.vsdx'
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index_to_copy]  # type: VisioFile.Page
+        new_page = vis.copy_page(page, name=in_page_name)
+        print(f"in_page_name:{in_page_name} out_page_name:{out_page_name} actual:{new_page.name}")
+        assert new_page.name == out_page_name  # check new page has expected name
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page_by_name(out_page_name)
+        assert page  # check that page name persists through file save and open
+
+
+@pytest.mark.parametrize(('filename', 'page_index_to_copy', 'page_position', 'out_page_index'),
+                         [
+                             ('test1.vsdx', 0, PagePosition.LAST, 3),
+                             ('test1.vsdx', 0, PagePosition.BEFORE, 0),
+                             ('test1.vsdx', 0, PagePosition.AFTER, 1),
+                             ('test1.vsdx', 1, PagePosition.LAST, 3),
+                             ('test1.vsdx', 1, PagePosition.BEFORE, 1),
+                             ('test1.vsdx', 1, PagePosition.AFTER, 2),
+                         ])
+def test_copy_page_positions(filename: str, page_index_to_copy:int, page_position: PagePosition, out_page_index: int):
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_copy_page_position.vsdx'
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index_to_copy]  # type: VisioFile.Page
+        new_page = vis.copy_page(page, index=page_position)
+        index = vis.pages.index(new_page)
+        print(f"page_index_to_copy:{page_index_to_copy} page_position:{page_position} out_page_index:{out_page_index} actual:{index}")
+        assert index == out_page_index  # check new page has expected index
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page_by_name(new_page.name)
+        index = vis.pages.index(page)
+        assert index == out_page_index  # check that page location persists through file save and open
