@@ -584,6 +584,35 @@ def test_jinja_self_ref_calculations(filename: str, context: dict, shape_id, exp
         assert shape.text == expected_text
 
 
+@pytest.mark.parametrize(
+    ("filename", "context", "expected_page_count", "expected_page_names"),
+    [("test_jinja_page_showif.vsdx", {"show": True}, 2, ['Normal Page', 'Page2']),
+     ("test_jinja_page_showif.vsdx", {"show": 1}, 2, ['Normal Page', 'Page2']),
+     ("test_jinja_page_showif.vsdx", {"show": "true"}, 2, ['Normal Page', 'Page2']),
+     ("test_jinja_page_showif.vsdx", {"show": 4.0}, 2, ['Normal Page', 'Page2']),
+     ("test_jinja_page_showif.vsdx", {"show": False}, 2, ['Normal Page', 'Page3']),
+     ("test_jinja_page_showif.vsdx", {"show": []}, 2, ['Normal Page', 'Page3']),
+     ("test_jinja_page_showif.vsdx", {"show": {}}, 2, ['Normal Page', 'Page3']),
+     ])
+def test_jinja_page_showif(filename: str, context: dict, expected_page_count, expected_page_names):
+    out_file = f"{basedir}out{os.sep}{filename[:-5]}_show_{context['show']}.vsdx"
+    with VisioFile(basedir+filename) as vis:
+        print(f"len(vis.pages)={len(vis.pages)} context={context}")
+        for p in vis.pages: # type: VisioFile.Page
+            print(f"page:{p.name}")
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and check shape has moved
+    with VisioFile(out_file) as vis:
+        page_names = []
+        for p in vis.pages: # type: VisioFile.Page
+            print(f"page:{p.name}")
+            page_names.append(p.name)
+        assert len(vis.pages) == expected_page_count
+        assert page_names == expected_page_names
+
+
 @pytest.mark.parametrize(("filename", "shape_elements"), [("test1.vsdx", 4), ("test2.vsdx", 14), ("test3_house.vsdx", 10)])
 def test_xml_findall_shapes(filename: str, shape_elements: int):
     with VisioFile(basedir+filename) as vis:

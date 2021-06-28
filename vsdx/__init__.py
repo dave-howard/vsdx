@@ -108,7 +108,7 @@ class VisioFile:
             page_file = rel.attrib['Target']
             relid_page_dict[rel_id] = page_file
 
-        pages_filename = page_dir + 'pages.xml'  # pages contains Page name, width, height, mapped to Id
+        pages_filename = self._pages_filename()  # pages contains Page name, width, height, mapped to Id
         pages = file_to_xml(pages_filename).getroot()  # this contains a list of pages with rel_id and filename
         self.pages_xml = file_to_xml(pages_filename)  # store xml so pages can be removed
         if self.debug:
@@ -125,7 +125,6 @@ class VisioFile:
 
             if self.debug:
                 print(f"Page({new_page.filename})", VisioFile.pretty_print_element(new_page.xml.getroot()))
-
 
         self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml')
         # TODO: add correctness cross-check. Or maybe the other way round, start from [Content_Types].xml
@@ -533,36 +532,45 @@ class VisioFile:
         :return: None
         """
         # parse each shape in each page as Jinja2 template with context
+        pages_to_remove = []  # list of pages to be removed after loop
         for page in self.pages:  # type: VisioFile.Page
-            loop_shape_ids = list()
-            for shapes_by_id in page.shapes:  # type: VisioFile.Shape
-                prev_shape = None
-                for shape in shapes_by_id.sub_shapes():  # type: VisioFile.Shape
-                    # manage for loops in template
-                    loop_shape_id = VisioFile.jinja_create_for_loop_if(shape, prev_shape)
-                    if loop_shape_id:
-                        loop_shape_ids.append(loop_shape_id)
-                    prev_shape = shape
-                    # manage 'set self' statements
-                    VisioFile.jinja_set_selfs(shape, context)
+            # check if page should be removed
+            if VisioFile.jinja_page_showif(page, context):
+                loop_shape_ids = list()
+                for shapes_by_id in page.shapes:  # type: VisioFile.Shape
+                    prev_shape = None
+                    for shape in shapes_by_id.sub_shapes():  # type: VisioFile.Shape
+                        # manage for loops in template
+                        loop_shape_id = VisioFile.jinja_create_for_loop_if(shape, prev_shape)
+                        if loop_shape_id:
+                            loop_shape_ids.append(loop_shape_id)
+                        prev_shape = shape
+                        # manage 'set self' statements
+                        VisioFile.jinja_set_selfs(shape, context)
 
-            source = ET.tostring(page.xml.getroot(), encoding='unicode')
-            source = VisioFile.unescape_jinja_statements(source)  # unescape chars like < and > inside {%...%}
-            template = Template(source)
-            output = template.render(context)
-            page.xml = ET.ElementTree(ET.fromstring(output))  # create ElementTree from Element created from output
+                source = ET.tostring(page.xml.getroot(), encoding='unicode')
+                source = VisioFile.unescape_jinja_statements(source)  # unescape chars like < and > inside {%...%}
+                template = Template(source)
+                output = template.render(context)
+                page.xml = ET.ElementTree(ET.fromstring(output))  # create ElementTree from Element created from output
 
-            # update loop shape IDs
-            page.set_max_ids()
-            for shape_id in loop_shape_ids:
-                shapes_by_id = page.find_shapes_by_id(shape_id)  # type: List[VisioFile.Shape]
-                if shapes_by_id and len(shapes_by_id) > 1:
-                    delta = 0
-                    for shape in shapes_by_id[1:]:  # from the 2nd onwards - leaving original unchanged
-                        # increment each new shape duplicated by the jinja loop
-                        self.increment_sub_shape_ids(shape, page)
-                        delta += shape.height  # automatically move each duplicate down
-                        shape.move(0, -delta)  # move duplicated shapes so they are visible
+                # update loop shape IDs
+                page.set_max_ids()
+                for shape_id in loop_shape_ids:
+                    shapes_by_id = page.find_shapes_by_id(shape_id)  # type: List[VisioFile.Shape]
+                    if shapes_by_id and len(shapes_by_id) > 1:
+                        delta = 0
+                        for shape in shapes_by_id[1:]:  # from the 2nd onwards - leaving original unchanged
+                            # increment each new shape duplicated by the jinja loop
+                            self.increment_sub_shape_ids(shape, page)
+                            delta += shape.height  # automatically move each duplicate down
+                            shape.move(0, -delta)  # move duplicated shapes so they are visible
+            else:
+                # note page to remove after this loop has completed
+                pages_to_remove.append(page)
+        # remove pages after processing
+        for p in pages_to_remove:
+            self.remove_page_by_index(p.index_num)
 
     @staticmethod
     def jinja_set_selfs(shape: VisioFile.Shape, context: dict):
@@ -599,16 +607,6 @@ class VisioFile:
             jinja_source_out = jinja_source_out.replace(m, unescaped)
         return jinja_source_out
 
-    def increment_sub_shape_ids(self, shape: VisioFile.Shape, page, id_map: dict=None):
-        id_map = self.increment_shape_ids(shape.xml, page, id_map)
-        self.update_ids(shape.xml, id_map)
-        for s in shape.sub_shapes():
-            id_map = self.increment_shape_ids(s.xml, page, id_map)
-            self.update_ids(s.xml, id_map)
-            if s.sub_shapes():
-                id_map = self.increment_sub_shape_ids(s, page, id_map)
-        return id_map
-
     @staticmethod
     def jinja_create_for_loop_if(shape: VisioFile.Shape, previous_shape:VisioFile.Shape or None):
         # update a Shapes tag where text looks like a jinja {% for xxxx %} loop
@@ -644,8 +642,38 @@ class VisioFile:
             shape.xml.tail = '{% endif %}'  # add text at end of Shape element
 
     @staticmethod
+    def jinja_page_showif(page: VisioFile.Page, context: dict):
+        text = page.name
+        jinja_source = re.findall("{% showif\s(.*?)\s%}", text)
+        if len(jinja_source):
+            # process last matching value
+            template_source = "{{ "+jinja_source[-1]+" }}"
+            template = Template(template_source)  # value might be '{{ 1.0+2.4*3 }}'
+            value = template.render(context)
+            # is the value truthy - i.e. not 0, False, or empty string, tuple, list or dict
+            print(f"jinja_page_showif(context={context}) statement: {template_source} returns: {type(value)} {value}")
+            if value in ['False', '0', '', '()', '[]', '{}']:
+                print("value in ['False', '0', '', '()', '[]', '{}']")
+                return False  # page should be hidden
+            # remove jinja statement from page name
+            jinja_statement = re.match("{%.*?%}", page.name)[0]
+            page.set_name(page.name.replace(jinja_statement, ''))
+            print(f"jinja_statement={jinja_statement} page.name={page.name}")
+        return True  # page should be left in
+
+    @staticmethod
     def get_shape_id(shape: ET) -> str:
         return shape.attrib['ID']
+
+    def increment_sub_shape_ids(self, shape: VisioFile.Shape, page, id_map: dict = None):
+        id_map = self.increment_shape_ids(shape.xml, page, id_map)
+        self.update_ids(shape.xml, id_map)
+        for s in shape.sub_shapes():
+            id_map = self.increment_shape_ids(s.xml, page, id_map)
+            self.update_ids(s.xml, id_map)
+            if s.sub_shapes():
+                id_map = self.increment_sub_shape_ids(s, page, id_map)
+        return id_map
 
     def copy_shape(self, shape: Element, page: ET, page_path: str) -> ET:
         """Insert shape into first Shapes tag in destination page, and return the copy.
@@ -1099,6 +1127,17 @@ class VisioFile:
         def __repr__(self):
             return f"<Page name={self.name} file={self.filename} >"
 
+        def set_name(self, value: str):
+            # todo: change to name property
+            pages_filename = self.vis._pages_filename()  # pages contains Page name, width, height, mapped to Id
+            pages = file_to_xml(pages_filename)  # this contains a list of pages with rel_id and filename
+            page = pages.getroot().find(f"{namespace}Page[{self.index_num + 1}]")
+            #print(f"set_name() page={VisioFile.pretty_print_element(page)}")
+            if page:
+                page.attrib['Name'] = value
+                self.name = value
+                self.vis.pages_xml = pages
+
         @property
         def xml(self):
             return self._xml
@@ -1125,6 +1164,11 @@ class VisioFile:
                         self.max_id = id
 
             return self.max_id
+
+        @property
+        def index_num(self):
+            # return zero-based index of this page in parent VisioFile.pages list
+            return self.vis.pages.index(self)
 
         def get_connects(self):
             elements = self.xml.findall(f".//{namespace}Connect")  # search recursively

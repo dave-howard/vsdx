@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.4.3: Added support for including/excluding pages via Jinja with `{% showif <statement> %}` in page name
 - v0.4.2: Added `VisioFile.add_page_at()` method taking `index` to allow insertion
   at a specific point; Added `VisionFile.copy_page()` method to copy an existing page 
   and insert at a specific index or relative to copied page (using `PagePosition` enum). 
