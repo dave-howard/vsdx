@@ -136,39 +136,37 @@ class VisioFile:
     def load_master_pages(self):
         # get data from /visio/masters folder
         master_rel_path = f'{self.directory}/visio/masters/_rels/masters.xml.rels'
-        relid_to_path = dict()
 
         master_rels_data = file_to_xml(master_rel_path)
-        master_rels = master_rels_data.getroot() if master_rels_data else None
+        master_rels = master_rels_data.getroot() if master_rels_data else []
         if self.debug:
             print(f"Master Relationships({master_rel_path})", VisioFile.pretty_print_element(master_rels))
-        if master_rels:
-            for rel in master_rels:
-                master_id = rel.attrib.get('Id')
-                master_path = f"{self.directory}/visio/masters/{rel.attrib.get('Target')}"  # get path from rel
-                relid_to_path[master_id] = master_path
-                master_data = file_to_xml(master_path)  # contains master page xml
-                master = master_data.getroot() if master_data else None
-                if master:
-                    master_page = VisioFile.Page(master_data, master_path, master_id, self)
-                    self.master_pages.append(master_page)
-                    if self.debug:
-                        print(f"Master({master_path}, id={master_id})", VisioFile.pretty_print_element(master))
 
+        # populate relid to master path
+        relid_to_path = {}
+        for rel in master_rels:
+            master_id = rel.attrib.get('Id')
+            master_path = f"{self.directory}/visio/masters/{rel.attrib.get('Target')}"  # get path from rel
+            relid_to_path[master_id] = master_path
+
+        # load masters.xml file
         masters_path = f'{self.directory}/visio/masters/masters.xml'
         masters_data = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
-        masters = masters_data.getroot() if masters_data else None
-        if masters is not None:
-            master_elements = masters.findall(f"{namespace}Master")
-            r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
-            # dict comprehension
-            self.master_id_to_path = {
-                m.attrib['ID']: relid_to_path[m.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]]
-                for m in master_elements
-            }
+        masters = masters_data.getroot() if masters_data else []
+
+        # for each master page, create the VisioFile.Page object
+        r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+        for master in masters:
+            rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
+            master_id = master.attrib['ID']
+
+            master_path = relid_to_path[rel_id]
+
+            master_page = VisioFile.Page(file_to_xml(master_path), master_path, master_id, self)
+            self.master_pages.append(master_page)
 
             if self.debug:
-                print(f"Masters({masters_path})", VisioFile.pretty_print_element(masters))
+                print(f"Master({master_path}, id={master_id})", VisioFile.pretty_print_element(master_page.xml.getroot()))
 
         return
 
@@ -894,7 +892,6 @@ class VisioFile:
 
 
         def get_cell_value_from_master(self, name:str) -> ET.Element:
-            breakpoint()
             master_page = self.page.vis.get_master_page_by_id(self.master_ID)
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
             return master_shape.cell_value(name)
@@ -995,17 +992,16 @@ class VisioFile:
             text = ""
             t = self.xml.find(f"{namespace}Text")
 
-            if t is None:
-                if self.master_ID is not None:
-                    breakpoint()
+            if t is not None:
+                text = "".join(t.itertext())
+
+            elif self.master_ID is not None:
                     master_page = self.page.vis.get_master_page_by_id(self.master_ID)
-                    master_shape = master_page.shapes.sub_shapes()[0]  # there's always a single master shape in a master page
-                    t = master_shape.text
+                    master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
+                    text = master_shape.text
 
                     # TODO: elif self.master_Shape_ID is  not None:
 
-            if t is not None:
-                text = "".join(t.itertext())
             return text
 
         @text.setter
