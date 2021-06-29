@@ -193,6 +193,11 @@ class VisioFile:
             if p.name == name:
                 return p
 
+    def get_master_page_by_id(self, id: str):
+        for m in self.master_pages:
+            if m.name == id:
+                return m
+
     def remove_page_by_index(self, index: int):
         """Remove zero-based nth page from VisioFile object
 
@@ -888,10 +893,11 @@ class VisioFile:
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
 
 
-        def get_cell_from_master(self, name:str) -> ET.Element:
-            master_path = self.page.vis.master_id_to_path[self.master_ID]
-            master_xml = self.page.vis.master_page_xml_by_file_path[master_path]
-            return master_xml.find(f'.//{namespace}Shape/{namespace}Cell[@N="{name}"]')
+        def get_cell_value_from_master(self, name:str) -> ET.Element:
+            breakpoint()
+            master_page = self.page.vis.get_master_page_by_id(self.master_ID)
+            master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
+            return master_shape.cell_value(name)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
@@ -899,8 +905,7 @@ class VisioFile:
                 return cell.value
 
             if self.master_ID is not None:
-                master_cell = self.get_cell_from_master(name)
-                return master_cell.attrib['V']
+                return self.get_cell_value_from_master(name)
 
             if self.master_shape_ID is not None:
                 pass
@@ -992,9 +997,10 @@ class VisioFile:
 
             if t is None:
                 if self.master_ID is not None:
-                    master_path = self.page.vis.master_id_to_path[self.master_ID]
-                    master_xml = self.page.vis.master_page_xml_by_file_path[master_path]
-                    t = master_xml.find(f'.//{namespace}Shape/{namespace}Text')
+                    breakpoint()
+                    master_page = self.page.vis.get_master_page_by_id(self.master_ID)
+                    master_shape = master_page.shapes.sub_shapes()[0]  # there's always a single master shape in a master page
+                    t = master_shape.text
 
                     # TODO: elif self.master_Shape_ID is  not None:
 
