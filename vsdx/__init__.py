@@ -182,8 +182,8 @@ class VisioFile:
     def get_page_by_name(self, name: str):
         """Get page from VisioFile with matching name
 
-                :param name: The name of the new page
-                :type name: str, optional
+                :param name: The name of the required page
+                :type name: str
 
                 :return: :class:`Page` object representing the page (or None if not found)
                 """
@@ -192,6 +192,15 @@ class VisioFile:
                 return p
 
     def get_master_page_by_id(self, id: str):
+        """Get master page from VisioFile with matching ID.
+
+        Referred by :attr:`Shape.master_ID`.
+
+                :param id: The ID of the required master
+                :type id: str
+
+                :return: :class:`Page` object representing the master page (or None if not found)
+                """
         for m in self.master_pages:
             if m.name == id:
                 return m
@@ -891,10 +900,14 @@ class VisioFile:
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
 
 
-        def get_cell_value_from_master(self, name:str) -> ET.Element:
+        @property
+        def master_shape(self):
             master_page = self.page.vis.get_master_page_by_id(self.master_ID)
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
-            return master_shape.cell_value(name)
+            return master_shape
+
+        def get_cell_value_from_master(self, name:str) -> ET.Element:
+            return self.master_shape.cell_value(name)
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
@@ -996,9 +1009,7 @@ class VisioFile:
                 text = "".join(t.itertext())
 
             elif self.master_ID is not None:
-                    master_page = self.page.vis.get_master_page_by_id(self.master_ID)
-                    master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
-                    text = master_shape.text
+                    text = self.master_shape.text
 
                     # TODO: elif self.master_Shape_ID is  not None:
 
