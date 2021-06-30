@@ -660,6 +660,7 @@ def test_master_inheritance(filename: str):
         shape_a = page.find_shape_by_text('Shape A')  # type: VisioFile.Shape
         shape_b = page.find_shape_by_text('Shape B')  # type: VisioFile.Shape
 
+        '''
         for s in page.shapes[0].sub_shapes():
             print(f"\n\nshape {s.ID} '{s.text}' MasterShapeID:{s.master_shape_ID} MasterID:{s.master_ID}")
             master_shape = master_page.find_shape_by_id(s.master_shape_ID)
@@ -669,14 +670,19 @@ def test_master_inheritance(filename: str):
                 # nte this is not the correct link to master shape
                 master_shape = master_page.find_shape_by_id(sub.master_shape_ID)
                 print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
+        '''
 
         # these tests fail until master shape link in place for Shape.text
         assert shape_a
         assert shape_b
 
+        # test inheritance of cell values
         assert shape_a.width == 1
         assert shape_a.height == 0.75
 
+        # test inheritance for subshapes
+        sub_shape_a = shape_a.sub_shapes()[0]
+        assert sub_shape_a.cell_value('LineWeight') == 0.01875
 
 @pytest.mark.parametrize(('filename'),
                          [('test1.vsdx')])

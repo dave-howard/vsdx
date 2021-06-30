@@ -864,6 +864,8 @@ class VisioFile:
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
             self.master_ID = xml.attrib.get('Master', None)
+            if self.master_ID is None: # in case of a sub_shape
+                self.master_ID = parent_xml.attrib.get('Master', None)
             self.shape_type = xml.attrib.get('Type', None)
             self.page = page
 
@@ -888,6 +890,9 @@ class VisioFile:
             :return: :class:`Shape` the new copy of shape
             """
             # set parent_xml: location for new shape tag to be added
+            dst_page = page or self.page
+            new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
+
             if page:
                 # set parent_xml to first page Shapes tag if destination page passed
                 parent_xml = page.xml.find(f"{namespace}Shapes")
@@ -895,8 +900,6 @@ class VisioFile:
                 # or set parent_xml to source shapes own parent
                 parent_xml = self.parent_xml
 
-            dst_page = page or self.page
-            new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
             return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
 
 
@@ -906,19 +909,17 @@ class VisioFile:
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
             return master_shape
 
-        def get_cell_value_from_master(self, name:str) -> ET.Element:
-            return self.master_shape.cell_value(name)
-
         def cell_value(self, name: str):
             cell = self.cells.get(name)
             if cell:
                 return cell.value
 
             if self.master_ID is not None:
-                return self.get_cell_value_from_master(name)
+                return self.master_shape.cell_value(name)
 
             if self.master_shape_ID is not None:
-                pass
+                master_sub_shape = self.master_shape.find_shape_by_id(self.master_shape_ID)
+                return master_sub_shape.cell_value(name)
 
         def set_cell_value(self, name: str, value: str):
             cell = self.cells.get(name)
@@ -1201,7 +1202,7 @@ class VisioFile:
             Note: typically returns one :class:`Shape` object which itself contains :class:`Shape` objects
 
             """
-            return [VisioFile.Shape(shapes, self.xml, self) for shapes in self.xml.findall(f"{namespace}Shapes")]
+            return [VisioFile.Shape(shapes, self.xml.getroot(), self) for shapes in self.xml.findall(f"{namespace}Shapes")]
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
