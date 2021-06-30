@@ -682,7 +682,7 @@ def test_master_inheritance(filename: str):
 
         # test inheritance for subshapes
         sub_shape_a = shape_a.sub_shapes()[0]
-        assert sub_shape_a.cell_value('LineWeight') == 0.01875
+        assert sub_shape_a.cell_value('LineWeight') == '0.01875'
 
 @pytest.mark.parametrize(('filename'),
                          [('test1.vsdx')])

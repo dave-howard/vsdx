@@ -642,7 +642,7 @@ class VisioFile:
             if previous_shape:
                 previous_shape.xml.tail = jinja_loop_text  # add jinja loop text after previous shape, before this element
             else:
-                shape.parent_xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
+                shape.parent.xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
             shape.text = text.lstrip(jinja_loop_text)  # remove jinja loop from <Text> tag in element
 
             # add closing 'endfor' to just inside the shapes element, after last shape
@@ -658,7 +658,7 @@ class VisioFile:
             if previous_shape:
                 previous_shape.xml.tail = str(previous_shape.xml.tail or '')+jinja_show_if  # add jinja loop text after previous shape, before this element
             else:
-                shape.parent_xml.text = str(shape.parent_xml.text or '')+jinja_show_if  # add jinja loop at start of parent, just before this element
+                shape.parent.xml.text = str(shape.parent.xml.text or '')+jinja_show_if  # add jinja loop at start of parent, just before this element
 
             shape.text = ''  # remove jinja loop from <Text> tag in element
 
@@ -857,15 +857,15 @@ class VisioFile:
     class Shape:
         """Represents a single shape, or a group shape containing other shapes
         """
-        def __init__(self, xml: Element, parent_xml: Element, page: VisioFile.Page):
+        def __init__(self, xml: Element, parent: VisioFile.Page or VisioFile.Shape, page: VisioFile.Page):
             self.xml = xml
-            self.parent_xml = parent_xml
+            self.parent = parent
             self.tag = xml.tag
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
             self.master_ID = xml.attrib.get('Master', None)
-            if self.master_ID is None: # in case of a sub_shape
-                self.master_ID = parent_xml.attrib.get('Master', None)
+            if self.master_ID is None and isinstance(parent, VisioFile.Shape): # in case of a sub_shape
+                self.master_ID = parent.master_ID
             self.shape_type = xml.attrib.get('Type', None)
             self.page = page
 
@@ -889,18 +889,18 @@ class VisioFile:
 
             :return: :class:`Shape` the new copy of shape
             """
-            # set parent_xml: location for new shape tag to be added
             dst_page = page or self.page
             new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
 
+            # set parent: location for new shape tag to be added
             if page:
-                # set parent_xml to first page Shapes tag if destination page passed
-                parent_xml = page.xml.find(f"{namespace}Shapes")
+                # set parent to first page Shapes tag if destination page passed
+                parent = page.shapes
             else:
-                # or set parent_xml to source shapes own parent
-                parent_xml = self.parent_xml
+                # or set parent to source shapes own parent
+                parent = self.parent
 
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
+            return VisioFile.Shape(xml=new_shape_xml, parent=parent, page=dst_page)
 
 
         @property
@@ -1035,7 +1035,7 @@ class VisioFile:
             else:  # a Shapes
                 parent_element = self.xml
 
-            shapes = [VisioFile.Shape(shape, parent_element, self.page) for shape in parent_element]
+            shapes = [VisioFile.Shape(xml=shape, parent=self, page=self.page) for shape in parent_element]
             return shapes
 
         def get_max_id(self):
@@ -1112,7 +1112,7 @@ class VisioFile:
                 s.find_replace(old, new)
 
         def remove(self):
-            self.parent_xml.remove(self.xml)
+            self.parent.xml.remove(self.xml)
 
         def append_shape(self, append_shape: VisioFile.Shape):
             # insert shape into shapes tag, and return updated shapes tag
@@ -1202,7 +1202,7 @@ class VisioFile:
             Note: typically returns one :class:`Shape` object which itself contains :class:`Shape` objects
 
             """
-            return [VisioFile.Shape(shapes, self.xml.getroot(), self) for shapes in self.xml.findall(f"{namespace}Shapes")]
+            return [VisioFile.Shape(shapes, self, self) for shapes in self.xml.findall(f"{namespace}Shapes")]
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
