@@ -64,7 +64,6 @@ class VisioFile:
         self.app_xml = None
         self.pages = list()  # list of Page objects, populated by open_vsdx_file()
         self.master_pages = list()  # list of Page objects, populated by open_vsdx_file()
-        self.master_id_to_path = dict()
         self.open_vsdx_file()
 
     def __enter__(self):
@@ -1024,8 +1023,6 @@ class VisioFile:
             elif self.master_ID is not None:
                     text = self.master_shape.text
 
-                    # TODO: elif self.master_Shape_ID is  not None:
-
             return text
 
         @text.setter
@@ -1214,7 +1211,7 @@ class VisioFile:
             Note: typically returns one :class:`Shape` object which itself contains :class:`Shape` objects
 
             """
-            return [VisioFile.Shape(shapes, self, self) for shapes in self.xml.findall(f"{namespace}Shapes")]
+            return [VisioFile.Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")]
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
