@@ -337,8 +337,9 @@ class VisioFile:
         # update [Content_Types].xml - insert reference to the new page
         self._update_content_types_xml(new_page_filename)
 
-        # update app.xml - strictly speaking, this is optional, but we're doing what MS Visio does.
-        self._update_app_xml(page_name)
+        # update app.xml, if it exists
+        if self.app_xml:
+            self._update_app_xml(page_name)
 
         # Update VisioFile object
         new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)
@@ -812,7 +813,8 @@ class VisioFile:
         xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml')
 
         # write app.xml
-        xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
+        if self.app_xml:
+            xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
@@ -907,6 +909,11 @@ class VisioFile:
         def master_shape(self):
             master_page = self.page.vis.get_master_page_by_id(self.master_ID)
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
+
+            if self.master_shape_ID is not None:
+                master_sub_shape = self.master_shape.find_shape_by_id(self.master_shape_ID)
+                return master_sub_shape
+
             return master_shape
 
         def cell_value(self, name: str):
@@ -917,14 +924,19 @@ class VisioFile:
             if self.master_ID is not None:
                 return self.master_shape.cell_value(name)
 
-            if self.master_shape_ID is not None:
-                master_sub_shape = self.master_shape.find_shape_by_id(self.master_shape_ID)
-                return master_sub_shape.cell_value(name)
-
         def set_cell_value(self, name: str, value: str):
             cell = self.cells.get(name)
             if cell:  # only set value of existing item
                 cell.value = value
+
+            elif self.master_ID is not None:
+                master_cell_xml = self.master_shape.xml.find(f'{namespace}Cell[@N="{name}"]')
+                new_cell = ET.fromstring(ET.tostring(master_cell_xml))
+
+                self.cells[name] = VisioFile.Cell(xml=new_cell, shape=self)
+                self.cells[name].value = value
+
+                self.xml.append(self.cells[name].xml)
 
         @property
         def x(self):

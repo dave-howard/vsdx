@@ -684,6 +684,36 @@ def test_master_inheritance(filename: str):
         sub_shape_a = shape_a.sub_shapes()[0]
         assert sub_shape_a.cell_value('LineWeight') == '0.01875'
 
+@pytest.mark.parametrize(("filename"),
+                         [('test5_master.vsdx')])
+def test_master_inheritance_setters(filename: str):
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_master_inheritance_setters.vsdx'
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)
+
+        shape_a = page.find_shape_by_text('Shape A')
+        shape_a.set_cell_value('LineWeight', 0.5)
+        shape_a.set_cell_value('LineColor', "#00FF00")
+
+        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        sub_shape_b.set_cell_value('LineWeight', 0.5)
+        sub_shape_b.set_cell_value('LineColor', "#00FF00")
+
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page(0)
+
+        shape_a = page.find_shape_by_text('Shape A')
+        assert shape_a.cell_value('LineWeight') == '0.5'
+        assert shape_a.cell_value('LineColor') == "#00FF00"
+
+        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        assert sub_shape_b.cell_value('LineWeight') == '0.5'
+        assert sub_shape_b.cell_value('LineColor') == "#00FF00"
+
+
+
 @pytest.mark.parametrize(('filename'),
                          [('test1.vsdx')])
 def test_add_page(filename: str):
