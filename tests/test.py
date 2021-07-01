@@ -650,7 +650,6 @@ def test_remove_page_by_index(filename: str, page_index: int):
         assert len(vis.pages) == page_count - 1
 
 
-#@pytest.mark.skip('master inheritence not yet implemented')
 @pytest.mark.parametrize(("filename"),
                          [('test5_master.vsdx')])
 def test_master_inheritance(filename: str):

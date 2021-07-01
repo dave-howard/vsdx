@@ -911,7 +911,7 @@ class VisioFile:
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
 
             if self.master_shape_ID is not None:
-                master_sub_shape = self.master_shape.find_shape_by_id(self.master_shape_ID)
+                master_sub_shape = master_shape.find_shape_by_id(self.master_shape_ID)
                 return master_sub_shape
 
             return master_shape
