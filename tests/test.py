@@ -650,16 +650,16 @@ def test_remove_page_by_index(filename: str, page_index: int):
         assert len(vis.pages) == page_count - 1
 
 
-@pytest.mark.skip('master inheritence not yet implemented')
 @pytest.mark.parametrize(("filename"),
                          [('test5_master.vsdx')])
 def test_master_inheritance(filename: str):
     with VisioFile(basedir+os.path.join(filename)) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
         master_page = vis.master_pages[0]  # type: VisioFile.Page
-        shape_a = page.find_shapes_by_text('Shape A')  # type: List[VisioFile.Shape]
-        shape_b = page.find_shapes_by_text('Shape B')  # type: List[VisioFile.Shape]
+        shape_a = page.find_shape_by_text('Shape A')  # type: VisioFile.Shape
+        shape_b = page.find_shape_by_text('Shape B')  # type: VisioFile.Shape
 
+        '''
         for s in page.shapes[0].sub_shapes():
             print(f"\n\nshape {s.ID} '{s.text}' MasterShapeID:{s.master_shape_ID} MasterID:{s.master_ID}")
             master_shape = master_page.find_shape_by_id(s.master_shape_ID)
@@ -669,10 +669,48 @@ def test_master_inheritance(filename: str):
                 # nte this is not the correct link to master shape
                 master_shape = master_page.find_shape_by_id(sub.master_shape_ID)
                 print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
+        '''
 
         # these tests fail until master shape link in place for Shape.text
         assert shape_a
         assert shape_b
+
+        # test inheritance of cell values
+        assert shape_a.width == 1
+        assert shape_a.height == 0.75
+
+        # test inheritance for subshapes
+        sub_shape_a = shape_a.sub_shapes()[0]
+        assert sub_shape_a.cell_value('LineWeight') == '0.01875'
+
+@pytest.mark.parametrize(("filename"),
+                         [('test5_master.vsdx')])
+def test_master_inheritance_setters(filename: str):
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_master_inheritance_setters.vsdx'
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)
+
+        shape_a = page.find_shape_by_text('Shape A')
+        shape_a.set_cell_value('LineWeight', 0.5)
+        shape_a.set_cell_value('LineColor', "#00FF00")
+
+        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        sub_shape_b.set_cell_value('LineWeight', 0.5)
+        sub_shape_b.set_cell_value('LineColor', "#00FF00")
+
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page(0)
+
+        shape_a = page.find_shape_by_text('Shape A')
+        assert shape_a.cell_value('LineWeight') == '0.5'
+        assert shape_a.cell_value('LineColor') == "#00FF00"
+
+        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        assert sub_shape_b.cell_value('LineWeight') == '0.5'
+        assert sub_shape_b.cell_value('LineColor') == "#00FF00"
+
 
 
 @pytest.mark.parametrize(('filename'),

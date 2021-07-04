@@ -137,26 +137,35 @@ class VisioFile:
         master_rel_path = f'{self.directory}/visio/masters/_rels/masters.xml.rels'
 
         master_rels_data = file_to_xml(master_rel_path)
-        master_rels = master_rels_data.getroot() if master_rels_data else None
+        master_rels = master_rels_data.getroot() if master_rels_data else []
         if self.debug:
             print(f"Master Relationships({master_rel_path})", VisioFile.pretty_print_element(master_rels))
-        if master_rels:
-            for rel in master_rels:
-                master_id = rel.attrib.get('Id')
-                master_path = f"{self.directory}/visio/masters/{rel.attrib.get('Target')}"  # get path from rel
-                master_data = file_to_xml(master_path)  # contains master page xml
-                master = master_data.getroot() if master_data else None
-                if master:
-                    master_page = VisioFile.Page(master_data, master_path, master_id, self)
-                    self.master_pages.append(master_page)
-                    if self.debug:
-                        print(f"Master({master_path}, id={master_id})", VisioFile.pretty_print_element(master))
 
+        # populate relid to master path
+        relid_to_path = {}
+        for rel in master_rels:
+            master_id = rel.attrib.get('Id')
+            master_path = f"{self.directory}/visio/masters/{rel.attrib.get('Target')}"  # get path from rel
+            relid_to_path[master_id] = master_path
+
+        # load masters.xml file
         masters_path = f'{self.directory}/visio/masters/masters.xml'
         masters_data = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
-        masters = masters_data.getroot() if masters_data else None
-        if self.debug:
-            print(f"Masters({masters_path})", VisioFile.pretty_print_element(masters))
+        masters = masters_data.getroot() if masters_data else []
+
+        # for each master page, create the VisioFile.Page object
+        r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+        for master in masters:
+            rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
+            master_id = master.attrib['ID']
+
+            master_path = relid_to_path[rel_id]
+
+            master_page = VisioFile.Page(file_to_xml(master_path), master_path, master_id, self)
+            self.master_pages.append(master_page)
+
+            if self.debug:
+                print(f"Master({master_path}, id={master_id})", VisioFile.pretty_print_element(master_page.xml.getroot()))
 
         return
 
@@ -172,14 +181,28 @@ class VisioFile:
     def get_page_by_name(self, name: str):
         """Get page from VisioFile with matching name
 
-                :param name: The name of the new page
-                :type name: str, optional
+                :param name: The name of the required page
+                :type name: str
 
                 :return: :class:`Page` object representing the page (or None if not found)
                 """
         for p in self.pages:
             if p.name == name:
                 return p
+
+    def get_master_page_by_id(self, id: str):
+        """Get master page from VisioFile with matching ID.
+
+        Referred by :attr:`Shape.master_ID`.
+
+                :param id: The ID of the required master
+                :type id: str
+
+                :return: :class:`Page` object representing the master page (or None if not found)
+                """
+        for m in self.master_pages:
+            if m.name == id:
+                return m
 
     def remove_page_by_index(self, index: int):
         """Remove zero-based nth page from VisioFile object
@@ -313,8 +336,9 @@ class VisioFile:
         # update [Content_Types].xml - insert reference to the new page
         self._update_content_types_xml(new_page_filename)
 
-        # update app.xml - strictly speaking, this is optional, but we're doing what MS Visio does.
-        self._update_app_xml(page_name)
+        # update app.xml, if it exists
+        if self.app_xml:
+            self._update_app_xml(page_name)
 
         # Update VisioFile object
         new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)
@@ -618,7 +642,7 @@ class VisioFile:
             if previous_shape:
                 previous_shape.xml.tail = jinja_loop_text  # add jinja loop text after previous shape, before this element
             else:
-                shape.parent_xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
+                shape.parent.xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
             shape.text = text.lstrip(jinja_loop_text)  # remove jinja loop from <Text> tag in element
 
             # add closing 'endfor' to just inside the shapes element, after last shape
@@ -634,7 +658,7 @@ class VisioFile:
             if previous_shape:
                 previous_shape.xml.tail = str(previous_shape.xml.tail or '')+jinja_show_if  # add jinja loop text after previous shape, before this element
             else:
-                shape.parent_xml.text = str(shape.parent_xml.text or '')+jinja_show_if  # add jinja loop at start of parent, just before this element
+                shape.parent.xml.text = str(shape.parent.xml.text or '')+jinja_show_if  # add jinja loop at start of parent, just before this element
 
             shape.text = ''  # remove jinja loop from <Text> tag in element
 
@@ -788,7 +812,8 @@ class VisioFile:
         xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml')
 
         # write app.xml
-        xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
+        if self.app_xml:
+            xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
@@ -833,13 +858,15 @@ class VisioFile:
     class Shape:
         """Represents a single shape, or a group shape containing other shapes
         """
-        def __init__(self, xml: Element, parent_xml: Element, page: VisioFile.Page):
+        def __init__(self, xml: Element, parent: VisioFile.Page or VisioFile.Shape, page: VisioFile.Page):
             self.xml = xml
-            self.parent_xml = parent_xml
+            self.parent = parent
             self.tag = xml.tag
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
             self.master_ID = xml.attrib.get('Master', None)
+            if self.master_ID is None and isinstance(parent, VisioFile.Shape): # in case of a sub_shape
+                self.master_ID = parent.master_ID
             self.shape_type = xml.attrib.get('Type', None)
             self.page = page
 
@@ -863,26 +890,52 @@ class VisioFile:
 
             :return: :class:`Shape` the new copy of shape
             """
-            # set parent_xml: location for new shape tag to be added
-            if page:
-                # set parent_xml to first page Shapes tag if destination page passed
-                parent_xml = page.xml.find(f"{namespace}Shapes")
-            else:
-                # or set parent_xml to source shapes own parent
-                parent_xml = self.parent_xml
-
             dst_page = page or self.page
             new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
-            return VisioFile.Shape(xml=new_shape_xml, parent_xml=parent_xml, page=dst_page)
+
+            # set parent: location for new shape tag to be added
+            if page:
+                # set parent to first page Shapes tag if destination page passed
+                parent = page.shapes
+            else:
+                # or set parent to source shapes own parent
+                parent = self.parent
+
+            return VisioFile.Shape(xml=new_shape_xml, parent=parent, page=dst_page)
+
+
+        @property
+        def master_shape(self):
+            master_page = self.page.vis.get_master_page_by_id(self.master_ID)
+            master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
+
+            if self.master_shape_ID is not None:
+                master_sub_shape = master_shape.find_shape_by_id(self.master_shape_ID)
+                return master_sub_shape
+
+            return master_shape
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
-            return cell.value if cell else None
+            if cell:
+                return cell.value
+
+            if self.master_ID is not None:
+                return self.master_shape.cell_value(name)
 
         def set_cell_value(self, name: str, value: str):
             cell = self.cells.get(name)
             if cell:  # only set value of existing item
                 cell.value = value
+
+            elif self.master_ID is not None:
+                master_cell_xml = self.master_shape.xml.find(f'{namespace}Cell[@N="{name}"]')
+                new_cell = ET.fromstring(ET.tostring(master_cell_xml))
+
+                self.cells[name] = VisioFile.Cell(xml=new_cell, shape=self)
+                self.cells[name].value = value
+
+                self.xml.append(self.cells[name].xml)
 
         @property
         def x(self):
@@ -963,8 +1016,13 @@ class VisioFile:
         def text(self):
             text = ""
             t = self.xml.find(f"{namespace}Text")
+
             if t is not None:
                 text = "".join(t.itertext())
+
+            elif self.master_ID is not None:
+                    text = self.master_shape.text
+
             return text
 
         @text.setter
@@ -986,7 +1044,7 @@ class VisioFile:
             else:  # a Shapes
                 parent_element = self.xml
 
-            shapes = [VisioFile.Shape(shape, parent_element, self.page) for shape in parent_element]
+            shapes = [VisioFile.Shape(xml=shape, parent=self, page=self.page) for shape in parent_element]
             return shapes
 
         def get_max_id(self):
@@ -1063,7 +1121,7 @@ class VisioFile:
                 s.find_replace(old, new)
 
         def remove(self):
-            self.parent_xml.remove(self.xml)
+            self.parent.xml.remove(self.xml)
 
         def append_shape(self, append_shape: VisioFile.Shape):
             # insert shape into shapes tag, and return updated shapes tag
@@ -1153,7 +1211,7 @@ class VisioFile:
             Note: typically returns one :class:`Shape` object which itself contains :class:`Shape` objects
 
             """
-            return [VisioFile.Shape(shapes, self.xml, self) for shapes in self.xml.findall(f"{namespace}Shapes")]
+            return [VisioFile.Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")]
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
