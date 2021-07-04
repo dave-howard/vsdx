@@ -903,10 +903,11 @@ class VisioFile:
 
             return VisioFile.Shape(xml=new_shape_xml, parent=parent, page=dst_page)
 
-
         @property
-        def master_shape(self):
+        def master_shape(self) -> VisioFile.Shape:
             master_page = self.page.vis.get_master_page_by_id(self.master_ID)
+            if not master_page:
+                return   # None if no master page set for this Shape
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
 
             if self.master_shape_ID is not None:

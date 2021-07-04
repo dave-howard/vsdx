@@ -659,19 +659,6 @@ def test_master_inheritance(filename: str):
         shape_a = page.find_shape_by_text('Shape A')  # type: VisioFile.Shape
         shape_b = page.find_shape_by_text('Shape B')  # type: VisioFile.Shape
 
-        '''
-        for s in page.shapes[0].sub_shapes():
-            print(f"\n\nshape {s.ID} '{s.text}' MasterShapeID:{s.master_shape_ID} MasterID:{s.master_ID}")
-            master_shape = master_page.find_shape_by_id(s.master_shape_ID)
-            print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
-            for sub in s.sub_shapes():
-                print(f"\nsubshape {sub.ID} '{sub.text}' MasterShapeID:{sub.master_shape_ID} MasterID:{sub.master_ID}")
-                # nte this is not the correct link to master shape
-                master_shape = master_page.find_shape_by_id(sub.master_shape_ID)
-                print(f"master={master_shape} {master_shape.text if master_shape else 'n/a'}")
-        '''
-
-        # these tests fail until master shape link in place for Shape.text
         assert shape_a
         assert shape_b
 
@@ -682,6 +669,7 @@ def test_master_inheritance(filename: str):
         # test inheritance for subshapes
         sub_shape_a = shape_a.sub_shapes()[0]
         assert sub_shape_a.cell_value('LineWeight') == '0.01875'
+
 
 @pytest.mark.parametrize(("filename"),
                          [('test5_master.vsdx')])
@@ -711,6 +699,36 @@ def test_master_inheritance_setters(filename: str):
         assert sub_shape_b.cell_value('LineWeight') == '0.5'
         assert sub_shape_b.cell_value('LineColor') == "#00FF00"
 
+
+@pytest.mark.parametrize(("filename", "shape_text"),
+                         [("test_master.vsdx", "Page Shape"),
+                          ("test_master.vsdx", "Master Shape A"),
+                          ("test_master.vsdx", "Master Shape B"),
+                          ("test_master.vsdx", "Master B with updated text"), ])
+def test_master_find_shapes(filename: str, shape_text: str):
+    # Check that shape with text can be found - whether in page, master or overridden in master
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        shape = page.find_shape_by_text(shape_text)
+        assert shape  # shape found
+
+
+@pytest.mark.parametrize(("filename", "shape_text", "has_master", "inherits_text"),
+                         [("test_master.vsdx", "Page Shape", False, False),
+                          ("test_master.vsdx", "Master Shape A", True, True),
+                          ("test_master.vsdx", "Master Shape B", True, True),
+                          ("test_master.vsdx", "Master B with updated text", True, False), ])
+def test_master_check_text_inheritance(filename: str, shape_text: str, has_master: bool, inherits_text: bool):
+    # Check that shape with text can be found and that it has a master (or not) and inherits text (or not)
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        shape = page.find_shape_by_text(shape_text)
+
+        if shape.master_shape:
+            assert has_master
+            assert (shape.text == shape.master_shape.text) == inherits_text
+        else:
+            assert not has_master
 
 
 @pytest.mark.parametrize(('filename'),
