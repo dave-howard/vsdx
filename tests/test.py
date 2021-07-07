@@ -679,12 +679,12 @@ def test_master_inheritance_setters(filename: str):
         page = vis.get_page(0)
 
         shape_a = page.find_shape_by_text('Shape A')
-        shape_a.set_cell_value('LineWeight', 0.5)
-        shape_a.set_cell_value('LineColor', "#00FF00")
+        shape_a.line_weight = 0.5
+        shape_a.line_color = '#00FF00'
 
         sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
-        sub_shape_b.set_cell_value('LineWeight', 0.5)
-        sub_shape_b.set_cell_value('LineColor', "#00FF00")
+        sub_shape_b.line_weight = 0.5
+        sub_shape_b.line_color = '#00FF00'
 
         vis.save_vsdx(out_file)
 
@@ -692,12 +692,12 @@ def test_master_inheritance_setters(filename: str):
         page = vis.get_page(0)
 
         shape_a = page.find_shape_by_text('Shape A')
-        assert shape_a.cell_value('LineWeight') == '0.5'
-        assert shape_a.cell_value('LineColor') == "#00FF00"
+        assert shape_a.line_weight == 0.5
+        assert shape_a.line_color == '#00FF00'
 
         sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
-        assert sub_shape_b.cell_value('LineWeight') == '0.5'
-        assert sub_shape_b.cell_value('LineColor') == "#00FF00"
+        assert sub_shape_b.line_weight == 0.5
+        assert sub_shape_b.line_color == '#00FF00'
 
 
 @pytest.mark.parametrize(("filename", "shape_text"),
@@ -729,6 +729,61 @@ def test_master_check_text_inheritance(filename: str, shape_text: str, has_maste
             assert (shape.text == shape.master_shape.text) == inherits_text
         else:
             assert not has_master
+
+
+@pytest.mark.parametrize(("filename", "master_shape_text", "number_shapes"),
+                         [('test_master.vsdx', 'Master Shape A', 1),
+                          ('test_master.vsdx', 'Master Shape B', 2),
+                          ])
+def test_find_shapes_by_master_id(filename: str, master_shape_text: str, number_shapes: int):
+    # test that a shapes master has 'number_shapes' shapes that inherit from it
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)
+        shape = page.find_shape_by_text(master_shape_text)  # get shape which has a master
+        # print(f"master_shape: {master_shape} {master_shape_.master_shape_ID}")
+        shapes = page.find_shapes_with_same_master(shape)
+        print(f"shapes: {shapes}")
+        assert len(shapes) == number_shapes
+
+
+@pytest.mark.parametrize(("filename", "master_shape_search_text", "shape_search_text", "expect_inherit"),
+                         [('test_master.vsdx', 'Master Shape A', 'Master Shape A', True),
+                          ('test_master.vsdx', 'Master Shape A', 'Master B with updated text', False),
+                          ('test_master.vsdx', 'Master B with updated text', 'Master B with updated text', False),
+                          ('test_master.vsdx', 'Master Shape B', 'Master Shape B', True),
+                          ('test_master.vsdx', 'Master Shape A', 'Page Shape', False),
+                          ])
+def test_master_inheritance_master_shape_set_text(filename: str, master_shape_search_text: str, shape_search_text: str,
+                                                  expect_inherit: bool):
+    # test that when a master shape text is updated, only shapes that inherit that master shapes text are affected
+    out_file = f'{basedir}out{os.sep}{filename[:-5]}_test_master_inheritance_master_shape_set_text.vsdx'
+    master_text = "Updated Master Shape Text"
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)
+
+        # get master shape of Shape with search text
+        master_shape = page.find_shapes_by_text(master_shape_search_text)[0].master_shape
+        shape = page.find_shape_by_text(shape_search_text)
+        shape_id = shape.ID
+        shape_text = shape.text
+        master_shape.text = master_text
+
+        if expect_inherit:
+            assert shape.text == master_text  # inherited from master change
+        else:
+            assert shape.text == shape_text  # unchanged
+
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page(0)
+
+        # get same shape and confirm inheritance works as expected
+        shape = page.find_shape_by_id(shape_id)
+        if expect_inherit:
+            assert shape.text == master_text  # inherited from master change
+        else:
+            assert shape.text == shape_text  # unchanged
 
 
 @pytest.mark.parametrize(('filename'),

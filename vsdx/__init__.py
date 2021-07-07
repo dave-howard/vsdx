@@ -169,7 +169,7 @@ class VisioFile:
 
         return
 
-    def get_page(self, n: int):
+    def get_page(self, n: int) -> VisioFile.Page:
         try:
             return self.pages[n]
         except IndexError:
@@ -804,6 +804,10 @@ class VisioFile:
         # write pages.xml file - in case pages added removed
         xml_to_file(self.pages_xml, self._pages_filename())
 
+        # write the master pages to file
+        for page in self.master_pages:  # type: VisioFile.Page
+            xml_to_file(page.xml, page.filename)
+
         # write the pages to file
         for page in self.pages:  # type: VisioFile.Page
             xml_to_file(page.xml, page.filename)
@@ -864,9 +868,9 @@ class VisioFile:
             self.tag = xml.tag
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
-            self.master_ID = xml.attrib.get('Master', None)
-            if self.master_ID is None and isinstance(parent, VisioFile.Shape): # in case of a sub_shape
-                self.master_ID = parent.master_ID
+            self.master_page_ID = xml.attrib.get('Master', None)
+            if self.master_page_ID is None and isinstance(parent, VisioFile.Shape):  # in case of a sub_shape
+                self.master_page_ID = parent.master_page_ID
             self.shape_type = xml.attrib.get('Type', None)
             self.page = page
 
@@ -905,7 +909,7 @@ class VisioFile:
 
         @property
         def master_shape(self) -> VisioFile.Shape:
-            master_page = self.page.vis.get_master_page_by_id(self.master_ID)
+            master_page = self.page.vis.get_master_page_by_id(self.master_page_ID)
             if not master_page:
                 return   # None if no master page set for this Shape
             master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
@@ -921,7 +925,7 @@ class VisioFile:
             if cell:
                 return cell.value
 
-            if self.master_ID is not None:
+            if self.master_page_ID is not None:
                 return self.master_shape.cell_value(name)
 
         def set_cell_value(self, name: str, value: str):
@@ -929,7 +933,7 @@ class VisioFile:
             if cell:  # only set value of existing item
                 cell.value = value
 
-            elif self.master_ID is not None:
+            elif self.master_page_ID is not None:
                 master_cell_xml = self.master_shape.xml.find(f'{namespace}Cell[@N="{name}"]')
                 new_cell = ET.fromstring(ET.tostring(master_cell_xml))
 
@@ -937,6 +941,23 @@ class VisioFile:
                 self.cells[name].value = value
 
                 self.xml.append(self.cells[name].xml)
+
+        @property
+        def line_weight(self) -> float:
+            val = self.cell_value('LineWeight')
+            return to_float(val)
+
+        @line_weight.setter
+        def line_weight(self, value: float or str):
+            self.set_cell_value('LineWeight', str(value))
+
+        @property
+        def line_color(self) -> str:
+            return self.cell_value('LineColor')
+
+        @line_color.setter
+        def line_color(self, value: str):
+            self.set_cell_value('LineColor', str(value))
 
         @property
         def x(self):
@@ -1015,23 +1036,22 @@ class VisioFile:
 
         @property
         def text(self):
-            text = ""
-            t = self.xml.find(f"{namespace}Text")
+            # return contents of Text element, or Master shape (if referenced), or empty string
+            text_element = self.xml.find(f"{namespace}Text")
 
-            if t is not None:
-                text = "".join(t.itertext())
-
-            elif self.master_ID is not None:
-                    text = self.master_shape.text
-
-            return text
+            if isinstance(text_element, Element):
+                return "".join(text_element.itertext())  # get all text from <Text> sub elements
+            elif self.master_page_ID:
+                return self.master_shape.text  # get text from master shape
+            return ""
 
         @text.setter
         def text(self, value):
-            t = self.xml.find(f"{namespace}Text")  # type: Element
-            if t is not None:
-                VisioFile.Shape.clear_all_text_from_xml(t)
-                t.text = value
+            text_element = self.xml.find(f"{namespace}Text")
+            if isinstance(text_element, Element):  # if there is a Text element then clear out and set contents
+                VisioFile.Shape.clear_all_text_from_xml(text_element)
+                text_element.text = value
+            # todo: create new Text element if not found
 
         def sub_shapes(self):
             shapes = list()
@@ -1068,13 +1088,25 @@ class VisioFile:
                         return found
 
         def find_shapes_by_id(self, shape_id: str) -> List[VisioFile.Shape]:
-            # recursively search for shapes by text and return first match
+            # recursively search for shapes by ID and return all matches
             found = list()
             for shape in self.sub_shapes():  # type: VisioFile.Shape
                 if shape.ID == shape_id:
                     found.append(shape)
                 if shape.shape_type == 'Group':
                     sub_found = shape.find_shapes_by_id(shape_id)
+                    if sub_found:
+                        found.extend(sub_found)
+            return found  # return list of matching shapes
+
+        def find_shapes_by_master(self, master_page_ID: str, master_shape_ID: str) -> List[VisioFile.Shape]:
+            # recursively search for shapes by master ID and return all matches
+            found = list()
+            for shape in self.sub_shapes():  # type: VisioFile.Shape
+                if shape.master_shape_ID == master_shape_ID and shape.master_page_ID == master_page_ID:
+                    found.append(shape)
+                if shape.shape_type == 'Group':
+                    sub_found = shape.find_shapes_by_master(master_shape_ID, master_shape_ID)
                     if sub_found:
                         found.extend(sub_found)
             return found  # return list of matching shapes
@@ -1265,6 +1297,16 @@ class VisioFile:
             found = list()
             for s in self.shapes:
                 found = s.find_shapes_by_id(shape_id)
+                if found:
+                    return found
+            return found
+
+        def find_shapes_with_same_master(self, shape: VisioFile.Shape) -> List[VisioFile.Shape]:
+            # return all shapes with master
+            found = list()
+            for s in self.shapes:
+                found = s.find_shapes_by_master(master_page_ID=shape.master_page_ID,
+                                                master_shape_ID=shape.master_shape_ID)
                 if found:
                     return found
             return found
