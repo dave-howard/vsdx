@@ -922,3 +922,4 @@ def test_copy_page_positions(filename: str, page_index_to_copy:int, page_positio
         page = vis.get_page_by_name(new_page.name)
         index = vis.pages.index(page)
         assert index == out_page_index  # check that page location persists through file save and open
+

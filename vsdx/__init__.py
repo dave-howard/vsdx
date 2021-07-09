@@ -909,6 +909,11 @@ class VisioFile:
 
         @property
         def master_shape(self) -> VisioFile.Shape:
+            """Get this shapes master
+
+            Returns this Shape's master as a Shape object (or None)
+
+            """
             master_page = self.page.vis.get_master_page_by_id(self.master_page_ID)
             if not master_page:
                 return   # None if no master page set for this Shape

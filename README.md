@@ -57,6 +57,8 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.4.4: Added support for master page shape inheritance, ability to get `Shape.master_shape`, ability to 
+  update master shapes and persist changes to master shapes in `save_vsdx()`
 - v0.4.3: Added support for including/excluding pages via Jinja with `{% showif <statement> %}` in page name
 - v0.4.2: Added `VisioFile.add_page_at()` method taking `index` to allow insertion
   at a specific point; Added `VisionFile.copy_page()` method to copy an existing page 
