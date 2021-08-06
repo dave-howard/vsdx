@@ -636,19 +636,33 @@ class VisioFile:
         # update a Shapes tag where text looks like a jinja {% for xxxx %} loop
         # move text to start of Shapes tag and add {% endfor %} at end of tag
         text = shape.text
-        jinja_loop_text = text[:text.find(' %}') + 3] if text.startswith('{% for ') and text.find(' %}') else ''
-        if jinja_loop_text:
+
+        # use regex to find all loops
+        jinja_loops = re.findall("{% for\s(.*?)\s%}", text)
+
+        for loop in jinja_loops:
+            jinja_loop_text = f"{{% for {loop} %}}"
             # move the for loop to start of shapes element (just before first Shape element)
             if previous_shape:
-                previous_shape.xml.tail = jinja_loop_text  # add jinja loop text after previous shape, before this element
+                if previous_shape.xml.tail:
+                    previous_shape.xml.tail += jinja_loop_text
+                else:
+                    previous_shape.xml.tail = jinja_loop_text  # add jinja loop text after previous shape, before this element
             else:
-                shape.parent.xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
-            shape.text = text.lstrip(jinja_loop_text)  # remove jinja loop from <Text> tag in element
+                if shape.parent.xml.text:
+                    shape.parent.xml.text += jinja_loop_text
+                else:
+                    shape.parent.xml.text = jinja_loop_text  # add jinja loop at start of parent, just before this element
+            shape.text = shape.text.replace(jinja_loop_text, '')  # remove jinja loop from <Text> tag in element
 
             # add closing 'endfor' to just inside the shapes element, after last shape
-            shape.xml.tail = '{% endfor %}'  # add text at end of Shape element
+            if shape.xml.tail:  # extend or set text at end of Shape element
+                shape.xml.tail += "{% endfor %}"
+            else:
+                shape.xml.tail = '{% endfor %}'
 
-            return shape.ID  # return shape ID if it is a loop
+        if jinja_loops:
+            return shape.ID  # return shape ID if it is a loop, so that duplicate shape IDs can be updated
 
         # jinja_show_if - translate non-standard {% showif statement %} to valid jinja if statement
         jinja_show_if = text[:text.find(' %}') + 3] if text.startswith('{% showif ') and text.find(' %}') else ''

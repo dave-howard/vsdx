@@ -528,6 +528,27 @@ def test_basic_jinja_loop(filename: str, context: dict):
                     assert page.find_shape_by_text(str(item))
 
 
+@pytest.mark.parametrize(("filename", "context"),
+                         [("test_jinja_inner_loop.vsdx", {"test_list":[[1, 2, 3], [1, 2, 3], [1, 2, 3]]}),
+                          ("test_jinja_inner_loop.vsdx", {"test_list":["One", "Two","Three"]}),
+                          ])
+def test_jinja_inner_loop(filename: str, context: dict):
+    out_file = basedir+'out'+ os.sep + filename[:-5] + '_test_jinja_inner_loop.vsdx'
+    with VisioFile(basedir+filename) as vis:
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    # open file and validate each shape id has expected text, and that a shape exists with each loop value
+    test_list = context["test_list"]
+    with VisioFile(out_file) as vis:
+        page = vis.pages[0]
+        for o in test_list:
+            for p in o:
+                print(f"p={p}")
+                s = page.find_shape_by_text(str(p))
+                assert s
+
+
 @pytest.mark.parametrize(
     ("filename", "context", "shape_id", "expected_x", "expected_text"),
     [("test_jinja_self_refs.vsdx", {"n": 1}, "1", 2.0, "This text should remain  and x should be 2.0\n"),
