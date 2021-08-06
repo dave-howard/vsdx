@@ -756,15 +756,13 @@ class VisioFile:
         return id_map
 
     def set_new_id(self, element: Element, page: VisioFile.Page, id_map: dict):
+        page.max_id += 1
+        max_id = page.max_id
         if element.attrib.get('ID'):
             current_id = element.attrib['ID']
-            page.max_id += 1
-            max_id = page.max_id
             id_map[current_id] = max_id  # record mappings
-            element.attrib['ID'] = str(max_id)
-            return max_id  # return new id for info
-        else:
-            print(f"no ID attr in {element.tag}")
+        element.attrib['ID'] = str(max_id)
+        return max_id  # return new id for info
 
     def update_ids(self, shape: Element, id_map: dict):
         # update: <ns0:Cell F="Sheet.15! replacing 15 with new id using prepopulated id_map
@@ -1069,8 +1067,10 @@ class VisioFile:
                 parent_element = self.xml.find(f"{namespace}Shapes")
             else:  # a Shapes
                 parent_element = self.xml
-
-            shapes = [VisioFile.Shape(xml=shape, parent=self, page=self.page) for shape in parent_element]
+            if parent_element:
+                shapes = [VisioFile.Shape(xml=shape, parent=self, page=self.page) for shape in parent_element]
+            else:
+                shapes = []
             return shapes
 
         def get_max_id(self):
