@@ -295,6 +295,12 @@ class VisioFile:
         ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
         vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
 
+        HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+        i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
+        num_pages = int(i4.text)
+        # TODO: if deleting a page, this should be decremented
+        i4.text = str(num_pages+1)
+
         TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
         vector = TitlesOfParts.find(f'{vt_namespace}vector')
 
@@ -302,6 +308,7 @@ class VisioFile:
         lpstr.text = new_page_name
         vector.append(lpstr)
         vector_size = int(vector.attrib['size'])
+        # TODO: if deleting a page, this should be decremented
         vector.set('size', str(vector_size+1))
 
     def _create_page(
