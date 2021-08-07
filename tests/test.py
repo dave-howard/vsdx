@@ -153,6 +153,22 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
             assert s.y == x_y[1]
 
 
+@pytest.mark.parametrize(("filename", "shape_name", "property_dict"),
+                         [("test1.vsdx", "Shape Text", {"my_property_name": "property value",
+                                                        "my_second_property_name": "another value"}),
+                          ])
+def test_get_shape_data_properties(filename: str, shape_name: str, property_dict: dict):
+    with VisioFile(basedir+filename) as vis:
+        shape = vis.pages[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+
+        props = shape.data_properties
+        # check lengths are same
+        assert len(props) == len(property_dict)
+        # check each key/value the same
+        for prop in props:
+            assert prop.value == property_dict.get(prop.value)
+
+
 @pytest.mark.parametrize(("filename", "shape_names", "shape_x_y_deltas"),
                          [("test1.vsdx", {"Shape to remove"}, {(1.0, 1.0)}),
                           ("test4_connectors.vsdx", {"Shape B"}, {(1.0, 1.0)})])

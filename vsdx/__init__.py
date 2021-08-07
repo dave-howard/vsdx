@@ -871,6 +871,12 @@ class VisioFile:
         def __repr__(self):
             return f"Cell: name={self.name} val={self.value} func={self.func}"
 
+    class ShapeProperty:
+        def __init__(self, name: str, value, shape: VisioFile.Shape):
+            self.name = name
+            self.value = value
+            self.shape = shape
+
     class Shape:
         """Represents a single shape, or a group shape containing other shapes
         """
@@ -936,6 +942,18 @@ class VisioFile:
                 return master_sub_shape
 
             return master_shape
+
+        @property
+        def data_properties(self) -> List[VisioFile.ShapeProperty]:
+            properties = list()
+            properties_xml = self.xml.find(f'{namespace}Section[@N="Property"]')
+            property_rows = properties_xml.findall(f'{namespace}Row')
+            for prop in property_rows:
+                name = prop.attrib.get('N')
+                value_cell = prop.find(f'{namespace}Cell[@N="Value"]')
+                value = value_cell.attrib.get('V') if value_cell else None
+                properties.append(VisioFile.ShapeProperty(name=name, value=value, shape=self))
+            return properties
 
         def cell_value(self, name: str):
             cell = self.cells.get(name)
