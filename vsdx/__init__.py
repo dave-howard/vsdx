@@ -584,15 +584,7 @@ class VisioFile:
             if VisioFile.jinja_page_showif(page, context):
                 loop_shape_ids = list()
                 for shapes_by_id in page.shapes:  # type: VisioFile.Shape
-                    prev_shape = None
-                    for shape in shapes_by_id.sub_shapes():  # type: VisioFile.Shape
-                        # manage for loops in template
-                        loop_shape_id = VisioFile.jinja_create_for_loop_if(shape, prev_shape)
-                        if loop_shape_id:
-                            loop_shape_ids.append(loop_shape_id)
-                        prev_shape = shape
-                        # manage 'set self' statements
-                        VisioFile.jinja_set_selfs(shape, context)
+                    VisioFile.jinja_render_shape(shape=shapes_by_id, context=context, loop_shape_ids=loop_shape_ids)
 
                 source = ET.tostring(page.xml.getroot(), encoding='unicode')
                 source = VisioFile.unescape_jinja_statements(source)  # unescape chars like < and > inside {%...%}
@@ -617,6 +609,19 @@ class VisioFile:
         # remove pages after processing
         for p in pages_to_remove:
             self.remove_page_by_index(p.index_num)
+
+    @staticmethod
+    def jinja_render_shape(shape: VisioFile.Shape, context: dict, loop_shape_ids: list):
+        prev_shape = None
+        for s in shape.sub_shapes():  # type: VisioFile.Shape
+            # manage for loops in template
+            loop_shape_id = VisioFile.jinja_create_for_loop_if(s, prev_shape)
+            if loop_shape_id:
+                loop_shape_ids.append(loop_shape_id)
+            prev_shape = s
+            # manage 'set self' statements
+            VisioFile.jinja_set_selfs(s, context)
+            VisioFile.jinja_render_shape(shape=s, context=context, loop_shape_ids=loop_shape_ids)
 
     @staticmethod
     def jinja_set_selfs(shape: VisioFile.Shape, context: dict):
@@ -683,23 +688,27 @@ class VisioFile:
             else:
                 shape.xml.tail = '{% endfor %}'
 
-        if jinja_loops:
-            return shape.ID  # return shape ID if it is a loop, so that duplicate shape IDs can be updated
-
+        jinja_show_ifs = re.findall("{% showif\s(.*?)\s%}", text)  # find all showif statements
         # jinja_show_if - translate non-standard {% showif statement %} to valid jinja if statement
-        jinja_show_if = text[:text.find(' %}') + 3] if text.startswith('{% showif ') and text.find(' %}') else ''
-        if jinja_show_if:
-            jinja_show_if = jinja_show_if.replace('{% showif ', '{% if ')  # translate to actual jinja if statement
+        for show_if in jinja_show_ifs:
+            jinja_show_if = f"{{% if {show_if} %}}"  # translate to actual jinja if statement
             # move the for loop to start of shapes element (just before first Shape element)
             if previous_shape:
                 previous_shape.xml.tail = str(previous_shape.xml.tail or '')+jinja_show_if  # add jinja loop text after previous shape, before this element
             else:
                 shape.parent.xml.text = str(shape.parent.xml.text or '')+jinja_show_if  # add jinja loop at start of parent, just before this element
 
-            shape.text = ''  # remove jinja loop from <Text> tag in element
+            # remove original jinja showif from <Text> tag in element
+            shape.text = shape.text.replace(f"{{% showif {show_if} %}}", '')
 
             # add closing 'endfor' to just inside the shapes element, after last shape
-            shape.xml.tail = '{% endif %}'  # add text at end of Shape element
+            if shape.xml.tail:  # extend or set text at end of Shape element
+                shape.xml.tail += "{% endif %}"
+            else:
+                shape.xml.tail = '{% endif %}'
+
+        if jinja_loops:
+            return shape.ID  # return shape ID if it is a loop, so that duplicate shape IDs can be updated
 
     @staticmethod
     def jinja_page_showif(page: VisioFile.Page, context: dict):

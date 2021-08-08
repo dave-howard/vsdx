@@ -565,6 +565,28 @@ def test_jinja_inner_loop(filename: str, context: dict):
                 assert s
 
 
+@pytest.mark.parametrize(("filename", "out_name", "context"),
+                         [("test_jinja_loop_showif.vsdx", "1234", {"test_list": [1, 2, 3, 4]}),
+                          ("test_jinja_loop_showif.vsdx", "3456", {"test_list": [3, 4, 5, 6]}),
+                          ])
+def test_jinja_loop_showif(filename: str, out_name: str,  context: dict):
+    out_file = basedir+'out'+ os.sep + filename[:-5] + out_name + '.vsdx'
+    with VisioFile(basedir+filename) as vis:
+        vis.jinja_render_vsdx(context=context)
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.pages[0]
+        for o in context['test_list']:
+            s = page.find_shape_by_text(f"In this instance, o={o}")
+            # test that {% show if o > 2 %} has worked
+            print(f"for {o} found {s}")
+            if o > 2:
+                assert s  # check that shape is found (not removed by showif)
+            else:
+                assert not s  # check that shape is not found (has been removed by showif)
+
+
 @pytest.mark.parametrize(
     ("filename", "context", "shape_id", "expected_x", "expected_text"),
     [("test_jinja_self_refs.vsdx", {"n": 1}, "1", 2.0, "This text should remain  and x should be 2.0\n"),
