@@ -13,6 +13,8 @@ from xml.etree.ElementTree import Element
 import xml.dom.minidom as minidom   # minidom used for prettyprint
 
 namespace = "{http://schemas.microsoft.com/office/visio/2012/main}"  # visio file name space
+ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
+vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
 
 
 # utility functions
@@ -62,8 +64,8 @@ class VisioFile:
         self.pages_xml_rels = None
         self.content_types_xml = None
         self.app_xml = None
-        self.pages = list()  # list of Page objects, populated by open_vsdx_file()
-        self.master_pages = list()  # list of Page objects, populated by open_vsdx_file()
+        self.pages = list()  # type: List[VisioFile.Page]  # list of Page objects, populated by open_vsdx_file()
+        self.master_pages = list()  # type: List[VisioFile.Page]  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
 
     def __enter__(self):
@@ -219,6 +221,7 @@ class VisioFile:
         if page:
             self.pages_xml.getroot().remove(page)
             page = self.pages[index]  # type: VisioFile.Page
+            self._remove_page_from_app_xml(page.name)
             del self.pages[index]
 
     def _update_pages_xml_rels(self, new_page_filename: str) -> str:
@@ -291,10 +294,7 @@ class VisioFile:
         # then add it:
         content_types.insert(idx+1, content_types_element)
 
-    def _update_app_xml(self, new_page_name: str):
-        ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
-        vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
-
+    def _add_page_to_app_xml(self, new_page_name: str):
         HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
         i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
         num_pages = int(i4.text)
@@ -310,6 +310,25 @@ class VisioFile:
         vector_size = int(vector.attrib['size'])
         # TODO: if deleting a page, this should be decremented
         vector.set('size', str(vector_size+1))
+
+    def _remove_page_from_app_xml(self, page_name: str):
+        HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+        i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
+        num_pages = int(i4.text)
+        # deleting a page, this should be decremented
+        i4.text = str(num_pages-1)
+
+        TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+
+        for lpstr in vector.findall(f'{vt_namespace}lpstr'):
+            if lpstr.text == page_name:
+                vector.remove(lpstr)
+                break
+
+        vector_size = int(vector.attrib['size'])
+        # deleting a page, this should be decremented
+        vector.set('size', str(vector_size-1))
 
     def _create_page(
         self,
@@ -345,7 +364,7 @@ class VisioFile:
 
         # update app.xml, if it exists
         if self.app_xml:
-            self._update_app_xml(page_name)
+            self._add_page_to_app_xml(page_name)
 
         # Update VisioFile object
         new_page = VisioFile.Page(new_page_xml, new_page_path, page_name, self)

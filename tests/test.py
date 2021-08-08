@@ -1,5 +1,5 @@
 import pytest
-from vsdx import VisioFile, namespace, PagePosition
+from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition
 from datetime import datetime
 import os
 from typing import List
@@ -960,3 +960,79 @@ def test_copy_page_positions(filename: str, page_index_to_copy:int, page_positio
         index = vis.pages.index(page)
         assert index == out_page_index  # check that page location persists through file save and open
 
+
+@pytest.mark.parametrize(("filename"),
+                         [("test1.vsdx"),
+                          ])
+def test_app_xml_page_names(filename: str):
+    # test that page names in app.xml matches page names loaded
+    with VisioFile(basedir+filename) as vis:
+        HeadingPairs = vis.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+        i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
+        num_pages = int(i4.text)
+        assert num_pages == len(vis.pages)
+
+        # check page names from pages is same as page names from app.xml
+        page_names = [p.name for p in vis.pages]
+        TitlesOfParts = vis.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+        app_xml_page_names = []
+        for lpstr in vector.findall(f'{vt_namespace}lpstr'):
+            page_name = lpstr.text
+            app_xml_page_names.append(page_name)
+        assert page_names == app_xml_page_names
+
+
+@pytest.mark.parametrize(("filename", "new_page_name", "location"),
+                         [("test1.vsdx", "new_page", 0),
+                          ("test1.vsdx", "new_page", 1),
+                          ("test2.vsdx", "new_page", 0),
+                          ])
+def test_app_xml_page_names_after_add_page(filename: str, new_page_name: str, location: int):
+    # test that page names in app.xml matches page names loaded
+    with VisioFile(basedir+filename) as vis:
+        if location is not None:
+            vis.add_page(new_page_name)
+        else:
+            vis.add_page_at(location, new_page_name)
+
+        HeadingPairs = vis.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+        i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
+        num_pages = int(i4.text)
+        assert num_pages == len(vis.pages)
+
+        # check page names from pages is same as page names from app.xml
+        page_names = [p.name for p in vis.pages]
+        TitlesOfParts = vis.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+        app_xml_page_names = []
+        for lpstr in vector.findall(f'{vt_namespace}lpstr'):
+            page_name = lpstr.text
+            app_xml_page_names.append(page_name)
+        assert page_names == app_xml_page_names
+
+
+@pytest.mark.parametrize(("filename", "remove_index"),
+                         [("test1.vsdx", 0),
+                          ("test1.vsdx", 1),
+                          ("test2.vsdx", 0),
+                          ])
+def test_app_xml_page_names_after_remove_page(filename: str, remove_index: int):
+    # test that page names in app.xml matches page names loaded
+    with VisioFile(basedir+filename) as vis:
+        vis.remove_page_by_index(remove_index)
+
+        HeadingPairs = vis.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+        i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
+        num_pages = int(i4.text)
+        assert num_pages == len(vis.pages)
+
+        # check page names from pages is same as page names from app.xml
+        page_names = [p.name for p in vis.pages]
+        TitlesOfParts = vis.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+        app_xml_page_names = []
+        for lpstr in vector.findall(f'{vt_namespace}lpstr'):
+            page_name = lpstr.text
+            app_xml_page_names.append(page_name)
+        assert page_names == app_xml_page_names
