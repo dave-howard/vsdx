@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.4.8: Support nested loops/showifs and combo of loop and if in same shape.
 - v0.4.7: Python 3.10.0rc1 added to test suite. Add `Shape.data_properties` property, and new class `ShapeProperty` to represent Visio Shape Data
 - v0.4.6: Add support for nested jinja loops in one shape
 - v0.4.5: Fix bug where some shapes have no parent, and inserting shape into empty page
