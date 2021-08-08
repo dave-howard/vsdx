@@ -298,37 +298,33 @@ class VisioFile:
         HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
         i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
         num_pages = int(i4.text)
-        # TODO: if deleting a page, this should be decremented
-        i4.text = str(num_pages+1)
+        i4.text = str(num_pages+1)  # increment as page added
 
         TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
         vector = TitlesOfParts.find(f'{vt_namespace}vector')
 
         lpstr = Element(f'{vt_namespace}lpstr')
         lpstr.text = new_page_name
-        vector.append(lpstr)
+        vector.append(lpstr)  # add new lpstr element with new page name
         vector_size = int(vector.attrib['size'])
-        # TODO: if deleting a page, this should be decremented
-        vector.set('size', str(vector_size+1))
+        vector.set('size', str(vector_size+1))  # increment as page added
 
     def _remove_page_from_app_xml(self, page_name: str):
         HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
         i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
         num_pages = int(i4.text)
-        # deleting a page, this should be decremented
-        i4.text = str(num_pages-1)
+        i4.text = str(num_pages-1)  # decrement as page removed
 
         TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
         vector = TitlesOfParts.find(f'{vt_namespace}vector')
 
         for lpstr in vector.findall(f'{vt_namespace}lpstr'):
             if lpstr.text == page_name:
-                vector.remove(lpstr)
+                vector.remove(lpstr)  # remove page from list of names
                 break
 
         vector_size = int(vector.attrib['size'])
-        # deleting a page, this should be decremented
-        vector.set('size', str(vector_size-1))
+        vector.set('size', str(vector_size-1))  # decrement as page removed
 
     def _create_page(
         self,
