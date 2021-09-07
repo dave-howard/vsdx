@@ -1441,7 +1441,7 @@ class VisioFile:
                 # create new connect shape and get id
                 media = Media()
                 connector_shape = media.straight_connector.copy(page)  # default to straight connector
-
+                connector_shape.text = ''  # clear text used to find shape
                 if not os.path.exists(page.vis._masters_folder):
                     # Add masters folder to directory if not already present
                     shutil.copytree(media._media_vsdx._masters_folder, page.vis._masters_folder)
