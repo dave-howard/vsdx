@@ -280,6 +280,34 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
         assert sorted(expected_connector_ids) == list(actual_connector_ids)
 
 
+@pytest.mark.parametrize(("filename", "shape_a_text", "shape_b_text"),
+                         [
+                             ('test1.vsdx', "Shape Text", "Shape to remove"),
+                             ('test1.vsdx', "Shape to remove", "Shape Text"),
+                             ('test1.vsdx', "Shape Text", "Shape to copy"),
+                             ('test1.vsdx', "Shape to copy", "Shape to remove"),
+                             ('test4_connectors.vsdx', "Shape A", "Shape C"),
+                          ])
+def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_text: str):
+    out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_add_connect_between_'+shape_a_text+'_'+shape_b_text+'.vsdx'
+    with VisioFile(basedir+filename) as vis:
+        page = vis.pages[0]  # type: VisioFile.Page
+        from_shape = page.find_shape_by_text(shape_a_text)
+        to_shape = page.find_shape_by_text(shape_b_text)
+        c = VisioFile.Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
+        new_connector_id = c.ID
+        vis.save_vsdx(out_file)
+
+        # re-open saved file and check it is changed as expected
+        with VisioFile(out_file) as vis:
+            page = vis.pages[0]
+            connector_ids = [c.connector_shape_id for c in page.connects]
+            # new shape is referenced as connector_shape for new connector relationship
+            assert new_connector_id in connector_ids
+            # new shape exists in page
+            assert page.find_shape_by_id(new_connector_id)
+
+
 @pytest.mark.parametrize(("filename", "shape_name"),
                          [("test1.vsdx", "Shape to copy"),
                           ("test4_connectors.vsdx", "Shape B")])
@@ -296,7 +324,7 @@ def test_vis_copy_shape(filename: str, shape_name: str):
 
         # note = this does add the shape, but prefer Shape.copy() as per next test which wraps this and returns Shape
         page.set_max_ids()
-        new_shape = vis.copy_shape(shape=s.xml, page=page.xml, page_path=page.filename)
+        new_shape = vis.copy_shape(shape=s.xml, page=page)
 
         assert new_shape  # check copy_shape returns xml
         
@@ -366,12 +394,12 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
         shape_text = s.text
         print(f"Found shape id:{s.ID}")
 
-        new_shape = vis.copy_shape(shape=s.xml, page=page2.xml, page_path=page2.filename)
+        new_shape = vis.copy_shape(shape=s.xml, page=page2)
         assert new_shape  # check copy_shape returns xml
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         page2_new_shape_id = new_shape.attrib['ID']
 
-        new_shape = vis.copy_shape(shape=s.xml, page=page3.xml, page_path=page3.filename)
+        new_shape = vis.copy_shape(shape=s.xml, page=page3)
         assert new_shape  # check copy_shape returns xml
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         page3_new_shape_id = new_shape.attrib['ID']

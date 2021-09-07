@@ -15,7 +15,9 @@ import xml.dom.minidom as minidom   # minidom used for prettyprint
 namespace = "{http://schemas.microsoft.com/office/visio/2012/main}"  # visio file name space
 ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
 vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
-
+r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+document_rels_namespace = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
 
 # utility functions
 def to_float(val: str):
@@ -60,10 +62,12 @@ class VisioFile:
         if debug:
             print(f"VisioFile(filename={filename})")
         self.directory = f"./{filename.rsplit('.', 1)[0]}"
-        self.pages_xml = None
-        self.pages_xml_rels = None
-        self.content_types_xml = None
-        self.app_xml = None
+        self.pages_xml = None  # type: ET.ElementTree
+        self.pages_xml_rels = None  # type: ET.ElementTree
+        self.content_types_xml = None  # type: ET.ElementTree
+        self.app_xml = None  # type: ET.ElementTree
+        self.document_xml = None  # type: ET.ElementTree
+        self.document_xml_rels = None  # type: ET.ElementTree
         self.pages = list()  # type: List[VisioFile.Page]  # list of Page objects, populated by open_vsdx_file()
         self.master_pages = list()  # type: List[VisioFile.Page]  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
@@ -78,6 +82,8 @@ class VisioFile:
     def pretty_print_element(xml: Element) -> str:
         if type(xml) is Element:
             return minidom.parseString(ET.tostring(xml)).toprettyxml()
+        elif type(xml) is ET.ElementTree:
+            return minidom.parseString(ET.tostring(xml.getroot())).toprettyxml()
         else:
             return f"Not an Element. type={type(xml)}"
 
@@ -93,6 +99,11 @@ class VisioFile:
         page_dir = f'{self.directory}/visio/pages/'
         pages_filename = page_dir + 'pages.xml'  # pages.xml contains Page name, width, height, mapped to Id
         return pages_filename
+
+    @property
+    def _masters_folder(self):
+        path = f"{self.directory}/visio/masters"
+        return path
 
     def load_pages(self):
         rel_dir = f'{self.directory}/visio/pages/_rels/'
@@ -132,7 +143,9 @@ class VisioFile:
         # TODO: add correctness cross-check. Or maybe the other way round, start from [Content_Types].xml
         #       to get page_dir and other paths...
 
-        self.app_xml = file_to_xml(f'{self.directory}/docProps/app.xml')
+        self.app_xml = file_to_xml(f'{self.directory}/docProps/app.xml')  # note: files in docProps may be missing
+        self.document_xml = file_to_xml(f'{self.directory}/visio/document.xml')
+        self.document_xml_rels = file_to_xml(f'{self.directory}/visio/_rels/document.xml.rels')
 
     def load_master_pages(self):
         # get data from /visio/masters folder
@@ -156,7 +169,6 @@ class VisioFile:
         masters = masters_data.getroot() if masters_data else []
 
         # for each master page, create the VisioFile.Page object
-        r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
         for master in masters:
             rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
             master_id = master.attrib['ID']
@@ -274,14 +286,32 @@ class VisioFile:
 
         return index
 
+    def _add_content_types_override(self, part_name_path: str, content_type: str):
+        content_types = self.content_types_xml.getroot()
+
+        content_types_attribs = {
+            'PartName': part_name_path,
+            'ContentType': content_type,
+        }
+        override_element = Element(f'{cont_types_namespace}Override', content_types_attribs)
+        # find existing elements with same content_type
+        matching_overrides = content_types.findall(
+            f'{cont_types_namespace}Override[@ContentType="{content_type}"]'
+        )
+        if len(matching_overrides):  # insert after similar elements
+            idx = list(content_types).index(matching_overrides[-1])
+            content_types.insert(idx+1, override_element)
+        else:  # add at end of list
+            content_types.append(override_element)
+
     def _update_content_types_xml(self, new_page_filename: str):
+        # todo: use generic function above
         content_types = self.content_types_xml.getroot()
 
         content_types_attribs = {
             'PartName'   : f'/visio/pages/{new_page_filename}',
             'ContentType': 'application/vnd.ms-visio.page+xml'
         }
-        cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
         content_types_element = Element(f'{cont_types_namespace}Override', content_types_attribs)
 
         # add the new element after the last such element
@@ -294,8 +324,98 @@ class VisioFile:
         # then add it:
         content_types.insert(idx+1, content_types_element)
 
+    def document_rels(self) -> List[Element]:
+        rels = self.document_xml_rels.findall(f'{document_rels_namespace}Relationship')
+        return rels
+
+    def _add_document_rel(self, rel_type: str, target: str):
+        rel_ids = [int(str(r.attrib.get('Id')).replace('rId', '')) for r in self.document_rels()]
+        new_rel = Element(f"{document_rels_namespace}Relationship",
+                          {
+                              "Id": f"rId{max(rel_ids)+1}",
+                              "Type": rel_type,
+                              "Target": target,
+                          })
+        self.document_xml_rels.getroot().append(new_rel)
+
+    def _style_sheets(self) -> Element:
+        # return StyleSheets element from document.xml
+        return self.document_xml.getroot().find(f'{namespace}StyleSheets')
+
+    def _get_styles_name_list(self) -> List[str]:
+        return [s.attrib.get('Name','') for s in self._style_sheets().findall(f'{namespace}StyleSheet')]
+
+    def _get_style_by_name(self, name: str) -> Element:
+        stylesheet = self._style_sheets().find(f"{namespace}StyleSheet[@Name = '{name}']")
+        return stylesheet
+
+    def _get_style_by_id(self, ID: str) -> Element:
+        stylesheet = self._style_sheets().find(f"{namespace}StyleSheet[@ID = '{ID}']")
+        return stylesheet
+
+    def _heading_pairs(self) -> Element:
+        # return HeadingPairs element from app.xml
+        return self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+
+    def _titles_of_parts(self) -> Element:
+        # return TitlesOfParts element from app.xml
+        return self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+
+    def _titles_of_parts_list(self) -> List[str]:
+        # return list of strings
+        return [t.text for t in self._titles_of_parts().find(f".//{vt_namespace}vector")]
+
+    def _add_titles_of_parts_item(self, title: str):
+        titles = self._titles_of_parts()
+        vector = titles.find(f".//{vt_namespace}vector")  # new variant appended to vector Element
+        new_title = Element(f'{vt_namespace}lpstr', {})
+        new_title.text = title
+        vector.append(new_title)
+        # add one to vector size, as we have added two new variant elements
+        vector.attrib['size'] = str(int(vector.attrib.get('size', 0)) + 1)
+
+    def _get_app_xml_value(self, name: str) -> str:
+        variants = self._heading_pairs().findall(f".//{vt_namespace}variant")
+        # find Pages in headings
+        for index in range(len(variants)):
+            v = variants[index]
+            lpstr = v.find(f".//{vt_namespace}lpstr")
+            if type(lpstr) is Element and lpstr.text == name:
+                next_v = variants[index+1] if index < (len(variants)-1) else None  # next variant if there is one
+                i4 = next_v.find(f".//{vt_namespace}i4") if type(next_v) is Element else None
+                if type(i4) is Element:
+                    return i4.text
+
+    def _set_app_xml_value(self, name: str, value: str):
+        variants = self._heading_pairs().findall(f".//{vt_namespace}variant")
+        # find Pages in headings
+        for index in range(len(variants)):
+            v = variants[index]
+            lpstr = v.find(f".//{vt_namespace}lpstr")
+            if type(lpstr) is Element and lpstr.text == name:
+                next_v = variants[index+1] if index < (len(variants)-1) else None  # next variant if there is one
+                i4 = next_v.find(f".//{vt_namespace}i4") if type(next_v) is Element else None
+                if type(i4) is Element:
+                    i4.text = value
+                    return
+        # no matching variant found - so create new item and populate it
+        vector = self._heading_pairs().find(f".//{vt_namespace}vector")  # new variant appended to vector Element
+        name_variant = Element(f'{vt_namespace}variant', {})
+        lpstr = Element(f'{vt_namespace}lpstr', {})
+        lpstr.text = name
+        name_variant.append(lpstr)
+        vector.append(name_variant)
+        i4_variant = Element(f'{vt_namespace}variant', {})
+        i4 = Element(f'{vt_namespace}i4', {})
+        i4.text = value
+        i4_variant.append(i4)
+        vector.append(i4_variant)
+        # add two to vector size, as we have added two new variant elements
+        vector.attrib['size'] = str(int(vector.attrib.get('size', 0)) + 2)
+
     def _add_page_to_app_xml(self, new_page_name: str):
-        HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+        # todo: use _add_titles_of_parts_item()
+        HeadingPairs = self._heading_pairs()
         i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
         num_pages = int(i4.text)
         i4.text = str(num_pages+1)  # increment as page added
@@ -744,7 +864,7 @@ class VisioFile:
                 id_map = self.increment_sub_shape_ids(s, page, id_map)
         return id_map
 
-    def copy_shape(self, shape: Element, page: ET, page_path: str) -> ET:
+    def copy_shape(self, shape: Element, page: VisioFile.Page) -> ET:
         """Insert shape into first Shapes tag in destination page, and return the copy.
 
         If destination page does not have a Shapes tag yet, create it.
@@ -761,18 +881,14 @@ class VisioFile:
 
         new_shape = ET.fromstring(ET.tostring(shape))
 
-        for page_obj in self.pages:
-            if page_obj.filename == page_path:
-                break
-        page_obj.set_max_ids()
-
+        page.set_max_ids()
         # find or create Shapes tag
-        shapes_tag = page.find(f"{namespace}Shapes")
+        shapes_tag = page.xml.find(f"{namespace}Shapes")
         if shapes_tag is None:
             shapes_tag = Element(f"{namespace}Shapes")
-            page.getroot().append(shapes_tag)
+            page.xml.getroot().append(shapes_tag)
 
-        id_map = self.increment_shape_ids(new_shape, page_obj)
+        id_map = self.increment_shape_ids(new_shape, page) # page_obj)
         self.update_ids(new_shape, id_map)
         shapes_tag.append(new_shape)
 
@@ -859,8 +975,14 @@ class VisioFile:
         xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml')
 
         # write app.xml
-        if self.app_xml:
+        if self.app_xml is not None:
             xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
+
+        # write document.xml
+        xml_to_file(self.document_xml, f'{self.directory}/visio/document.xml')
+
+        # write document.xml.rels
+        xml_to_file(self.document_xml_rels, f'{self.directory}/visio/_rels/document.xml.rels')
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
@@ -892,6 +1014,14 @@ class VisioFile:
             self.xml.attrib['V'] = str(value)
 
         @property
+        def formula(self):
+            return self.xml.attrib.get('F')
+
+        @formula.setter
+        def formula(self, value: str):
+            self.xml.attrib['F'] = str(value)
+
+        @property
         def name(self):
             return self.xml.attrib.get('N')
 
@@ -917,7 +1047,7 @@ class VisioFile:
             self.tag = xml.tag
             self.ID = xml.attrib.get('ID', None)
             self.master_shape_ID = xml.attrib.get('MasterShape', None)
-            self.master_page_ID = xml.attrib.get('Master', None)
+            self.master_page_ID = xml.attrib.get('Master', None)  # i.e. '2', note: the master_page.name not list index
             if self.master_page_ID is None and isinstance(parent, VisioFile.Shape):  # in case of a sub_shape
                 self.master_page_ID = parent.master_page_ID
             self.shape_type = xml.attrib.get('Type', None)
@@ -944,7 +1074,7 @@ class VisioFile:
             :return: :class:`Shape` the new copy of shape
             """
             dst_page = page or self.page
-            new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page.xml, dst_page.filename)
+            new_shape_xml = self.page.vis.copy_shape(self.xml, dst_page)
 
             # set parent: location for new shape tag to be added
             if page:
@@ -994,6 +1124,14 @@ class VisioFile:
             if self.master_page_ID is not None:
                 return self.master_shape.cell_value(name)
 
+        def cell_formula(self, name: str):
+            cell = self.cells.get(name)
+            if cell:
+                return cell.formula
+
+            if self.master_page_ID is not None:
+                return self.master_shape.cell_formula(name)
+
         def set_cell_value(self, name: str, value: str):
             cell = self.cells.get(name)
             if cell:  # only set value of existing item
@@ -1007,6 +1145,31 @@ class VisioFile:
                 self.cells[name].value = value
 
                 self.xml.append(self.cells[name].xml)
+
+        # LineStyle="7" FillStyle="7" TextStyle="7"
+        @property
+        def line_style_id(self):
+            return self.xml.attrib.get('LineStyle')
+
+        @line_style_id.setter
+        def line_style_id(self, value):
+            self.xml.attrib['LineStyle'] = str(value)
+
+        @property
+        def fill_style_id(self):
+            return self.xml.attrib.get('FillStyle')
+
+        @fill_style_id.setter
+        def fill_style_id(self, value):
+            self.xml.attrib['FillStyle'] = str(value)
+
+        @property
+        def text_style_id(self):
+            return self.xml.attrib.get('TextStyle')
+
+        @text_style_id.setter
+        def text_style_id(self, value):
+            self.xml.attrib['TextStyle'] = str(value)
 
         @property
         def line_weight(self) -> float:
@@ -1251,14 +1414,91 @@ class VisioFile:
             return shapes
 
     class Connect:
-        def __init__(self, xml: Element):
-            self.xml = xml
-            self.from_id = xml.attrib.get('FromSheet')  # ref to the connector shape
-            self.connector_shape_id = self.from_id
-            self.to_id = xml.attrib.get('ToSheet')  # ref to the shape where the connector terminates
-            self.shape_id = self.to_id
-            self.from_rel = xml.attrib.get('FromCell')  # i.e. EndX / BeginX
-            self.to_rel = xml.attrib.get('ToCell')  # i.e. PinX
+        def __init__(self, xml: Element=None, page: VisioFile.Page=None,
+                     from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None):
+            """
+            self.xml = None
+            self.from_id = None  # ref to the connector shape
+            self.connector_shape_id = self.from_id  # ref to the connector shape (duplicate)
+            self.to_id = None  # ref to the shape where the connector terminates
+            self.shape_id = self.to_id  # ref to the shape where the connector terminates
+            self.from_rel = None  # i.e. EndX / BeginX
+            self.to_rel = None  # i.e. PinX
+            """
+            if page is None:
+                return
+            if type(xml) is Element:  # create from xml
+                self.xml = xml
+                self.page = page  # type: VisioFile.Page
+                self.from_id = xml.attrib.get('FromSheet')  # ref to the connector shape
+                self.to_id = xml.attrib.get('ToSheet')  # ref to the shape where the connector terminates
+                self.from_rel = xml.attrib.get('FromCell')  # i.e. EndX / BeginX
+                self.to_rel = xml.attrib.get('ToCell')  # i.e. PinX
+
+        @staticmethod
+        def create(page: VisioFile.Page=None, from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None):
+            if from_shape and to_shape:  # create new connector shape and connect items between this and the two shapes
+                # create new connect shape and get id
+                media = Media()
+                connector_shape = media.straight_connector.copy(page)  # default to straight connector
+
+                if not os.path.exists(page.vis._masters_folder):
+                    # Add masters folder to directory if not already present
+                    shutil.copytree(media._media_vsdx._masters_folder, page.vis._masters_folder)
+                    page.vis.load_master_pages()  # load copied master page files into VisioFile object
+                    # add new master to document relationship
+                    page.vis._add_document_rel(rel_type="http://schemas.microsoft.com/visio/2010/relationships/masters",
+                                               target="masters/masters.xml")
+                    # create masters/master1 elements in [Content_Types].xml
+                    page.vis._add_content_types_override(content_type="application/vnd.ms-visio.masters+xml",
+                                                         part_name_path="/visio/masters/masters.xml")
+                    page.vis._add_content_types_override(content_type="application/vnd.ms-visio.master+xml",
+                                                         part_name_path="/visio/masters/master1.xml")
+
+                # update HeadingPairs and TitlesOfParts in app.xml
+                if page.vis._get_app_xml_value('Masters') is None:
+                    page.vis._set_app_xml_value('Masters', '1')
+                if 'Dynamic connector' not in page.vis._titles_of_parts_list():  # todo: replace static string with name from shape
+                    page.vis._add_titles_of_parts_item('Dynamic connector')
+
+                # copy style used by new connector shape
+                if not page.vis._get_style_by_id(connector_shape.master_shape.line_style_id):
+                    # assume same if is ok, todo: use names for match and increment IDs
+                    media_style = media._media_vsdx._get_style_by_id(connector_shape.master_shape.line_style_id)
+                    page.vis._style_sheets().append(media_style)
+
+                # set Begin and End Trigger formulae for the new shape - linking to shapes in destination page
+                beg_trigger = connector_shape.cells.get('BegTrigger')
+                beg_trigger.formula = beg_trigger.formula.replace('Sheet.1!', f'Sheet{from_shape.ID}!')
+                end_trigger = connector_shape.cells.get('EndTrigger')
+                end_trigger.formula = end_trigger.formula.replace('Sheet.2!', f'Sheet{to_shape.ID}!')
+                # create connect relationships
+                # todo: FromPart="12" and ToPart="3" represent the part of a shape to connection is from/to
+                end_connect_xml = f'<Connect xmlns="http://schemas.microsoft.com/office/visio/2012/main" FromSheet="{connector_shape.ID}" FromCell="EndX" FromPart="12" ToSheet="{to_shape.ID}" ToCell="PinX" ToPart="3"/>'
+                beg_connect_xml = f'<Connect xmlns="http://schemas.microsoft.com/office/visio/2012/main" FromSheet="{connector_shape.ID}" FromCell="BeginX" FromPart="9" ToSheet="{from_shape.ID}" ToCell="PinX" ToPart="3"/>'
+
+                # Add these new connection relationships to the page
+                page.add_connect(VisioFile.Connect(xml=ET.fromstring(end_connect_xml), page=page))
+                page.add_connect(VisioFile.Connect(xml=ET.fromstring(beg_connect_xml), page=page))
+                return connector_shape
+
+        @property
+        def shape_id(self):
+            # ref to the shape where the connector terminates - convenience property
+            return self.to_id
+
+        @property
+        def shape(self) -> VisioFile.Shape:
+            return self.page.find_shape_by_id(self.shape_id)
+
+        @property
+        def connector_shape_id(self):
+            # ref to the connector shape - convenience property
+            return self.from_id
+
+        @property
+        def connector_shape(self) -> VisioFile.Shape:
+            return self.page.find_shape_by_id(self.connector_shape_id)
 
         def __repr__(self):
             return f"Connect: from={self.from_id} to={self.to_id} connector_id={self.connector_shape_id} shape_id={self.shape_id}"
@@ -1280,11 +1520,14 @@ class VisioFile:
             self.filename = filename
             self.name = page_name
             self.vis = vis
-            self.connects = self.get_connects()
             self.max_id = 0
 
         def __repr__(self):
             return f"<Page name={self.name} file={self.filename} >"
+
+        @property
+        def connects(self):
+            return self.get_connects()
 
         def set_name(self, value: str):
             # todo: change to name property
@@ -1329,9 +1572,18 @@ class VisioFile:
             # return zero-based index of this page in parent VisioFile.pages list
             return self.vis.pages.index(self)
 
+        def add_connect(self, connect: VisioFile.Connect):
+            connects = self.xml.find(f".//{namespace}Connects")
+            if connects is None:
+                connects = ET.fromstring(f"<Connects xmlns='{namespace[1:-1]}' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'/>")
+                self.xml.getroot().append(connects)
+                connects = self.xml.find(f".//{namespace}Connects")
+
+            connects.append(connect.xml)
+
         def get_connects(self):
             elements = self.xml.findall(f".//{namespace}Connect")  # search recursively
-            connects = [VisioFile.Connect(e) for e in elements]
+            connects = [VisioFile.Connect(xml=e, page=self) for e in elements]
             return connects
 
         def get_connectors_between(self, shape_a_id: str='', shape_a_text: str='',
@@ -1405,4 +1657,23 @@ def file_to_xml(filename: str) -> ET.ElementTree:
 
 def xml_to_file(xml: ET.ElementTree, filename: str):
     """Save an ElementTree to a file"""
-    xml.write(filename)
+    xml.write(filename, xml_declaration=True, method='xml', encoding='UTF-8')
+
+
+class Media:
+    straight_connector_text = 'STRAIGHT_CONNECTOR'
+    curved_connector_text = 'CURVED_CONNECTOR'
+
+    def __init__(self):
+        basedir = str(os.path.relpath(__file__))
+        file_path = os.sep.join(basedir.split(os.sep)[:-1])
+        file_path = os.path.join(file_path, 'media', 'media.vsdx')
+        self._media_vsdx = VisioFile(file_path)
+
+    @property
+    def straight_connector(self):
+        return self._media_vsdx.pages[0].find_shape_by_text(Media.straight_connector_text)
+
+    @property
+    def curved_connector(self):
+        return self._media_vsdx.pages[0].find_shape_by_text(Media.straight_connector_text)
