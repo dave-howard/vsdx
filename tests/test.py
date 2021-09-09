@@ -166,7 +166,8 @@ def test_get_shape_data_properties(filename: str, shape_name: str, property_dict
         assert len(props) == len(property_dict)
         # check each key/value the same
         for prop in props:
-            assert prop.value == property_dict.get(prop.value)
+            print(f"Prop: {prop.name}:'{prop.value}' vs '{property_dict.get(prop.name)}' {prop.value_type} {prop.label} {prop.sort_key} {prop.prompt}")
+            assert prop.value == property_dict.get(prop.name)
 
 
 @pytest.mark.parametrize(("filename", "shape_names", "shape_x_y_deltas"),

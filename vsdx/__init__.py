@@ -1033,10 +1033,16 @@ class VisioFile:
             return f"Cell: name={self.name} val={self.value} func={self.func}"
 
     class ShapeProperty:
-        def __init__(self, name: str, value, shape: VisioFile.Shape):
+        def __init__(self, *, name: str, label: str, prompt: str, sort_key:str, value_type: str, value, shape: VisioFile.Shape):
+            """Represents a single Data Property item associated with a Shape object"""
             self.name = name
+            self.label = label
+            self.prompt = prompt
+            self.sort_key = sort_key
+            self.value_type = value_type
             self.value = value
             self.shape = shape
+
 
     class Shape:
         """Represents a single shape, or a group shape containing other shapes
@@ -1106,14 +1112,24 @@ class VisioFile:
 
         @property
         def data_properties(self) -> List[VisioFile.ShapeProperty]:
-            properties = list()
+            properties = list()  # todo: persist this list as a property of Shape
+            # todo: add propertioes to dict to allow fast lookup by property.name
             properties_xml = self.xml.find(f'{namespace}Section[@N="Property"]')
             property_rows = properties_xml.findall(f'{namespace}Row')
             for prop in property_rows:
+                # todo: move this logic into ShapeProperty class
                 name = prop.attrib.get('N')
                 value_cell = prop.find(f'{namespace}Cell[@N="Value"]')
-                value = value_cell.attrib.get('V') if value_cell else None
-                properties.append(VisioFile.ShapeProperty(name=name, value=value, shape=self))
+                value = value_cell.attrib.get('V') if type(value_cell) is Element else None
+                value_type_cell = prop.find(f'{namespace}Cell[@N="Type"]')
+                value_type = value_type_cell.attrib.get('V') if type(value_type_cell) is Element else None
+                label_cell = prop.find(f'{namespace}Cell[@N="Label"]')
+                label = label_cell.attrib.get('V') if type(label_cell) is Element else None
+                prompt_cell = prop.find(f'{namespace}Cell[@N="Prompt"]')
+                prompt = prompt_cell.attrib.get('V') if type(prompt_cell) is Element else None
+                sort_key_cell = prop.find(f'{namespace}Cell[@N="SortKey"]')
+                sort_key = sort_key_cell.attrib.get('V') if type(sort_key_cell) is Element else None
+                properties.append(VisioFile.ShapeProperty(name=name, label=label, prompt=prompt, sort_key=sort_key, value_type=value_type, value=value, shape=self))
             return properties
 
         def cell_value(self, name: str):
