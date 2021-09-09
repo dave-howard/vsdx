@@ -24,7 +24,7 @@ copyright = '2021, Dave Howard'
 author = 'Dave Howard'
 
 # The full version, including alpha/beta/rc tags
-release = '0.4.8'
+release = '0.4.9'
 
 
 # -- General configuration ---------------------------------------------------
