@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ---
 
 ###  Change Log
+- v0.4.10: Add methods (`Shape.find_shape_by_property_label()` and `Shape.find_shapes_by_property_label`) to find shape or shapes by data property name.
 - v0.4.9: Add support for creating new connection between two objects. Fix ShapeProperty.value, and add label, sort_key, value_type and prompt 
 - v0.4.8: Support nested loops/showifs and combo of loop and if in same shape.
 - v0.4.7: Python 3.10.0rc1 added to test suite. Add `Shape.data_properties` property, and new class `ShapeProperty` to represent Visio Shape Data

@@ -5,7 +5,7 @@ import os
 import re
 from enum import IntEnum
 from jinja2 import Template
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -1032,17 +1032,34 @@ class VisioFile:
         def __repr__(self):
             return f"Cell: name={self.name} val={self.value} func={self.func}"
 
-    class ShapeProperty:
-        def __init__(self, *, name: str, label: str, prompt: str, sort_key:str, value_type: str, value, shape: VisioFile.Shape):
+    class DataProperty:
+        def __init__(self, *, xml: Element, shape: VisioFile.Shape):
             """Represents a single Data Property item associated with a Shape object"""
+            name = xml.attrib.get('N')
+            # get Cell element for each property of DataProperty
+            value_cell = xml.find(f'{namespace}Cell[@N="Value"]')
+            value_type_cell = xml.find(f'{namespace}Cell[@N="Type"]')
+            label_cell = xml.find(f'{namespace}Cell[@N="Label"]')
+            prompt_cell = xml.find(f'{namespace}Cell[@N="Prompt"]')
+            sort_key_cell = xml.find(f'{namespace}Cell[@N="SortKey"]')
+
+            # get values from each Cell Element
+            value = value_cell.attrib.get('V') if type(value_cell) is Element else None
+            value_type = value_type_cell.attrib.get('V') if type(value_type_cell) is Element else None
+            label = label_cell.attrib.get('V') if type(label_cell) is Element else None
+            prompt = prompt_cell.attrib.get('V') if type(prompt_cell) is Element else None
+            sort_key = sort_key_cell.attrib.get('V') if type(sort_key_cell) is Element else None
+
+            # set DataProperty properties from xml
             self.name = name
+            self.value = value
+            self.value_type = value_type
             self.label = label
             self.prompt = prompt
             self.sort_key = sort_key
-            self.value_type = value_type
-            self.value = value
-            self.shape = shape
 
+            self.shape = shape  # reference back to Shape object
+            self.xml = xml  # reference to xml used to create DataProperty
 
     class Shape:
         """Represents a single shape, or a group shape containing other shapes
@@ -1064,6 +1081,7 @@ class VisioFile:
             for e in self.xml.findall(f"{namespace}Cell"):
                 cell = VisioFile.Cell(xml=e, shape=self)
                 self.cells[cell.name] = cell
+            self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
 
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.shape_type} text='{self.text}' >"
@@ -1111,25 +1129,20 @@ class VisioFile:
             return master_shape
 
         @property
-        def data_properties(self) -> List[VisioFile.ShapeProperty]:
-            properties = list()  # todo: persist this list as a property of Shape
-            # todo: add propertioes to dict to allow fast lookup by property.name
+        def data_properties(self) -> Dict[str, VisioFile.DataProperty]:
+            if self._data_properties:
+                # return cached dict if present
+                return self._data_properties
+
+            properties = dict()
             properties_xml = self.xml.find(f'{namespace}Section[@N="Property"]')
-            property_rows = properties_xml.findall(f'{namespace}Row')
-            for prop in property_rows:
-                # todo: move this logic into ShapeProperty class
-                name = prop.attrib.get('N')
-                value_cell = prop.find(f'{namespace}Cell[@N="Value"]')
-                value = value_cell.attrib.get('V') if type(value_cell) is Element else None
-                value_type_cell = prop.find(f'{namespace}Cell[@N="Type"]')
-                value_type = value_type_cell.attrib.get('V') if type(value_type_cell) is Element else None
-                label_cell = prop.find(f'{namespace}Cell[@N="Label"]')
-                label = label_cell.attrib.get('V') if type(label_cell) is Element else None
-                prompt_cell = prop.find(f'{namespace}Cell[@N="Prompt"]')
-                prompt = prompt_cell.attrib.get('V') if type(prompt_cell) is Element else None
-                sort_key_cell = prop.find(f'{namespace}Cell[@N="SortKey"]')
-                sort_key = sort_key_cell.attrib.get('V') if type(sort_key_cell) is Element else None
-                properties.append(VisioFile.ShapeProperty(name=name, label=label, prompt=prompt, sort_key=sort_key, value_type=value_type, value=value, shape=self))
+            if type(properties_xml) is Element:
+                property_rows = properties_xml.findall(f'{namespace}Row')
+                for prop in property_rows:
+                    data_prop = VisioFile.DataProperty(xml=prop, shape=self)
+                    # add properties to dict to allow fast lookup by property.label
+                    properties[data_prop.label] = data_prop
+            self._data_properties = properties  # cache for next call
             return properties
 
         def cell_value(self, name: str):
@@ -1377,6 +1390,29 @@ class VisioFile:
                     shapes.append(shape)
                 if shape.shape_type == 'Group':
                     found = shape.find_shapes_by_text(text)
+                    if found:
+                        shapes.extend(found)
+            return shapes
+
+        def find_shape_by_property_label(self, property_label: str) -> VisioFile.Shape:  # returns Shape
+            # recursively search for shapes by property name and return first match
+            for shape in self.sub_shapes():  # type: VisioFile.Shape
+                if property_label in shape.data_properties.keys():
+                    return shape
+                if shape.shape_type == 'Group':
+                    found = shape.find_shape_by_property_label(property_label)
+                    if found:
+                        return found
+
+        def find_shapes_by_property_label(self, property_label: str, shapes: List[VisioFile.Shape] = None) -> List[VisioFile.Shape]:
+            # recursively search for shapes by property name and return all matches
+            if not shapes:
+                shapes = list()
+            for shape in self.sub_shapes():  # type: VisioFile.Shape
+                if property_label in shape.data_properties.keys():
+                    shapes.append(shape)
+                if shape.shape_type == 'Group':
+                    found = shape.find_shapes_by_property_label(property_label)
                     if found:
                         shapes.extend(found)
             return shapes
@@ -1657,6 +1693,23 @@ class VisioFile:
             shapes = list()
             for s in self.shapes:
                 found = s.find_shapes_by_text(text)
+                if found:
+                    shapes.extend(found)
+            return shapes
+
+        def find_shape_by_property_label(self, property_label: str) -> VisioFile.Shape:
+            # return first matching shape with label
+            # note: use label rather than name as label is more easily visible in diagram
+            for s in self.shapes:
+                found = s.find_shape_by_property_label(property_label)
+                if found:
+                    return found
+
+        def find_shapes_by_property_label(self, property_label: str) -> List[VisioFile.Shape]:
+            # return all matching shapes with property label
+            shapes = list()
+            for s in self.shapes:
+                found = s.find_shapes_by_property_label(property_label)
                 if found:
                     shapes.extend(found)
             return shapes
