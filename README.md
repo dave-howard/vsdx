@@ -54,7 +54,7 @@ with VisioFile('my_template_file.vsdx') as vis:
 Please refer to tests/test.py for more usage
 examples in the form of pytest tests.
 
----
+----
 
 ###  Change Log
 - v0.4.10: Add methods (`Shape.find_shape_by_property_label()` and `Shape.find_shapes_by_property_label`) to find shape or shapes by data property name.
