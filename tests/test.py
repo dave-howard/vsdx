@@ -171,34 +171,38 @@ def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, 
             assert type(prop) is VisioFile.DataProperty
 
 
-@pytest.mark.parametrize(("filename", "shape_name", "property_dict"),
-                         [("test1.vsdx", "Shape Text", {"my_property_name": "property value",
-                                                        "my_second_property_name": "another value"}),
+@pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
+                         [("test1.vsdx", 0, "Shape Text", {"my_property_label": "property value",
+                                                        "my_second_property_label": "another value"}),
+                          ("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "master prop value"}),
+                          ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "master prop value",
+                                                                   "shape_prop": "shape property value"}),
                           ])
-def test_get_shape_data_properties(filename: str, shape_name: str, property_dict: dict):
+def test_get_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
     with VisioFile(basedir+filename) as vis:
-        shape = vis.pages[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: VisioFile.Shape
 
         props = shape.data_properties
+
         # check lengths are same
         assert len(props) == len(property_dict)
 
-        # check each key/value the same
-        for property_name in props.keys():
-            prop = props[property_name]
-            print(f"Prop: {prop.name}:'{prop.value}' vs '{property_dict.get(prop.name)}' {prop.value_type} {prop.label} {prop.sort_key} {prop.prompt}")
-            assert prop.value == property_dict.get(prop.name)
+        # check each key/value is same as expected
+        for property_label in props.keys():
+            prop = props[property_label]
+            assert prop.value == property_dict.get(property_label)
 
 
-@pytest.mark.parametrize(("filename", "expected_shape_name", "property_label"),
-                         [("test1.vsdx", "Shape Text", "my_property_label"),
-                          ("test6_shape_properties.vsdx", "Shape One", "my_property_label"),
-                          ("test6_shape_properties.vsdx", "Shape One", "my_second_property_label"),
-                          ("test6_shape_properties.vsdx", "Shape Three", "my_third_property_label"),
+@pytest.mark.parametrize(("filename", "page_index", "expected_shape_name", "property_label"),
+                         [("test1.vsdx", 0, "Shape Text", "my_property_label"),
+                          ("test6_shape_properties.vsdx", 0, "Shape One", "my_property_label"),
+                          ("test6_shape_properties.vsdx", 0, "Shape One", "my_second_property_label"),
+                          ("test6_shape_properties.vsdx", 0, "Shape Three", "my_third_property_label"),
+                          ("test6_shape_properties.vsdx", 2, "A", "master_Prop"),
                           ])
-def test_find_shape_by_data_property_label(filename: str, expected_shape_name: str, property_label: str):
+def test_find_shape_by_data_property_label(filename: str, page_index: int, expected_shape_name: str, property_label: str):
     with VisioFile(basedir+filename) as vis:
-        shape = vis.pages[0].find_shape_by_property_label(property_label)  # type: VisioFile.Shape
+        shape = vis.pages[page_index].find_shape_by_property_label(property_label)  # type: VisioFile.Shape
 
         # test that a shape is returned
         assert shape
@@ -215,6 +219,7 @@ def test_find_shape_by_data_property_label(filename: str, expected_shape_name: s
                           ("test6_shape_properties.vsdx", 0, ["Shape One", "Shape Two"], "my_property_label"),
                           ("test6_shape_properties.vsdx", 0, ["Shape One", "Shape Three"], "my_second_property_label"),
                           ("test6_shape_properties.vsdx", 1, ["Shape A", "Shape C"], "label_one"),
+                          ("test6_shape_properties.vsdx", 2, ["A", "B"], "master_Prop"),
                           ])
 def test_find_shapes_by_data_property_label(filename: str, page_index: int, expected_shape_names: list, property_label: str):
     with VisioFile(basedir+filename) as vis:

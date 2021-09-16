@@ -1135,6 +1135,8 @@ class VisioFile:
                 return self._data_properties
 
             properties = dict()
+            if self.master_shape:  # start with master data properties or empty dict
+                properties = self.master_shape.data_properties
             properties_xml = self.xml.find(f'{namespace}Section[@N="Property"]')
             if type(properties_xml) is Element:
                 property_rows = properties_xml.findall(f'{namespace}Row')
