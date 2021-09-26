@@ -61,7 +61,11 @@ class VisioFile:
         self.filename = filename
         if debug:
             print(f"VisioFile(filename={filename})")
-        self.directory = f"./{filename.rsplit('.', 1)[0]}"
+        file_type = self.filename.split('.')[-1]  # last text after dot
+        if not file_type.lower() == 'vsdx':
+            raise TypeError(f'Invalid File Type:{file_type}')
+
+        self.directory = os.path.abspath(filename)[:-5]
         self.pages_xml = None  # type: ET.ElementTree
         self.pages_xml_rels = None  # type: ET.ElementTree
         self.content_types_xml = None  # type: ET.ElementTree

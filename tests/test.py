@@ -1,10 +1,64 @@
 import pytest
-from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition
+from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition, Media
 from datetime import datetime
 import os
 from typing import List
 
 basedir = os.path.relpath(__file__)[:-7]  # remove last 7 chars to get directory
+
+
+def test_invalid_file_type():
+    filename = __file__
+    print(f"Opening invalid but existing {filename}")
+    try:
+        with VisioFile(filename):
+            assert False
+    except TypeError as e:
+        print(e)
+        pass # exp[ect to get here
+
+def test_open_rel_path():
+    # test opening media file (not in tests directory)with absolute path
+    filename = os.path.join(basedir, 'test1.vsdx')
+
+    assert(os.path.exists(filename))
+    with VisioFile(filename) as vis:
+        for p in vis.pages:
+            print(p.name, p.shapes)
+
+
+def test_open_abs_path():
+    # test opening media file (not in tests directory)with absolute path
+    media_file_path = Media()._media_vsdx.filename
+    filename = os.path.abspath(media_file_path)
+
+    assert(os.path.exists(filename))
+    with VisioFile(filename) as vis:
+        for p in vis.pages:
+            print(p.name, p.shapes)
+
+
+def test_open_abs_path_save_rel_path():
+    # test opening media file (not in tests directory)with absolute path
+    media_file_path = Media()._media_vsdx.filename
+    filename = os.path.abspath(media_file_path)
+
+    assert(os.path.exists(filename))
+    output_file = os.path.join(basedir, 'out', 'abs_to_rel_out.vsdx')
+    with VisioFile(filename) as vis:
+        vis.save_vsdx(output_file)
+
+
+def test_open_abs_path_save_abs_path():
+    # test opening media file (not in tests directory)with absolute path
+    media_file_path = Media()._media_vsdx.filename
+    filename = os.path.abspath(media_file_path)
+
+    assert(os.path.exists(filename))
+    output_file = os.path.abspath(os.path.join(basedir, 'out', 'abs_to_abs_out.vsdx'))
+    print('output_file', output_file)
+    with VisioFile(filename) as vis:
+        vis.save_vsdx(output_file)
 
 
 def test_file_closure():
