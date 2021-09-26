@@ -231,6 +231,7 @@ def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, 
                           ("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "master prop value"}),
                           ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "master prop value",
                                                                    "shape_prop": "shape property value"}),
+                          ("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "override"}),
                           ])
 def test_get_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
     with VisioFile(basedir+filename) as vis:
@@ -244,6 +245,7 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
         # check each key/value is same as expected
         for property_label in props.keys():
             prop = props[property_label]
+            print(f"prop: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
             assert prop.value == property_dict.get(property_label)
 
 
@@ -273,7 +275,7 @@ def test_find_shape_by_data_property_label(filename: str, page_index: int, expec
                           ("test6_shape_properties.vsdx", 0, ["Shape One", "Shape Two"], "my_property_label"),
                           ("test6_shape_properties.vsdx", 0, ["Shape One", "Shape Three"], "my_second_property_label"),
                           ("test6_shape_properties.vsdx", 1, ["Shape A", "Shape C"], "label_one"),
-                          ("test6_shape_properties.vsdx", 2, ["A", "B"], "master_Prop"),
+                          ("test6_shape_properties.vsdx", 2, ["A", "B", "C"], "master_Prop"),
                           ])
 def test_find_shapes_by_data_property_label(filename: str, page_index: int, expected_shape_names: list, property_label: str):
     with VisioFile(basedir+filename) as vis:

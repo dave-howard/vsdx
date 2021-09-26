@@ -1041,18 +1041,27 @@ class VisioFile:
             """Represents a single Data Property item associated with a Shape object"""
             name = xml.attrib.get('N')
             # get Cell element for each property of DataProperty
-            value_cell = xml.find(f'{namespace}Cell[@N="Value"]')
-            value_type_cell = xml.find(f'{namespace}Cell[@N="Type"]')
             label_cell = xml.find(f'{namespace}Cell[@N="Label"]')
-            prompt_cell = xml.find(f'{namespace}Cell[@N="Prompt"]')
-            sort_key_cell = xml.find(f'{namespace}Cell[@N="SortKey"]')
-
-            # get values from each Cell Element
+            value_cell = xml.find(f'{namespace}Cell[@N="Value"]')
             value = value_cell.attrib.get('V') if type(value_cell) is Element else None
-            value_type = value_type_cell.attrib.get('V') if type(value_type_cell) is Element else None
-            label = label_cell.attrib.get('V') if type(label_cell) is Element else None
-            prompt = prompt_cell.attrib.get('V') if type(prompt_cell) is Element else None
-            sort_key = sort_key_cell.attrib.get('V') if type(sort_key_cell) is Element else None
+
+            if type(label_cell) is Element:
+                value_type_cell = xml.find(f'{namespace}Cell[@N="Type"]')
+                prompt_cell = xml.find(f'{namespace}Cell[@N="Prompt"]')
+                sort_key_cell = xml.find(f'{namespace}Cell[@N="SortKey"]')
+
+                # get values from each Cell Element
+                value_type = value_type_cell.attrib.get('V') if type(value_type_cell) is Element else None
+                label = label_cell.attrib.get('V') if type(label_cell) is Element else None
+                prompt = prompt_cell.attrib.get('V') if type(prompt_cell) is Element else None
+                sort_key = sort_key_cell.attrib.get('V') if type(sort_key_cell) is Element else None
+            else:
+                # over-ridden master shape properties have no label - only a name and value
+                master_prop = [p for p in shape.master_shape.data_properties.values() if p.name == name][0]  # type: VisioFile.DataProperty
+                label = master_prop.label
+                value_type = master_prop.value_type
+                prompt = master_prop.prompt
+                sort_key = master_prop.sort_key
 
             # set DataProperty properties from xml
             self.name = name
