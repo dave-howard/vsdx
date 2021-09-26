@@ -12,10 +12,10 @@ def test_invalid_file_type():
     print(f"Opening invalid but existing {filename}")
     try:
         with VisioFile(filename):
-            assert False
+            assert False  # don't expect to get here
     except TypeError as e:
-        print(e)
-        pass # exp[ect to get here
+        print(e)  # expect to get here
+
 
 def test_open_rel_path():
     # test opening media file (not in tests directory)with absolute path

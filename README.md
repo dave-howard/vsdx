@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.4.12: Add support for absolute paths
 - v0.4.11: Add support for master shape data properties, with related tests
 - v0.4.10: Add methods (`Shape.find_shape_by_property_label()` and `Shape.find_shapes_by_property_label`) to find shape or shapes by data property name.
 - v0.4.9: Add support for creating new connection between two objects. Fix ShapeProperty.value, and add label, sort_key, value_type and prompt 
