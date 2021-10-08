@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.4.14: Include media/*.vsdx files in package
 - v0.4.13: Fix for master shape property inheritance / value overrides
 - v0.4.12: Add support for absolute paths
 - v0.4.11: Add support for master shape data properties, with related tests
