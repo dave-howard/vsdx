@@ -1503,7 +1503,7 @@ class VisioFile:
             """Create a new Connect object between from_shape and to_shape
 
             :returns: a new Connect object
-            :rtype: `VisioFile.Connect`
+            :rtype: VisioFile.Connect
             """
             if from_shape and to_shape:  # create new connector shape and connect items between this and the two shapes
                 # create new connect shape and get id
