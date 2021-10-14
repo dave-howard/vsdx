@@ -1486,17 +1486,8 @@ class VisioFile:
             return shapes
 
     class Connect:
-        def __init__(self, xml: Element=None, page: VisioFile.Page=None,
-                     from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None):
-            """
-            self.xml = None
-            self.from_id = None  # ref to the connector shape
-            self.connector_shape_id = self.from_id  # ref to the connector shape (duplicate)
-            self.to_id = None  # ref to the shape where the connector terminates
-            self.shape_id = self.to_id  # ref to the shape where the connector terminates
-            self.from_rel = None  # i.e. EndX / BeginX
-            self.to_rel = None  # i.e. PinX
-            """
+        """Connect class to represent a connection between two `VisioFile.Shape` objects"""
+        def __init__(self, xml: Element=None, page: VisioFile.Page=None):
             if page is None:
                 return
             if type(xml) is Element:  # create from xml
@@ -1509,6 +1500,10 @@ class VisioFile:
 
         @staticmethod
         def create(page: VisioFile.Page=None, from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None):
+            """Create a new Connect object between from_shape and to_shape
+            :returns: a new Connect object
+            :rtype: `VisioFile.Connect`
+            """
             if from_shape and to_shape:  # create new connector shape and connect items between this and the two shapes
                 # create new connect shape and get id
                 media = Media()
@@ -1587,7 +1582,6 @@ class VisioFile:
 
         """
         def __init__(self, xml: ET.ElementTree, filename: str, page_name: str, vis: VisioFile):
-
             self._xml = xml
             self.filename = filename
             self.name = page_name
