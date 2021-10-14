@@ -1,7 +1,7 @@
 vsdx Key Classes
 ================
 
-There are a few key classes in vsdx that relate to elements of a vsdx file
+There are a few key classes in the vsdx package that relate to elements of a vsdx file
 
 
 vsdx.VisioFile
