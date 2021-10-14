@@ -91,7 +91,7 @@ def test_get_page_shapes(filename: str, count: int):
 def test_get_page_sub_shapes(filename: str, count: int):
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        shapes = page.shapes[0].sub_shapes()
+        shapes = page.sub_shapes()
         print(f"shape count={len(shapes)}")
         assert len(shapes) == count
 
@@ -103,7 +103,7 @@ def test_shape_locations(filename: str, expected_locations: str):
     print("=== list_shape_locations ===")
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        shapes = page.shapes[0].sub_shapes()
+        shapes = page.sub_shapes()
         locations = ""
         for s in shapes:  # type: VisioFile.Shape
             locations += f"{s.x:.2f},{s.y:.2f} "
@@ -116,7 +116,7 @@ def test_shape_locations(filename: str, expected_locations: str):
 def test_get_shape_with_text(filename: str, shape_id: str):
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        shape = page.shapes[0].find_shape_by_text('{{date}}')  # type: VisioFile.Shape
+        shape = page.find_shape_by_text('{{date}}')  # type: VisioFile.Shape
         assert shape.ID == shape_id
 
 
@@ -128,7 +128,7 @@ def test_apply_context(filename: str):
     out_file = basedir + 'out' + os.sep + filename[:-5] + '_VISfilter_applied.vsdx'
     with VisioFile(basedir+filename) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        original_shape = page.shapes[0].find_shape_by_text('{{date}}')  # type: VisioFile.Shape
+        original_shape = page.find_shape_by_text('{{date}}')  # type: VisioFile.Shape
         assert original_shape.ID
         page.apply_text_context(context)
         vis.save_vsdx(out_file)
@@ -136,7 +136,7 @@ def test_apply_context(filename: str):
     # open and find date_str
     with VisioFile(out_file) as vis:
         page = vis.get_page(0)  # type: VisioFile.Page
-        updated_shape = page.shapes[0].find_shape_by_text(date_str)  # type: VisioFile.Shape
+        updated_shape = page.find_shape_by_text(date_str)  # type: VisioFile.Shape
         assert updated_shape.ID == original_shape.ID
 
 
@@ -660,7 +660,7 @@ def test_jinja_if(filename: str, context: dict, shape_count: int):
     # open file and validate each shape id has expected text
     with VisioFile(out_file) as vis:
         page = vis.pages[1]  # second page has the shapes with if statements
-        count = len(page.shapes[0].sub_shapes())
+        count = len(page.sub_shapes())
         print(f"expected {shape_count} and found {count}")
         assert count == shape_count
 

@@ -578,7 +578,7 @@ class VisioFile:
     def copy_page(self, page: VisioFile.Page, *, index: Optional[int] = PagePosition.AFTER, name: Optional[str] = None) -> VisioFile.Page:
         """Copy an existing page and insert in VisioFile
 
-        :param page: the :class Page: to copy
+        :param page: the page to copy
         :type page: VisioFile.Page
         :param index: the specific int or relation PagePosition location for new page
         :type index: int or PagePosition
@@ -1326,7 +1326,12 @@ class VisioFile:
                 text_element.text = value
             # todo: create new Text element if not found
 
-        def sub_shapes(self):
+        def sub_shapes(self) -> List[VisioFile.Shape]:
+            """Get child/sub shapes contained by a VisioFile.Shape
+
+            :returns: list of VisioFile.Shape objects
+            :rtype: List[VisioFile.Shape]
+            """
             shapes = list()
             # for each shapes tag, look for Shape objects
             # self can be either a Shapes or a Shape
@@ -1623,6 +1628,15 @@ class VisioFile:
 
             """
             return [VisioFile.Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")]
+
+        def sub_shapes(self) -> List[VisioFile.Shape]:
+            """Return list of Shape objects at top level of VisioFile.Page
+
+            :returns: list of `VisioFile.Shape` objects
+            :rtype: List[VisioFile.Shape]
+            """
+            # note that self.shapes should always return a single shape
+            return self.shapes[0].sub_shapes()
 
         def set_max_ids(self):
             # get maximum shape id from xml in page
