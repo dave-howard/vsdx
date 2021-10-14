@@ -1501,6 +1501,7 @@ class VisioFile:
         @staticmethod
         def create(page: VisioFile.Page=None, from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None):
             """Create a new Connect object between from_shape and to_shape
+
             :returns: a new Connect object
             :rtype: `VisioFile.Connect`
             """
