@@ -716,10 +716,10 @@ class VisioFile:
                 output = template.render(context)
                 page.xml = ET.ElementTree(ET.fromstring(output))  # create ElementTree from Element created from output
 
-                # update loop shape IDs
+                # update loop shape IDs which have been duplicated by Jinja template
                 page.set_max_ids()
                 for shape_id in loop_shape_ids:
-                    shapes_by_id = page.find_shapes_by_id(shape_id)  # type: List[VisioFile.Shape]
+                    shapes_by_id = page._find_shapes_by_id(shape_id)  # type: List[VisioFile.Shape]
                     if shapes_by_id and len(shapes_by_id) > 1:
                         delta = 0
                         for shape in shapes_by_id[1:]:  # from the 2nd onwards - leaving original unchanged
@@ -1094,6 +1094,17 @@ class VisioFile:
             for e in self.xml.findall(f"{namespace}Cell"):
                 cell = VisioFile.Cell(xml=e, shape=self)
                 self.cells[cell.name] = cell
+            geometry = self.xml.find(f'{namespace}Section[@N="Geometry"]')
+            if geometry is not None:
+                for r in geometry.findall(f"{namespace}Row"):
+                    row_type = r.attrib['T']
+                    if row_type:
+                        for e in r.findall(f"{namespace}Cell"):
+                            cell = VisioFile.Cell(xml=e, shape=self)
+                            key = f"Geometry/{row_type}/{cell.name}"
+                            self.cells[key] = cell
+                            #print(f"added name:['{key}']={cell} {cell.xml}")
+
             self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
 
         def __repr__(self):
@@ -1143,6 +1154,12 @@ class VisioFile:
 
         @property
         def data_properties(self) -> Dict[str, VisioFile.DataProperty]:
+            """
+            Get data properties of the shape - which labels, names, and values
+            returns a dictionary of DataProperty objects indexed by property label
+
+            :return: Dict[str, VisioFile.DataProperty]
+            """
             if self._data_properties:
                 # return cached dict if present
                 return self._data_properties
@@ -1249,6 +1266,22 @@ class VisioFile:
             self.set_cell_value('PinY', str(value))
 
         @property
+        def line_to_x(self):
+            return to_float(self.cell_value('Geometry/LineTo/X'))
+
+        @line_to_x.setter
+        def line_to_x(self, value):
+            self.set_cell_value('Geometry/LineTo/X', str(value))
+
+        @property
+        def line_to_y(self):
+            return to_float(self.cell_value('Geometry/LineTo/Y'))
+
+        @line_to_y.setter
+        def line_to_y(self, value):
+            self.set_cell_value('Geometry/LineTo/Y', str(value))
+
+        @property
         def begin_x(self):
             return to_float(self.cell_value('BeginX'))
 
@@ -1299,6 +1332,12 @@ class VisioFile:
         @width.setter
         def width(self, value: float or str):
             self.set_cell_value('Width', str(value))
+
+        @property
+        def center_x_y(self):
+            x = self.x - (self.width/2)
+            y = self.y + (self.height/2)
+            return x, y
 
         @staticmethod
         def clear_all_text_from_xml(x: Element):
@@ -1358,6 +1397,12 @@ class VisioFile:
             return max_id
 
         def find_shape_by_id(self, shape_id: str) -> VisioFile.Shape:  # returns Shape
+            """
+            Recursively search for a shape, based on a known shape_id, and return a single VisioFile.Shape
+
+            :param shape_id:
+            :return: VisooFile.Shape
+            """
             # recursively search for shapes by text and return first match
             for shape in self.sub_shapes():  # type: VisioFile.Shape
                 if shape.ID == shape_id:
@@ -1499,11 +1544,11 @@ class VisioFile:
                 self.to_rel = xml.attrib.get('ToCell')  # i.e. PinX
 
         @staticmethod
-        def create(page: VisioFile.Page=None, from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None):
+        def create(page: VisioFile.Page=None, from_shape: VisioFile.Shape = None, to_shape: VisioFile.Shape = None) -> VisioFile.Shape:
             """Create a new Connect object between from_shape and to_shape
 
             :returns: a new Connect object
-            :rtype: VisioFile.Connect
+            :rtype: VisioFile.Shape
             """
             if from_shape and to_shape:  # create new connector shape and connect items between this and the two shapes
                 # create new connect shape and get id
@@ -1688,8 +1733,8 @@ class VisioFile:
                 if found:
                     return found
 
-        def find_shapes_by_id(self, shape_id) -> List[VisioFile.Shape]:
-            # return all shapes by ID
+        def _find_shapes_by_id(self, shape_id) -> List[VisioFile.Shape]:
+            # return all shapes by ID - should only be used internally
             found = list()
             for s in self.shapes:
                 found = s.find_shapes_by_id(shape_id)

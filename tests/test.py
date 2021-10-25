@@ -111,6 +111,24 @@ def test_shape_locations(filename: str, expected_locations: str):
         print(f"  Actual:{locations}")
     assert locations == expected_locations
 
+@pytest.mark.skip
+@pytest.mark.parametrize("filename, shape_id, expected_center",
+                         [("test1.vsdx", "1", (1,1)),
+                          ("test1.vsdx", "2", (1,1)),
+                          ("test1.vsdx", "5", (1,1)),
+                          ("test1.vsdx", "6", (1,1))])
+def test_shape_center(filename: str, shape_id: str, expected_center: str):
+
+    with VisioFile(basedir+filename) as vis:
+        page = vis.get_page(0)  # type: VisioFile.Page
+        print(f"Shape ids: {[s.ID for s in page.sub_shapes()]}")
+        shape = page.find_shape_by_id(shape_id)
+
+        print(f"shape {shape.ID} center={shape.center_x_y}")
+        print(f"x {shape.x} y={shape.y}")
+        print(f"end_x {shape.end_x} end_y={shape.end_y}")
+        assert shape.center_x_y == expected_center
+
 
 @pytest.mark.parametrize("filename, shape_id", [("test1.vsdx", "6"), ("test2.vsdx", "6")])
 def test_get_shape_with_text(filename: str, shape_id: str):
@@ -425,11 +443,12 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
 
 @pytest.mark.parametrize(("filename", "shape_a_text", "shape_b_text"),
                          [
-                             ('test1.vsdx', "Shape Text", "Shape to remove"),
+                             ('test7_with_connector.vsdx', "Shape Text", "Shape to remove"),
                              ('test1.vsdx', "Shape to remove", "Shape Text"),
                              ('test1.vsdx', "Shape Text", "Shape to copy"),
                              ('test1.vsdx', "Shape to copy", "Shape to remove"),
                              ('test4_connectors.vsdx', "Shape A", "Shape C"),
+                             ('test4_connectors.vsdx', "Shape C", "Shape B"),
                           ])
 def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_text: str):
     out_file = basedir + 'out' + os.sep + filename[:-5] + '_test_add_connect_between_'+shape_a_text+'_'+shape_b_text+'.vsdx'
@@ -439,6 +458,12 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
         to_shape = page.find_shape_by_text(shape_b_text)
         c = VisioFile.Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
         new_connector_id = c.ID
+        conns_shown = []
+        for conn in page.connects:
+            if conn.connector_shape.ID not in conns_shown:
+                print(f"conn between {[s.ID for s in conn.connector_shape.connected_shapes]} {conn.from_id}->{conn.to_id}:{VisioFile.pretty_print_element(conn.connector_shape.xml)}")
+                conns_shown.append(conn.connector_shape.ID)
+            print(VisioFile.pretty_print_element(conn.xml))
         vis.save_vsdx(out_file)
 
         # re-open saved file and check it is changed as expected
@@ -448,6 +473,8 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
             # new shape is referenced as connector_shape for new connector relationship
             assert new_connector_id in connector_ids
             # new shape exists in page
+            c = page.find_shape_by_id(new_connector_id)
+            print(f"conn_shape.line_to_x={c.line_to_x}")
             assert page.find_shape_by_id(new_connector_id)
 
 
