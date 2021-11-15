@@ -751,12 +751,12 @@ class VisioFile:
     def jinja_set_selfs(shape: VisioFile.Shape, context: dict):
         # apply any {% self self.xxx = yyy %} statements in shape properties
         jinja_source = shape.text
-        matches = re.findall('{% set self.(.*?)\s?=\s?(.*?) %}', jinja_source)  # non-greedy search for all {%...%} strings
+        matches = re.findall(r'{% set self.(.*?)\s?=\s?(.*?) %}', jinja_source)  # non-greedy search for all {%...%} strings
         for m in matches:  # type: tuple  # expect ('property', 'value') such as ('x', '10') or ('y', 'n*2')
             property_name = m[0]
             value = "{{ "+m[1]+" }}"  # Jinja to be processed
             # todo: replace any self references in value with actual value - i.e. {% set self.x = self.x+1 %}
-            self_refs = re.findall('self.(.*)[\s+-/*//]?', m[1])  # greedy search for all self.? between +, -, *, or /
+            self_refs = re.findall(r'self.(.*)[\s+-/*//]?', m[1])  # greedy search for all self.? between +, -, *, or /
             for self_ref in self_refs:  # type: tuple  # expect ('property', 'value') such as ('x', '10') or ('y', 'n*2')
                 ref_val = str(shape.__getattribute__(self_ref[0]))
                 value = value.replace('self.'+self_ref[0], ref_val)
@@ -789,7 +789,7 @@ class VisioFile:
         text = shape.text
 
         # use regex to find all loops
-        jinja_loops = re.findall("{% for\s(.*?)\s%}", text)
+        jinja_loops = re.findall(r"{% for\s(.*?)\s%}", text)
 
         for loop in jinja_loops:
             jinja_loop_text = f"{{% for {loop} %}}"
@@ -812,7 +812,7 @@ class VisioFile:
             else:
                 shape.xml.tail = '{% endfor %}'
 
-        jinja_show_ifs = re.findall("{% showif\s(.*?)\s%}", text)  # find all showif statements
+        jinja_show_ifs = re.findall(r"{% showif\s(.*?)\s%}", text)  # find all showif statements
         # jinja_show_if - translate non-standard {% showif statement %} to valid jinja if statement
         for show_if in jinja_show_ifs:
             jinja_show_if = f"{{% if {show_if} %}}"  # translate to actual jinja if statement
@@ -837,7 +837,7 @@ class VisioFile:
     @staticmethod
     def jinja_page_showif(page: VisioFile.Page, context: dict):
         text = page.name
-        jinja_source = re.findall("{% showif\s(.*?)\s%}", text)
+        jinja_source = re.findall(r"{% showif\s(.*?)\s%}", text)
         if len(jinja_source):
             # process last matching value
             template_source = "{{ "+jinja_source[-1]+" }}"
