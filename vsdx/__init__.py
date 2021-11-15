@@ -1579,6 +1579,7 @@ class VisioFile:
                     # assume same if is ok, todo: use names for match and increment IDs
                     media_style = media._media_vsdx._get_style_by_id(connector_shape.master_shape.line_style_id)
                     page.vis._style_sheets().append(media_style)
+                media._media_vsdx.close_vsdx()
 
                 # set Begin and End Trigger formulae for the new shape - linking to shapes in destination page
                 beg_trigger = connector_shape.cells.get('BegTrigger')
