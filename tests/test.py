@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from typing import List
 
-basedir = os.path.dirname(os.path.relpath(__file__)) + os.sep  # relative path of directory containing this file
+basedir = os.path.dirname(os.path.relpath(__file__))  # relative path of directory containing this file
 
 
 def test_invalid_file_type():
@@ -19,8 +19,9 @@ def test_invalid_file_type():
 
 def test_open_rel_path():
     # test opening media file (not in tests directory)with absolute path
+    print("basedir:" + basedir)
     filename = os.path.join(basedir, 'test1.vsdx')
-
+    print("filename:"+filename)
     assert(os.path.exists(filename))
     with VisioFile(filename) as vis:
         for p in vis.pages:
