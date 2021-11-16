@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from typing import List
 
-basedir = os.path.relpath(__file__)[:-7]  # remove last 7 chars to get directory
+basedir = os.path.dirname(os.path.relpath(__file__)) + os.sep  # relative path of directory containing this file
 
 
 def test_invalid_file_type():
@@ -497,7 +497,7 @@ def test_vis_copy_shape(filename: str, shape_name: str):
         new_shape = vis.copy_shape(shape=s.xml, page=page)
 
         assert new_shape  # check copy_shape returns xml
-        
+
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         assert int(new_shape.attrib.get('ID')) > int(s.ID)
         assert int(new_shape.attrib.get('ID')) > max_id
@@ -528,7 +528,7 @@ def test_shape_copy(filename: str, shape_name: str):
 
         new_shape = s.copy()
         assert new_shape  # check new shape exists
-        
+
         print(f"original shape {type(s)} {s} {s.ID}")
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.ID}")
         assert int(new_shape.ID) > int(s.ID)  # and new shape has > ID than original
