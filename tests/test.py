@@ -4,7 +4,9 @@ from datetime import datetime
 import os
 from typing import List
 
-basedir = os.path.dirname(os.path.relpath(__file__))  # relative path of directory containing this file
+# code to get basedir of this test file in either linux/windows
+filename = str(__file__).split(os.sep)[-1]  # get filename as str after any '/'
+basedir = os.path.relpath(__file__)[:-(len(filename))]  # remove filename to get directory
 
 
 def test_invalid_file_type():
@@ -19,6 +21,8 @@ def test_invalid_file_type():
 
 def test_open_rel_path():
     # test opening media file (not in tests directory)with absolute path
+    print("__file__:" + __file__)
+    print("os.path.relpath(__file__):" + os.path.relpath(__file__))
     print("basedir:" + basedir)
     filename = os.path.join(basedir, 'test1.vsdx')
     print("filename:"+filename)
