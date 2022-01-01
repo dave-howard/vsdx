@@ -1,8 +1,10 @@
 import pytest
-from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition, Media
-from datetime import datetime
 import os
-from typing import List
+
+from vsdx import DataProperty
+from vsdx import Page  # for typing
+from vsdx import Shape
+from vsdx import VisioFile
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -14,14 +16,15 @@ basedir = os.path.dirname(os.path.relpath(__file__))
 def test_shape_locations(filename: str, expected_locations: str):
     print("=== list_shape_locations ===")
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         shapes = page.sub_shapes()
         locations = ""
-        for s in shapes:  # type: VisioFile.Shape
+        for s in shapes:  # type: Shape
             locations += f"{s.x:.2f},{s.y:.2f} "
         print(f"Expected:{expected_locations}")
         print(f"  Actual:{locations}")
     assert locations == expected_locations
+
 
 @pytest.mark.skip
 @pytest.mark.parametrize("filename, shape_id, expected_center",
@@ -32,7 +35,7 @@ def test_shape_locations(filename: str, expected_locations: str):
 def test_shape_center(filename: str, shape_id: str, expected_center: str):
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         print(f"Shape ids: {[s.ID for s in page.sub_shapes()]}")
         shape = page.find_shape_by_id(shape_id)
 
@@ -48,7 +51,7 @@ def test_remove_shape(filename: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         shapes = vis.pages[0].shapes
         # get shape to remove
-        s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
+        s = shapes[0].find_shape_by_text('Shape to remove')  # type: Shape
         assert s  # check shape found
         s.remove()
         vis.save_vsdx(out_file)
@@ -56,7 +59,7 @@ def test_remove_shape(filename: str):
     with VisioFile(out_file) as vis:
         shapes = vis.pages[0].shapes
         # get shape that should have been removed
-        s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
+        s = shapes[0].find_shape_by_text('Shape to remove')  # type: Shape
         assert s is None  # check shape not found
 
 
@@ -68,7 +71,7 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
         shapes = vis.pages[0].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_locations):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x
             assert s.y
@@ -82,7 +85,7 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
         shapes = vis.pages[0].shapes
         # get each shape that should have been moved
         for (shape_name, x_y) in zip(shape_names, shape_locations):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x == x_y[0]
             assert s.y == x_y[1]
@@ -99,7 +102,7 @@ def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
         shapes = vis.pages[0].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_x_y_deltas):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x
             assert s.y
@@ -114,7 +117,7 @@ def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
         shapes = vis.pages[0].shapes
         # get each shape that should have been moved
         for shape_name in shape_names:
-            s = shapes[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x == expected_shape_locations[shape_name][0]
             assert s.y == expected_shape_locations[shape_name][1]
@@ -127,9 +130,9 @@ def test_shape_copy(filename: str, shape_name: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_shape_copy.vsdx')
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page =  vis.pages[0]  # type: VisioFile.Page
+        page =  vis.pages[0]  # type: Page
         # find and copy shape by name
-        s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        s = page.find_shape_by_text(shape_name)  # type: Shape
         assert s  # check shape found
         print(f"found {s.ID}")
         max_id = page.max_id
@@ -163,11 +166,11 @@ def test_shape_copy_other_page(filename: str, shape_name: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_shape_copy_other_page.vsdx')
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page =  vis.pages[0]  # type: VisioFile.Page
-        page2 = vis.pages[1]  # type: VisioFile.Page
-        page3 = vis.pages[2]  # type: VisioFile.Page
+        page =  vis.pages[0]  # type: Page
+        page2 = vis.pages[1]  # type: Page
+        page3 = vis.pages[2]  # type: Page
         # find and copy shape by name
-        s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        s = page.find_shape_by_text(shape_name)  # type: Shape
         assert s  # check shape found
         shape_text = s.text
         print(f"Found shape id:{s.ID}")
@@ -204,7 +207,7 @@ def test_shape_copy_other_page(filename: str, shape_name: str):
 def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, shape_name: str):
     # check that Shape.data_properties is a dict of ShapeProperty
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shape = vis.pages[0].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        shape = vis.pages[0].find_shape_by_text(shape_name)  # type: Shape
 
         props = shape.data_properties
 
@@ -213,7 +216,7 @@ def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, 
 
         # check each item type
         for prop in props.values():
-            assert type(prop) is VisioFile.DataProperty
+            assert type(prop) is DataProperty
 
 
 @pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
@@ -226,7 +229,7 @@ def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, 
                           ])
 def test_get_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
 
         props = shape.data_properties
 
@@ -265,10 +268,10 @@ def test_find_sub_shape_by_data_property_label(filename: str, page_index: int, c
                           ])
 def test_find_connected_shapes(filename: str, shape_id: str, expected_shape_ids: list):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: Page
         actual_connect_shape_ids = list()
         shape = page.find_shape_by_id(shape_id)
-        for c_shape in shape.connected_shapes:  # type: VisioFile.Shape
+        for c_shape in shape.connected_shapes:  # type: Shape
             actual_connect_shape_ids.append(c_shape.ID)
         assert sorted(actual_connect_shape_ids) == sorted(expected_shape_ids)
 
@@ -283,7 +286,7 @@ def test_find_connected_shapes(filename: str, shape_id: str, expected_shape_ids:
 def test_find_connected_shape_relationships(filename: str, shape_id: str, expected_shape_ids: list, expected_from: list,
                                             expected_to: list, expected_from_rels: list, expected_to_rels: list):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: Page
 
         shape = page.find_shape_by_id(shape_id)
         shape_ids = [s.ID for s in shape.connected_shapes]

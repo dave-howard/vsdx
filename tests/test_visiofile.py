@@ -1,8 +1,15 @@
 import pytest
-from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition, Media
-from datetime import datetime
 import os
-from typing import List
+
+from vsdx import ext_prop_namespace
+from vsdx import namespace
+from vsdx import vt_namespace
+
+from vsdx import Media
+from vsdx import Page
+from vsdx import PagePosition
+from vsdx import Shape
+from vsdx import VisioFile
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -80,7 +87,7 @@ def test_open_abs_path_save_abs_path():
 @pytest.mark.parametrize(("filename", "shape_elements"), [("test1.vsdx", 4), ("test2.vsdx", 14), ("test3_house.vsdx", 10)])
 def test_xml_findall_shapes(filename: str, shape_elements: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         # find all Shape elements
         xml = page.xml.getroot()
         xpath = f".//{namespace}Shape"
@@ -92,7 +99,7 @@ def test_xml_findall_shapes(filename: str, shape_elements: int):
 @pytest.mark.parametrize(("filename", "group_shape_elements"), [("test1.vsdx", 0), ("test2.vsdx", 3), ("test3_house.vsdx", 2)])
 def test_xml_findall_group_shapes(filename: str, group_shape_elements: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         # find all Shape elements where attribute Type='Group'
         xml = page.xml.getroot()
         xpath = f".//{namespace}Shape[@Type='Group']"
@@ -106,7 +113,7 @@ def test_xml_findall_group_shapes(filename: str, group_shape_elements: int):
 @pytest.mark.parametrize("filename, page_name", [("test1.vsdx", "Page-1"), ("test2.vsdx", "Page-1")])
 def test_get_page(filename: str, page_name: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         # confirm page name as expected
         assert page.name == page_name
 
@@ -278,7 +285,7 @@ def test_copy_page(filename: str, index: int, page_name: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         number_pages = len(vis.pages)
 
-        page = vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: Page
         new_page = vis.copy_page(page, index=index, name=page_name)
         assert new_page
         assert len(vis.pages) == number_pages + 1
@@ -303,7 +310,7 @@ def test_copy_page(filename: str, index: int, page_name: str):
 def test_copy_page_naming(filename: str, page_index_to_copy:int, in_page_name: str, out_page_name: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_copy_page_naming.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[page_index_to_copy]  # type: VisioFile.Page
+        page = vis.pages[page_index_to_copy]  # type: Page
         new_page = vis.copy_page(page, name=in_page_name)
         print(f"in_page_name:{in_page_name} out_page_name:{out_page_name} actual:{new_page.name}")
         assert new_page.name == out_page_name  # check new page has expected name
@@ -326,7 +333,7 @@ def test_copy_page_naming(filename: str, page_index_to_copy:int, in_page_name: s
 def test_copy_page_positions(filename: str, page_index_to_copy:int, page_position: PagePosition, out_page_index: int):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_copy_page_position.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[page_index_to_copy]  # type: VisioFile.Page
+        page = vis.pages[page_index_to_copy]  # type: Page
         new_page = vis.copy_page(page, index=page_position)
         index = vis.pages.index(new_page)
         print(f"page_index_to_copy:{page_index_to_copy} page_position:{page_position} out_page_index:{out_page_index} actual:{index}")
@@ -348,9 +355,9 @@ def test_vis_copy_shape(filename: str, shape_name: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_vis_copy_shape.vsdx')
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: Page
         # find and copy shape by name
-        s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        s = page.find_shape_by_text(shape_name)  # type: Shape
         assert s  # check shape found
         print(f"Found shape id:{s.ID}")
         max_id = page.max_id
@@ -382,11 +389,11 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_copy_shape_other_page.vsdx')
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page =  vis.pages[0]  # type: VisioFile.Page
-        page2 = vis.pages[1]  # type: VisioFile.Page
-        page3 = vis.pages[2]  # type: VisioFile.Page
+        page =  vis.pages[0]  # type: Page
+        page2 = vis.pages[1]  # type: Page
+        page3 = vis.pages[2]  # type: Page
         # find and copy shape by name
-        s = page.find_shape_by_text(shape_name)  # type: VisioFile.Shape
+        s = page.find_shape_by_text(shape_name)  # type: Shape
         assert s  # check shape found
         shape_text = s.text
         print(f"Found shape id:{s.ID}")

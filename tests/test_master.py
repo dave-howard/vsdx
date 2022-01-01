@@ -1,8 +1,9 @@
 import pytest
-from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition, Media
-from datetime import datetime
 import os
-from typing import List
+
+from vsdx import Page  # for typing
+from vsdx import Shape  # for typing
+from vsdx import VisioFile
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -19,7 +20,7 @@ def test_load_master_file(filename: str, expected_length: int):
                          [('test5_master.vsdx', "Shape B")])
 def test_find_master_shape(filename: str, shape_text: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        master_page =  vis.master_pages[0]  # type: VisioFile.Page
+        master_page =  vis.master_pages[0]  # type: Page
         s = master_page.find_shape_by_text(shape_text)
         assert s
 
@@ -28,10 +29,10 @@ def test_find_master_shape(filename: str, shape_text: str):
                          [('test5_master.vsdx')])
 def test_master_inheritance(filename: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
-        master_page = vis.master_pages[0]  # type: VisioFile.Page
-        shape_a = page.find_shape_by_text('Shape A')  # type: VisioFile.Shape
-        shape_b = page.find_shape_by_text('Shape B')  # type: VisioFile.Shape
+        page = vis.get_page(0)  # type: Page
+        master_page = vis.master_pages[0]  # type: Page
+        shape_a = page.find_shape_by_text('Shape A')  # type: Shape
+        shape_b = page.find_shape_by_text('Shape B')  # type: Shape
 
         assert shape_a
         assert shape_b
@@ -83,7 +84,7 @@ def test_master_inheritance_setters(filename: str):
 def test_master_find_shapes(filename: str, shape_text: str):
     # Check that shape with text can be found - whether in page, master or overridden in master
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         shape = page.find_shape_by_text(shape_text)
         assert shape  # shape found
 
@@ -96,7 +97,7 @@ def test_master_find_shapes(filename: str, shape_text: str):
 def test_master_check_text_inheritance(filename: str, shape_text: str, has_master: bool, inherits_text: bool):
     # Check that shape with text can be found and that it has a master (or not) and inherits text (or not)
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.get_page(0)  # type: VisioFile.Page
+        page = vis.get_page(0)  # type: Page
         shape = page.find_shape_by_text(shape_text)
 
         if shape.master_shape:

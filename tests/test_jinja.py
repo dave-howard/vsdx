@@ -1,8 +1,10 @@
 import pytest
-from vsdx import VisioFile, namespace, vt_namespace, ext_prop_namespace, PagePosition, Media
-from datetime import datetime
 import os
-from typing import List
+from datetime import datetime
+
+from vsdx import Page  # for typing
+from vsdx import Shape  # for typing
+from vsdx import VisioFile
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -158,9 +160,9 @@ def test_jinja_loop_showif(filename: str, out_name: str,  context: dict):
 def test_jinja_self_refs(filename: str, context: dict, shape_id, expected_x, expected_text):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_jinja_self_refs.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: Page
         # there should be one shape on page 0
-        shape = page.find_shape_by_id(shape_id)  # type: VisioFile.Shape
+        shape = page.find_shape_by_id(shape_id)  # type: Shape
         print(f"DEBUG: ID={shape.ID} shape.text={shape.text}")
         print(f"DEBUG: ID={shape.ID} shape.x={shape.x}")
         vis.jinja_render_vsdx(context=context)
@@ -169,7 +171,7 @@ def test_jinja_self_refs(filename: str, context: dict, shape_id, expected_x, exp
     # open file and check shape has moved
     with VisioFile(out_file) as vis:
         page = vis.pages[0]
-        shape = page.find_shape_by_id(shape_id)  # type: VisioFile.Shape
+        shape = page.find_shape_by_id(shape_id)  # type: Shape
         print(f"DEBUG: ID={shape.ID} shape.text='{shape.text}' expected='{expected_text}'")
         print(f"DEBUG: ID={shape.ID} shape.x={shape.x}")
         assert shape.x == expected_x
@@ -185,9 +187,9 @@ def test_jinja_self_refs(filename: str, context: dict, shape_id, expected_x, exp
 def test_jinja_self_ref_calculations(filename: str, context: dict, shape_id, expected_y, expected_text):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_jinja_self_ref_calcs.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        page = vis.pages[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: Page
         # there should be one shape on page 0
-        shape = page.find_shape_by_id(shape_id)  # type: VisioFile.Shape
+        shape = page.find_shape_by_id(shape_id)  # type: Shape
         if shape:
             print(f"DEBUG: ID={shape.ID} shape.text={shape.text}")
             print(f"DEBUG: ID={shape.ID} shape.y={shape.y}")
@@ -197,7 +199,7 @@ def test_jinja_self_ref_calculations(filename: str, context: dict, shape_id, exp
     # open file and check shape has moved
     with VisioFile(out_file) as vis:
         page = vis.pages[0]
-        shape = page.find_shape_by_id(shape_id)  # type: VisioFile.Shape
+        shape = page.find_shape_by_id(shape_id)  # type: Shape
         print(f"DEBUG: ID={shape.ID} shape.text='{shape.text}' expected='{expected_text}'")
         print(f"DEBUG: ID={shape.ID} shape.x={shape.y}")
         assert shape.y == expected_y
@@ -218,7 +220,7 @@ def test_jinja_page_showif(filename: str, context: dict, expected_page_count, ex
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_show_{context["show"]}.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
         print(f"len(vis.pages)={len(vis.pages)} context={context}")
-        for p in vis.pages: # type: VisioFile.Page
+        for p in vis.pages: # type: Page
             print(f"page:{p.name}")
         vis.jinja_render_vsdx(context=context)
         vis.save_vsdx(out_file)
@@ -226,7 +228,7 @@ def test_jinja_page_showif(filename: str, context: dict, expected_page_count, ex
     # open file and check shape has moved
     with VisioFile(out_file) as vis:
         page_names = []
-        for p in vis.pages: # type: VisioFile.Page
+        for p in vis.pages: # type: Page
             print(f"page:{p.name}")
             page_names.append(p.name)
         assert len(vis.pages) == expected_page_count
