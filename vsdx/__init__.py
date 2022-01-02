@@ -1116,6 +1116,15 @@ class VisioFile:
         def __repr__(self):
             return f"<Shape tag={self.tag} ID={self.ID} type={self.shape_type} text='{self.text}' >"
 
+        def __eq__(self, other: VisioFile.Shape) -> bool:
+            if not isinstance(other, VisioFile.Shape):
+                return False
+
+            return (self.ID == other.ID) and (self.page.name == other.page.name)
+
+        def __hash__(self):
+            return hash((self.ID, self.page.name))
+
         def copy(self, page: Optional[VisioFile.Page] = None) -> VisioFile.Shape:
             """Copy this Shape to the specified destination Page, and return the copy.
 
