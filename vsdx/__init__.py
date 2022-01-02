@@ -12,12 +12,15 @@ from xml.etree.ElementTree import Element
 
 import xml.dom.minidom as minidom   # minidom used for prettyprint
 
+from vsdx.geometry import Geometry
+
 namespace = "{http://schemas.microsoft.com/office/visio/2012/main}"  # visio file name space
 ext_prop_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}'
 vt_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}'
 r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
 document_rels_namespace = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+
 
 # utility functions
 def to_float(val: str):
@@ -1091,11 +1094,14 @@ class VisioFile:
 
             # get Cells in Shape
             self.cells = dict()
+            self.geometry = None
             for e in self.xml.findall(f"{namespace}Cell"):
                 cell = VisioFile.Cell(xml=e, shape=self)
                 self.cells[cell.name] = cell
             geometry = self.xml.find(f'{namespace}Section[@N="Geometry"]')
-            if geometry is not None:
+            if type(geometry) is Element:
+                #print(f"geometry({type(geometry)}):{geometry}")
+                self.geometry = Geometry(xml=geometry, shape=self)
                 for r in geometry.findall(f"{namespace}Row"):
                     row_type = r.attrib['T']
                     if row_type:
@@ -1264,6 +1270,22 @@ class VisioFile:
         @y.setter
         def y(self, value: float or str):
             self.set_cell_value('PinY', str(value))
+
+        @property
+        def loc_x(self):
+            return to_float(self.cell_value('LocPinX'))
+
+        @loc_x.setter
+        def loc_x(self, value: float or str):
+            self.set_cell_value('LocPinX', str(value))
+
+        @property
+        def loc_y(self):
+            return to_float(self.cell_value('LocPinY'))
+
+        @loc_y.setter
+        def loc_y(self, value: float or str):
+            self.set_cell_value('LocPinY', str(value))
 
         @property
         def line_to_x(self):

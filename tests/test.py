@@ -1262,3 +1262,22 @@ def test_app_xml_page_names_after_remove_page(filename: str, remove_index: int):
             page_name = lpstr.text
             app_xml_page_names.append(page_name)
         assert page_names == app_xml_page_names
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_coords", [
+    ("test7_with_connector.vsdx", 0, "Tall Box", [('RelMoveTo', [('X', '0', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '0', None)])]),
+    ("test1.vsdx", 0, "Shape Text", [('RelMoveTo', [('X', '0', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '0', None)])]),
+    ("test2.vsdx", 2, "Already here", [('Ellipse', [('X', '0.2460629842730571', 'Width*0.5'), ('Y', '0.2519684958956088', 'Height*0.5'), ('A', '0.4921259685461141', 'Width*1'), ('B', '0.2519684958956088', 'Height*0.5'), ('C', '0.2460629842730571', 'Width*0.5'), ('D', '0.5039369917912175', 'Height*1')])]),
+    ("test4_connectors.vsdx", 1, "A to B", [('MoveTo', [('X', '0', None), ('Y', '0.09842519685039441', None)]), ('LineTo', [('X', '0.6358267353988465', None), ('Y', '0.09842519685039441', None)])]),
+])
+def test_get_shape_geometry(filename: str, page_index: str, shape_text: str, expected_coords: list):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+
+        coords = [(r.row_type, [(c.name, c.value, c.func) for c in r.cells.values()]) for r in shape.geometry.rows.values()]
+        print(f"coords={coords}")
+        print(VisioFile.pretty_print_element(shape.xml))
+        if shape.master_shape:
+            print(VisioFile.pretty_print_element(shape.master_shape.xml))
+        assert coords == expected_coords
