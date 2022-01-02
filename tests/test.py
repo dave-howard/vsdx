@@ -1281,3 +1281,19 @@ def test_get_shape_geometry(filename: str, page_index: str, shape_text: str, exp
         if shape.master_shape:
             print(VisioFile.pretty_print_element(shape.master_shape.xml))
         assert coords == expected_coords
+
+
+@pytest.mark.parametrize("filename_1, page_index_1, shape_text_1, filename_2, page_index_2, shape_text_2, are_equal", [
+    ("test1.vsdx", 0, "Shape Text", "test1.vsdx", 0, "Shape Text", True),
+    ("test1.vsdx", 0, "Shape Text", "test2.vsdx", 0, "Shape Text", False),
+    ])
+def test_shape_equality(filename_1, page_index_1, shape_text_1, filename_2, page_index_2, shape_text_2, are_equal):
+    with VisioFile(os.path.join(basedir, filename_1)) as vis:
+        page = vis.pages[page_index_1]
+        shape_1 = page.find_shape_by_text(shape_text_1)
+
+    with VisioFile(os.path.join(basedir, filename_2)) as vis:
+        page = vis.pages[page_index_2]
+        shape_2 = page.find_shape_by_text(shape_text_2)
+
+    assert (shape_1 == shape_2) == are_equal

@@ -1120,10 +1120,10 @@ class VisioFile:
             if not isinstance(other, VisioFile.Shape):
                 return False
 
-            return (self.ID == other.ID) and (self.page.name == other.page.name)
+            return hash(self) == hash(other)
 
         def __hash__(self):
-            return hash((self.ID, self.page.name))
+            return hash((self.ID, self.page.name, self.page.vis.filename))
 
         def copy(self, page: Optional[VisioFile.Page] = None) -> VisioFile.Shape:
             """Copy this Shape to the specified destination Page, and return the copy.
