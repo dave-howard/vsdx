@@ -300,3 +300,38 @@ def test_find_connected_shape_relationships(filename: str, shape_id: str, expect
         assert sorted(to_ids) == sorted(expected_to)
         assert sorted(from_rels) == sorted(expected_from_rels)
         assert sorted(to_rels) == sorted(expected_to_rels)
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_coords", [
+    ("test7_with_connector.vsdx", 0, "Tall Box", [('RelMoveTo', [('X', '0', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '0', None)])]),
+    ("test1.vsdx", 0, "Shape Text", [('RelMoveTo', [('X', '0', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '0', None)]), ('RelLineTo', [('X', '1', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '1', None)]), ('RelLineTo', [('X', '0', None), ('Y', '0', None)])]),
+    ("test2.vsdx", 2, "Already here", [('Ellipse', [('X', '0.2460629842730571', 'Width*0.5'), ('Y', '0.2519684958956088', 'Height*0.5'), ('A', '0.4921259685461141', 'Width*1'), ('B', '0.2519684958956088', 'Height*0.5'), ('C', '0.2460629842730571', 'Width*0.5'), ('D', '0.5039369917912175', 'Height*1')])]),
+    ("test4_connectors.vsdx", 1, "A to B", [('MoveTo', [('X', '0', None), ('Y', '0.09842519685039441', None)]), ('LineTo', [('X', '0.6358267353988465', None), ('Y', '0.09842519685039441', None)])]),
+])
+def test_get_shape_geometry(filename: str, page_index: str, shape_text: str, expected_coords: list):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+
+        coords = [(r.row_type, [(c.name, c.value, c.func) for c in r.cells.values()]) for r in shape.geometry.rows.values()]
+        print(f"coords={coords}")
+        print(VisioFile.pretty_print_element(shape.xml))
+        if shape.master_shape:
+            print(VisioFile.pretty_print_element(shape.master_shape.xml))
+        assert coords == expected_coords
+
+
+@pytest.mark.parametrize("filename_1, page_index_1, shape_text_1, filename_2, page_index_2, shape_text_2, are_equal", [
+    ("test1.vsdx", 0, "Shape Text", "test1.vsdx", 0, "Shape Text", True),
+    ("test1.vsdx", 0, "Shape Text", "test2.vsdx", 0, "Shape Text", False),
+    ])
+def test_shape_equality(filename_1, page_index_1, shape_text_1, filename_2, page_index_2, shape_text_2, are_equal):
+    with VisioFile(os.path.join(basedir, filename_1)) as vis:
+        page = vis.pages[page_index_1]
+        shape_1 = page.find_shape_by_text(shape_text_1)
+
+    with VisioFile(os.path.join(basedir, filename_2)) as vis:
+        page = vis.pages[page_index_2]
+        shape_2 = page.find_shape_by_text(shape_text_2)
+
+    assert (shape_1 == shape_2) == are_equal
