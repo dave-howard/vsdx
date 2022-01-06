@@ -6,10 +6,8 @@ from xml.etree.ElementTree import Element
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .pages import Page
 
+import vsdx
 from vsdx import namespace
 
 
@@ -97,7 +95,7 @@ class DataProperty:
 class Shape:
     """Represents a single shape, or a group shape containing other shapes
     """
-    def __init__(self, xml: Element, parent: Page or Shape, page: Page):
+    def __init__(self, xml: Element, parent: vsdx.Page or Shape, page: vsdx.Page):
         self.xml = xml
         self.parent = parent
         self.tag = xml.tag
@@ -111,34 +109,38 @@ class Shape:
 
         # get Cells in Shape
         self.cells = dict()
+        self.geometry = None
         for e in self.xml.findall(f"{namespace}Cell"):
             cell = Cell(xml=e, shape=self)
             self.cells[cell.name] = cell
         geometry = self.xml.find(f'{namespace}Section[@N="Geometry"]')
-        if geometry is not None:
+        if type(geometry) is Element:
+            # print(f"geometry({type(geometry)}):{geometry}")
+            self.geometry = vsdx.Geometry(xml=geometry, shape=self)
             for r in geometry.findall(f"{namespace}Row"):
                 row_type = r.attrib['T']
                 if row_type:
                     for e in r.findall(f"{namespace}Cell"):
-                        cell = Cell(xml=e, shape=self)
+                        cell = vsdx.Cell(xml=e, shape=self)
                         key = f"Geometry/{row_type}/{cell.name}"
                         self.cells[key] = cell
-                        #print(f"added name:['{key}']={cell} {cell.xml}")
+                        # print(f"added name:['{key}']={cell} {cell.xml}")
 
         self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
 
     def __repr__(self):
         return f"<Shape tag={self.tag} ID={self.ID} type={self.shape_type} text='{self.text}' >"
 
-    def __eq__(self, other: Shape) -> bool:
-        if not isinstance(other, Shape):
+    def __eq__(self, other: vsdx.Shape) -> bool:
+        if not isinstance(other, vsdx.Shape):
             return False
-        return (self.ID == other.ID) and (self.page.name == other.page.name)
+
+        return hash(self) == hash(other)
 
     def __hash__(self):
-        return hash((self.ID, self.page.name))
+        return hash((self.ID, self.page.name, self.page.vis.filename))
 
-    def copy(self, page: Optional[Page] = None) -> Shape:
+    def copy(self, page: Optional[vsdx.Page] = None) -> Shape:
         """Copy this Shape to the specified destination Page, and return the copy.
 
         If the destination page is not specified, the Shape is copied to its containing Page.

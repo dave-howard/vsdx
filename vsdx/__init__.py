@@ -13,3 +13,4 @@ from .pages import PagePosition
 from .shapes import Shape
 from .vsdxfile import VisioFile
 from .media import Media
+from .geometry import Geometry, GeometryRow, GeometryCell

@@ -2,42 +2,38 @@ from __future__ import annotations
 import shutil
 import os
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .pages import Page
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 
+import vsdx
 from .shapes import Shape
 
 
 class Connect:
     """Connect class to represent a connection between two `Shape` objects"""
-    def __init__(self, xml: Element=None, page: Page=None):
+    def __init__(self, xml: Element=None, page: vsdx.Page=None):
         if page is None:
             return
         if type(xml) is Element:  # create from xml
             self.xml = xml
-            self.page = page  # type: Page
+            self.page = page  # type: vsdx.Page
             self.from_id = xml.attrib.get('FromSheet')  # ref to the connector shape
             self.to_id = xml.attrib.get('ToSheet')  # ref to the shape where the connector terminates
             self.from_rel = xml.attrib.get('FromCell')  # i.e. EndX / BeginX
             self.to_rel = xml.attrib.get('ToCell')  # i.e. PinX
 
     @staticmethod
-    def create(page: Page=None, from_shape: Shape = None, to_shape: Shape = None) -> Shape:
+    def create(page: vsdx.Page=None, from_shape: Shape = None, to_shape: Shape = None) -> Shape:
         """Create a new Connect object between from_shape and to_shape
 
         :returns: a new Connect object
         :rtype: Shape
         """
 
-        from .media import Media  # to break circular imports
-
         if from_shape and to_shape:  # create new connector shape and connect items between this and the two shapes
             # create new connect shape and get id
-            media = Media()
+            media = vsdx.Media()
             connector_shape = media.straight_connector.copy(page)  # default to straight connector
             connector_shape.text = ''  # clear text used to find shape
             if not os.path.exists(page.vis._masters_folder):
