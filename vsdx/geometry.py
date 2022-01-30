@@ -1,12 +1,14 @@
 from __future__ import annotations
 from xml.etree.ElementTree import Element
 
+import vsdx
+
 namespace = "{http://schemas.microsoft.com/office/visio/2012/main}"  # visio file name space
 
 
 class Geometry:
     """ class to represent, and manipulate, the geometry of a shape"""
-    def __init__(self, xml: Element, shape):
+    def __init__(self, xml: Element, shape: vsdx.Shape):
         # get shape master geometry, and append/overwrite with actual shape instance data
 
         self.xml = xml  # expect an Element of Section with attr N='Geometry'
@@ -30,12 +32,34 @@ class Geometry:
                 del self.rows[g_row.index]
 
     def start_pos(self) -> tuple:
+        # find start position of shape based on first MoveTo or RelMoveTo row in geometry
         for row in self.rows.values():  # type: GeometryRow
             if str(row.row_type).lower() == 'moveto':
                 return row.x, row.y
+            if str(row.row_type.lower()=='relmoveto'):
+                # todo: find actual x,y based on shape width/height and relmoveto x,y
+                return self.shape.x, self.shape.y
+
+    def move(self, x_delta: float, y_delta: float):
+        # update any absolute references to co-ordinates
+        for r in self.rows.values():  # type: GeometryRow
+            print(f"r={type(r)} {r}")
+            if r.row_type.lower() in ['moveto', 'lineto']:  # todo: include other absolute row types
+                r.x = r.x + x_delta
+                r.y = r.y + y_delta
+                print(f"r={type(r)} {r} after move {x_delta}, {y_delta}")
+
+    def set_line_to(self, x: int, y: int, line_to_index: int=0):
+        line_tos = [r for r in self.rows.values() if r.row_type.lower() == 'lineto']
+        print(f"line_tos={line_tos}")
+        if len(line_tos) > line_to_index:
+            line_to = line_tos[line_to_index]  # type: GeometryRow
+            line_to.x = x
+            line_to.y = y
+            print(f"line_to[{line_to_index}]={line_to.x},{line_to.y}")
 
     def __repr__(self):
-        s = f"Geometry: {self.cells} {[(r.x,r.y) for r in self.rows.values()]}"
+        s = f"Geometry: {self.cells} {[(r.row_type, r.x,r.y) for r in self.rows.values()]}"
         return s
 
 

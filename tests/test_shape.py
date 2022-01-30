@@ -91,15 +91,16 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
             assert s.y == x_y[1]
 
 
-@pytest.mark.parametrize(("filename", "shape_names", "shape_x_y_deltas"),
-                         [("test1.vsdx", {"Shape to remove"}, {(1.0, 1.0)}),
-                          ("test4_connectors.vsdx", {"Shape B"}, {(1.0, 1.0)})])
-def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
+@pytest.mark.parametrize(("filename", "page_index", "shape_names", "shape_x_y_deltas"),
+                         [("test1.vsdx", 0, {"Shape to remove"}, {(1.0, 1.0)}),
+                          ("test4_connectors.vsdx", 0, {"Shape B"}, {(1.0, 1.0)}),
+                          ("test4_connectors.vsdx", 1, {"B to C"}, {(1.0, 1.0)})])
+def test_move_shape(filename: str, page_index: int, shape_names: set, shape_x_y_deltas: set):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_move_shape.vsdx')
     expected_shape_locations = dict()
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[0].shapes
+        shapes = vis.pages[page_index].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_x_y_deltas):
             s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
@@ -114,7 +115,7 @@ def test_move_shape(filename: str, shape_names: set, shape_x_y_deltas: set):
 
     # re-open saved file and check it is changed as expected
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[0].shapes
+        shapes = vis.pages[page_index].shapes
         # get each shape that should have been moved
         for shape_name in shape_names:
             s = shapes[0].find_shape_by_text(shape_name)  # type: Shape

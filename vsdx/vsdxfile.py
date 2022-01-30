@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import zipfile
 import shutil
 import os
@@ -8,9 +9,6 @@ from jinja2 import Template
 
 from typing import List
 from typing import Optional
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .shapes import Shape
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -25,6 +23,13 @@ from vsdx import vt_namespace
 from vsdx import r_namespace
 from vsdx import document_rels_namespace
 from vsdx import cont_types_namespace
+
+ET.register_namespace('', namespace[1:-1])
+ET.register_namespace('', ext_prop_namespace[1:-1])
+ET.register_namespace('vt', vt_namespace[1:-1])
+ET.register_namespace('r', r_namespace[1:-1])
+ET.register_namespace('', document_rels_namespace[1:-1])
+ET.register_namespace('', cont_types_namespace[1:-1])
 
 
 def file_to_xml(filename: str) -> ET.ElementTree:
@@ -953,7 +958,8 @@ class VisioFile:
         try:
             # Remove extracted folder
             shutil.rmtree(self.directory)
-        except (FileNotFoundError, PermissionError):
+        except (FileNotFoundError, PermissionError) as e:
+            print(f"close_vsdx() {self.directory} error:{e}")
             pass
 
     def save_vsdx(self, new_filename=None):

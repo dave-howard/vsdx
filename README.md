@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.4.17: register xml namespaces to improve compatibility of xml output
 - v0.4.16: Add Geometry class to read Shape geometry
 - v0.4.15: Add requirement for Jinja2 to package
 - v0.4.14: Include media/*.vsdx files in package

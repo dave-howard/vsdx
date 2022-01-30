@@ -180,17 +180,23 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
 def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_text: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_add_connect_between_'+shape_a_text+'_'+shape_b_text+'.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
+        print(f"filename:{out_file}")
         page = vis.pages[0]  # type: Page
         from_shape = page.find_shape_by_text(shape_a_text)
         to_shape = page.find_shape_by_text(shape_b_text)
         c = Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
+        print(f"before move() x,y={c.x},{c.y} geo:{c.geometry}")
+        c.move(from_shape.x - c.x, from_shape.y - c.y)
+        print(f"after move() x,y={c.x},{c.y} geo:{c.geometry}")
+        c.geometry.set_line_to(to_shape.x, to_shape.y)
+        print(f"after set_line_to() x,y={c.x},{c.y} geo:{c.geometry}")
         new_connector_id = c.ID
-        conns_shown = []
-        for conn in page.connects:
-            if conn.connector_shape.ID not in conns_shown:
-                print(f"conn between {[s.ID for s in conn.connector_shape.connected_shapes]} {conn.from_id}->{conn.to_id}:{VisioFile.pretty_print_element(conn.connector_shape.xml)}")
-                conns_shown.append(conn.connector_shape.ID)
-            print(VisioFile.pretty_print_element(conn.xml))
+        #conns_shown = []
+        #for conn in page.connects:
+        #    if conn.connector_shape.ID not in conns_shown:
+        #        print(f"conn between {[s.ID for s in conn.connector_shape.connected_shapes]} {conn.from_id}->{conn.to_id}:{VisioFile.pretty_print_element(conn.connector_shape.xml)}")
+        #        conns_shown.append(conn.connector_shape.ID)
+        #    print(VisioFile.pretty_print_element(conn.xml))
         vis.save_vsdx(out_file)
 
         # re-open saved file and check it is changed as expected
@@ -201,5 +207,5 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
             assert new_connector_id in connector_ids
             # new shape exists in page
             c = page.find_shape_by_id(new_connector_id)
-            print(f"conn_shape.line_to_x={c.line_to_x}")
+            #print(f"conn_shape.line_to_x={c.line_to_x}")
             assert page.find_shape_by_id(new_connector_id)

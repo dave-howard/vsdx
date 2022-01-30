@@ -344,7 +344,13 @@ class Shape:
         self.set_cell_value('EndY', str(value))
 
     def move(self, x_delta: float, y_delta: float):
+        if self.geometry:
+            self.geometry.move(x_delta, y_delta)
+        if self.begin_x:
+            self.begin_x = self.begin_x + x_delta
         self.x = self.x + x_delta
+        if self.begin_y:
+            self.begin_y = self.begin_y + y_delta
         self.y = self.y + y_delta
 
     @property
