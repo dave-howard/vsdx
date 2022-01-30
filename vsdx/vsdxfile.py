@@ -17,6 +17,8 @@ import xml.dom.minidom as minidom   # minidom used for prettyprint
 from .pages import Page
 from .pages import PagePosition
 
+from vsdx import Shape
+
 from vsdx import namespace
 from vsdx import ext_prop_namespace
 from vsdx import vt_namespace
