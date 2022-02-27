@@ -4,6 +4,7 @@ import os
 
 from typing import List
 
+import vsdx
 from vsdx import Connect
 from vsdx import Page
 from vsdx import Shape
@@ -19,6 +20,72 @@ def test_get_page_shapes(filename: str, count: int):
         page = vis.get_page(0)  # type: Page
         print(f"shape count={len(page.shapes)}")
         assert len(page.shapes) == count
+
+
+@pytest.mark.parametrize("filename, page_index, height_width",
+                         [("test1.vsdx", 0, (8.26771653543307, 11.69291338582677)),
+                          ("test2.vsdx", 0, (8.26771653543307, 11.69291338582677)),
+                          ("test1.vsdx", 1, (8.26771653543307, 11.69291338582677)),
+                          ("test2.vsdx", 1, (8.26771653543307, 11.69291338582677)),])
+def test_get_page_size(filename: str, page_index: int, height_width: tuple):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        print(VisioFile.pretty_print_element(page._pagesheet_xml))
+        print(f"\n w x h={page.width} x {page.height}")
+        assert (page.width, page.height) == height_width
+
+
+@pytest.mark.parametrize("filename, page_index",
+                         [("test1.vsdx", 0),
+                          ("test2.vsdx", 0),
+                          ("test1.vsdx", 1),
+                          ("test2.vsdx", 1),])
+def test_set_page_size(filename: str, page_index: int):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_page_size_{page_index}.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        #print(VisioFile.pretty_print_element(page._pagesheet_xml))
+        print(f"\n w x h={page.width} x {page.height}")
+        page.width = page.width // 1
+        page.height = page.height // 1
+        vis.save_vsdx(out_file)
+
+        with VisioFile(out_file) as vis:
+            page = vis.pages[page_index]
+            print(f"\n w x h={page.width} x {page.height}")
+            assert page.width == page.width // 1
+            assert page.height == page.height // 1
+
+
+
+@pytest.mark.parametrize("filename, page_index, page_name",
+                         [("test1.vsdx", 0, "Page-1"),
+                          ("test2.vsdx", 0, "Page-1"),
+                          ("test1.vsdx", 1, "Page-2"),
+                          ("test2.vsdx", 1, "Page-2"),])
+def test_get_page_name(filename: str, page_index: int, page_name: str):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        print(VisioFile.pretty_print_element(page._pagesheet_xml))
+        assert page.name == page_name
+
+
+@pytest.mark.parametrize("filename, page_index, page_name",
+                         [("test1.vsdx", 0, "Page1"),
+                          ("test2.vsdx", 0, "Page1"),
+                          ("test1.vsdx", 1, "Page2"),
+                          ("test2.vsdx", 1, "Page2"),])
+def test_set_page_name(filename: str, page_index: int, page_name: str):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_page_name_{page_name}.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        print(VisioFile.pretty_print_element(page._pagesheet_xml))
+        page.page_name = page_name
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.pages[page_index]
+        assert page.page_name == page_name
 
 
 @pytest.mark.parametrize("filename, count", [("test1.vsdx", 4), ("test2.vsdx", 6)])

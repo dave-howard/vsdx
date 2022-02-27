@@ -859,8 +859,7 @@ class VisioFile:
                 return False  # page should be hidden
             # remove jinja statement from page name
             jinja_statement = re.match("{%.*?%}", page.name)[0]
-            page.set_name(page.name.replace(jinja_statement, ''))
-            print(f"jinja_statement={jinja_statement} page.name={page.name}")
+            page.page_name = page.page_name.replace(jinja_statement, '')
         return True  # page should be left in
 
     @staticmethod

@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.4.18: add page.page_name, width and height properties
 - v0.4.17: register xml namespaces to improve compatibility of xml output
 - v0.4.16: Add Geometry class to read Shape geometry
 - v0.4.15: Add requirement for Jinja2 to package

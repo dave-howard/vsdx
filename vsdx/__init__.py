@@ -5,6 +5,21 @@ r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationsh
 document_rels_namespace = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
 
+
+import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import Element
+import xml.dom.minidom as minidom   # minidom used for prettyprint
+
+
+def pretty_print_element(xml: Element) -> str:
+    if type(xml) is Element:
+        return minidom.parseString(ET.tostring(xml)).toprettyxml()
+    elif type(xml) is ET.ElementTree:
+        return minidom.parseString(ET.tostring(xml.getroot())).toprettyxml()
+    else:
+        return f"Not an Element. type={type(xml)}"
+
+
 from .shapes import Cell
 from .connectors import Connect
 from .shapes import DataProperty
