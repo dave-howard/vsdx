@@ -207,6 +207,9 @@ class Shape:
         self._data_properties = properties  # cache for next call
         return properties
 
+    def shape_value(self, name: str):
+        return self.xml.attrib.get(name, None)
+
     def cell_value(self, name: str):
         cell = self.cells.get(name)
         if cell:
