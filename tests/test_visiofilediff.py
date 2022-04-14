@@ -54,7 +54,7 @@ def test_visiodiff_before_after(filename_a: str, filename_b: str):
                 print(f"{num} {l}")
 
 
-#@pytest.mark.skip
+@pytest.mark.skip
 @pytest.mark.parametrize(("filename_a", "filename_b"),
                          [
                           ("connect_before.vsdx", "connect_after.vsdx" ),
