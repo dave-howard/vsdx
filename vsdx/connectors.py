@@ -67,6 +67,7 @@ class Connect:
             beg_trigger.formula = beg_trigger.formula.replace('Sheet.1!', f'Sheet{from_shape.ID}!')
             end_trigger = connector_shape.cells.get('EndTrigger')
             end_trigger.formula = end_trigger.formula.replace('Sheet.2!', f'Sheet{to_shape.ID}!')
+
             # create connect relationships
             # todo: FromPart="12" and ToPart="3" represent the part of a shape to connection is from/to
             end_connect_xml = f'<Connect xmlns="http://schemas.microsoft.com/office/visio/2012/main" FromSheet="{connector_shape.ID}" FromCell="EndX" FromPart="12" ToSheet="{to_shape.ID}" ToCell="PinX" ToPart="3"/>'
@@ -75,6 +76,11 @@ class Connect:
             # Add these new connection relationships to the page
             page.add_connect(Connect(xml=ET.fromstring(end_connect_xml), page=page))
             page.add_connect(Connect(xml=ET.fromstring(beg_connect_xml), page=page))
+            #print(vsdx.pretty_print_element(connector_shape.xml))
+            print(connector_shape.geometry)
+
+            connector_shape.set_start_and_finish(from_shape.center_x_y, to_shape.center_x_y)
+
             return connector_shape
 
     @property

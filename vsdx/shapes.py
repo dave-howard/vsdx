@@ -105,6 +105,7 @@ class Shape:
         if self.master_page_ID is None and isinstance(parent, Shape):  # in case of a sub_shape
             self.master_page_ID = parent.master_page_ID
         self.shape_type = xml.attrib.get('Type', None)
+        self.shape_name = xml.attrib.get('Name')
         self.page = page
 
         # get Cells in Shape
@@ -124,7 +125,16 @@ class Shape:
                         cell = vsdx.Cell(xml=e, shape=self)
                         key = f"Geometry/{row_type}/{cell.name}"
                         self.cells[key] = cell
-                        # print(f"added name:['{key}']={cell} {cell.xml}")
+
+        control = self.xml.find(f'{namespace}Section[@N="Control"]')
+        if type(control) is Element:
+            for r in control.findall(f"{namespace}Row"):
+                row_type = r.attrib['N']
+                if row_type:
+                    for e in r.findall(f"{namespace}Cell"):
+                        cell = vsdx.Cell(xml=e, shape=self)
+                        key = f"Control/{row_type}/{cell.name}"
+                        self.cells[key] = cell
 
         self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
 
@@ -296,6 +306,30 @@ class Shape:
         self.set_cell_value('PinY', str(value))
 
     @property
+    def loc_x(self):
+        return to_float(self.cell_value('LocPinX'))
+
+    @loc_x.setter
+    def loc_x(self, value: float or str):
+        self.set_cell_value('LocPinX', str(value))
+
+    @property
+    def loc_x_f(self):
+        return self.cell_formula('LocPinX')
+
+    @property
+    def loc_y(self):
+        return to_float(self.cell_value('LocPinY'))
+
+    @loc_y.setter
+    def loc_y(self, value: float or str):
+        self.set_cell_value('LocPinY', str(value))
+
+    @property
+    def loc_y_f(self):
+        return self.cell_formula('LocPinY')
+
+    @property
     def line_to_x(self):
         return to_float(self.cell_value('Geometry/LineTo/X'))
 
@@ -371,9 +405,56 @@ class Shape:
 
     @property
     def center_x_y(self):
-        x = self.x - (self.width/2)
-        y = self.y + (self.height/2)
+        if self.begin_x is not None:
+            x = self.begin_x + (self.width / 2)
+            y = self.begin_y + (self.height / 2)
+        else:
+            x = self.x
+            y = self.y
         return x, y
+
+    def set_start_and_finish(self, start, finish):
+        self.x, self.y = start
+        if self.begin_x is not None:
+            is_connector = self.shape_name == 'Dynamic connector'
+            # should work for lines
+            self.begin_x, self.begin_y = start
+            self.end_x, self.end_y = finish
+            self.width = self.end_x - self.begin_x
+            if is_connector:
+                self.height = self.end_y - self.begin_y  # connector has a height
+            else:
+                self.height = 0.0  # line height is always zero
+            self.x, self.y = start  # cp1.center_x_y
+            self.geometry.set_move_to(0.0, 0.0)
+            self.geometry.set_line_to(self.width, self.height)
+            txt_pin_x = self.cells.get('TxtPinX')
+            txt_pin_y = self.cells.get('TxtPinY')
+            if txt_pin_x and txt_pin_y:
+                if is_connector:
+                    txt_pin_x.value, txt_pin_y.value = self.width / 2, self.height / 2
+                else:
+                    txt_pin_x.value, txt_pin_y.value = self.center_x_y
+                self.set_cell_value(name='Control/TextPosition/X', value=txt_pin_x.value)
+                self.set_cell_value(name='Control/TextPosition/Y', value=txt_pin_y.value)
+                self.set_cell_value(name='Control/TextPosition/XDyn', value=txt_pin_x.value)
+                self.set_cell_value(name='Control/TextPosition/YDyn', value=txt_pin_y.value)
+                # print(cp1.cells.keys())
+            cells = list(self.cells.values()) + self.geometry.cells
+            for r in self.geometry.rows.values():
+                cells.extend(r.cells.values())
+            # print(cells)
+            for c in cells:  # type: Cell
+                v = None
+                formula = c.formula
+                if formula:
+                    if formula == 'Inh' and self.master_shape:
+                        print(f'Inh: {c.name} {self.master_shape.cells.get(c.name)}')
+                        master_c = self.master_shape.cells.get(c.name)
+                        formula = master_c.formula if master_c else formula
+                    v = vsdx.calc_value(self, formula)
+                    if v is not None:
+                        c.value = v
 
     @staticmethod
     def clear_all_text_from_xml(x: Element):

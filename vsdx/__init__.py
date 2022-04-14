@@ -26,6 +26,7 @@ from .shapes import DataProperty
 from .pages import Page
 from .pages import PagePosition
 from .shapes import Shape
+from .formulae import calc_value
 from .vsdxfile import VisioFile
 from .media import Media
 from .geometry import Geometry, GeometryRow, GeometryCell

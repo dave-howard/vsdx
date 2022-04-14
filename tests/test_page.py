@@ -9,6 +9,7 @@ from vsdx import Connect
 from vsdx import Page
 from vsdx import Shape
 from vsdx import VisioFile
+from vsdx import Cell
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -237,6 +238,7 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
 
 @pytest.mark.parametrize(("filename", "shape_a_text", "shape_b_text"),
                          [
+                             ('test8_simple_connector.vsdx', "Shape A", "Shape B"),
                              ('test7_with_connector.vsdx', "Shape Text", "Shape to remove"),
                              ('test1.vsdx', "Shape to remove", "Shape Text"),
                              ('test1.vsdx', "Shape Text", "Shape to copy"),
@@ -252,18 +254,9 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
         from_shape = page.find_shape_by_text(shape_a_text)
         to_shape = page.find_shape_by_text(shape_b_text)
         c = Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
-        print(f"before move() x,y={c.x},{c.y} geo:{c.geometry}")
-        c.move(from_shape.x - c.x, from_shape.y - c.y)
-        print(f"after move() x,y={c.x},{c.y} geo:{c.geometry}")
-        c.geometry.set_line_to(to_shape.x, to_shape.y)
-        print(f"after set_line_to() x,y={c.x},{c.y} geo:{c.geometry}")
         new_connector_id = c.ID
-        #conns_shown = []
-        #for conn in page.connects:
-        #    if conn.connector_shape.ID not in conns_shown:
-        #        print(f"conn between {[s.ID for s in conn.connector_shape.connected_shapes]} {conn.from_id}->{conn.to_id}:{VisioFile.pretty_print_element(conn.connector_shape.xml)}")
-        #        conns_shown.append(conn.connector_shape.ID)
-        #    print(VisioFile.pretty_print_element(conn.xml))
+
+        c.text = "NEW"
         vis.save_vsdx(out_file)
 
         # re-open saved file and check it is changed as expected
@@ -274,5 +267,116 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
             assert new_connector_id in connector_ids
             # new shape exists in page
             c = page.find_shape_by_id(new_connector_id)
-            #print(f"conn_shape.line_to_x={c.line_to_x}")
             assert page.find_shape_by_id(new_connector_id)
+
+
+def fl(v: float):
+    if type(v) is float:
+        return f"{v:.2g}"
+
+
+def add_shape_info(s: Shape):
+    s.text = s.text + f" x,y={fl(s.x)}, {fl(s.y)}"
+    if s.begin_x is not None:
+        s.text = s.text + f" bx,by={fl(s.begin_x)}, {fl(s.begin_y)}"
+        s.text = s.text + f" ex,ey={fl(s.end_x)}, {fl(s.end_y)}"
+    s.text = s.text + f" w,h={fl(s.width)}, {fl(s.height)}"
+    cx, cy = s.center_x_y
+    s.text = s.text + f" cx,cy={fl(cx)}, {fl(cy)}"
+    s.text = s.text + f" locx,locy={fl(s.loc_x)}, {fl(s.loc_y)}"
+
+
+@pytest.mark.parametrize(("filename", "shape_text", "lx", "ly"),
+                         [
+                             ('test9_rect_and_line.vsdx', "Rect A", 2.0, 8.0),
+                             ('test9_rect_and_line.vsdx', "Line A", 2.0, 8.0),
+                             ('test9_rect_and_line.vsdx', "Conn A", 2.0, 8.0),
+                             ('test9_rect_and_line.vsdx', "Rect A", 2.0, 5.0),
+                             ('test9_rect_and_line.vsdx', "Line A", 2.0, 5.0),
+                             ('test9_rect_and_line.vsdx', "Conn A", 2.0, 5.0),
+                          ])
+def test_copy_and_move_shape(filename: str, shape_text: str, lx: float, ly: float):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_copy_and_move_shape_{shape_text}_{lx}_{ly}.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        print(f"filename:{out_file}")
+        page = vis.pages[0]  # type: Page
+        shape = page.find_shape_by_text(shape_text)
+        print(vsdx.pretty_print_element(shape.xml))
+        # should work for shapes
+        cp1 = shape.copy()
+        add_shape_info(shape)
+        cp1.x, cp1.y = lx, ly
+        cp1.text = cp1.text + f"lx,ly={fl(lx)}, {fl(ly)}"
+        if shape.begin_x is not None:
+            # should work for lines
+            cp1.begin_x, cp1.begin_y = lx, ly
+            cp1.end_x, cp1.end_y = lx + cp1.width, ly + cp1.height
+            cp1.x, cp1.y = cp1.center_x_y
+        add_shape_info(cp1)
+
+        vis.save_vsdx(out_file)
+
+
+@pytest.mark.parametrize(("filename", "shape_text", "start", "finish"),
+                         [
+                             ('test9_rect_and_line.vsdx', "Line A", (2.0, 7.0), (3.0, 8.0)),
+                             ('test9_rect_and_line.vsdx', "Conn A", (2.0, 7.0), (3.0, 8.0)),
+                          ])
+def test_copy_and_move_line(filename: str, shape_text: str, start: tuple, finish: tuple):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_copy_and_move_line_{shape_text}_{start}_{finish}.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        print(f"filename:{out_file}")
+        page = vis.pages[0]  # type: Page
+        shape = page.find_shape_by_text(shape_text)
+        print(vsdx.pretty_print_element(shape.xml))
+        # should work for shapes
+        cp1 = shape.copy()
+        add_shape_info(shape)
+        cp1.x, cp1.y = start
+        cp1.text = cp1.text + f"lx,ly={fl(cp1.x)}, {fl(cp1.y)}"
+        if cp1.begin_x is not None:
+            is_connector = cp1.shape_name == 'Dynamic connector'
+            # should work for lines
+            cp1.begin_x, cp1.begin_y = start
+            cp1.end_x, cp1.end_y = finish
+            cp1.width = cp1.end_x - cp1.begin_x
+            if is_connector:
+                cp1.height = cp1.end_y - cp1.begin_y  # connector has a height
+            else:
+                cp1.height = 0.0  # line height is always zero
+            cp1.x, cp1.y = start # cp1.center_x_y
+            cp1.geometry.set_move_to(0.0, 0.0)
+            cp1.geometry.set_line_to(cp1.width, cp1.height)
+            txt_pin_x = cp1.cells.get('TxtPinX')
+            txt_pin_y = cp1.cells.get('TxtPinY')
+            if txt_pin_x and txt_pin_y:
+                if is_connector:
+                    txt_pin_x.value, txt_pin_y.value = cp1.width/2, cp1.height/2
+                else:
+                    txt_pin_x.value, txt_pin_y.value = cp1.center_x_y
+                cp1.set_cell_value(name='Control/TextPosition/X', value=txt_pin_x.value)
+                cp1.set_cell_value(name='Control/TextPosition/Y', value=txt_pin_y.value)
+                cp1.set_cell_value(name='Control/TextPosition/XDyn', value=txt_pin_x.value)
+                cp1.set_cell_value(name='Control/TextPosition/YDyn', value=txt_pin_y.value)
+                #print(cp1.cells.keys())
+            cells = list(cp1.cells.values())+cp1.geometry.cells
+            for r in cp1.geometry.rows.values():
+                cells.extend(r.cells.values())
+            #print(cells)
+            for c in cells:  # type: Cell
+                v = None
+                formula = c.formula
+                if formula:
+                    if formula == 'Inh' and cp1.master_shape:
+                        print(f'Inh: {c.name} {cp1.master_shape.cells.get(c.name)}')
+                        master_c = cp1.master_shape.cells.get(c.name)
+                        formula = master_c.formula if master_c else formula
+                    v = vsdx.calc_value(cp1, formula)
+                    if v is not None:
+                        c.value = v
+                #print(f"c={c.name} f={c.formula} v={v}")
+
+            print(vsdx.pretty_print_element(cp1.xml))
+        add_shape_info(cp1)
+
+        vis.save_vsdx(out_file)

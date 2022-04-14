@@ -36,10 +36,28 @@ class VisioFileDiff:
         d = difflib.Differ()
         for member_name in common_members:
             data_a = self.contents_a.get(member_name)
+            data_a = VisioFileDiff.break_all_xml_into_lines(data_a)
+            #print(data_a)
             data_b = self.contents_b.get(member_name)
+            data_b = VisioFileDiff.break_all_xml_into_lines(data_b)
             if data_a and data_b and data_a != data_b:  # only add diff if contents are not the same
                 diffs[member_name] = list(d.compare(data_a, data_b))
         return diffs
+
+    @staticmethod
+    def break_all_xml_into_lines(data: list) -> list:
+        data_out = []
+        if data:
+            for line in data:  # type: str
+                lines = VisioFileDiff.break_xml_into_lines(line)
+                for l in lines:
+                    data_out.append(l)
+        return data_out
+
+    @staticmethod
+    def break_xml_into_lines(x: str) -> list:
+        x = x.replace('<', '\n<')  # add CR before each element start
+        return x.split('\n')
 
     def common_members(self) -> list:
         # return a sorted list of members (file paths)
