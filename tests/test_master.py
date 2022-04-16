@@ -1,6 +1,7 @@
 import pytest
 import os
 
+import vsdx
 from vsdx import Page  # for typing
 from vsdx import Shape  # for typing
 from vsdx import VisioFile
@@ -48,32 +49,78 @@ def test_master_inheritance(filename: str):
 
 @pytest.mark.parametrize(("filename"),
                          [('test5_master.vsdx')])
-def test_master_inheritance_setters(filename: str):
-    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_master_inheritance_setters.vsdx')
-    # f'{basedir}out{os.sep}{filename[:-5]}_test_master_inheritance_setters.vsdx')
+def test_set_master_child_property(filename: str):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_master_child_property.vsdx')
+
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)
-
-        shape_a = page.find_shape_by_text('Shape A')
-        shape_a.line_weight = 0.5
-        shape_a.line_color = '#00FF00'
-
+        # find shape with master and set a child property
         sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+
         sub_shape_b.line_weight = 0.5
-        sub_shape_b.line_color = '#00FF00'
 
         vis.save_vsdx(out_file)
 
     with VisioFile(out_file) as vis:
         page = vis.get_page(0)
 
-        shape_a = page.find_shape_by_text('Shape A')
-        assert shape_a.line_weight == 0.5
-        assert shape_a.line_color == '#00FF00'
-
         sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
-        assert sub_shape_b.line_weight == 0.5
-        assert sub_shape_b.line_color == '#00FF00'
+        assert sub_shape_b.master_shape  # shape has a master
+        assert sub_shape_b.line_weight == 0.5  # child shape has value set
+
+
+@pytest.mark.parametrize(("filename, weight"),
+                         [('test5_master.vsdx', 0.5)])
+def test_master_property_change_is_inherited(filename: str, weight):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_master_property_change_is_inherited.vsdx')
+
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)
+
+        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        master = sub_shape_a.master_shape
+        master.line_weight = weight
+
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page(0)
+
+        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+
+        # check that both sub_shape values have changed based on master
+        assert sub_shape_a.line_weight == weight
+        assert sub_shape_b.line_weight == weight
+
+
+@pytest.mark.parametrize(("filename, weight"),
+                         [('test5_master.vsdx', 0.1)])
+def test_child_property_change_is_not_inherited(filename: str, weight):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_child_property_change_is_not_inherited.vsdx')
+
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)
+
+        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        master = sub_shape_a.master_shape
+        original_master_weight = master.line_weight
+        # increment child property to ensure child and master are not the same
+        line_weight = master.line_weight + weight
+        sub_shape_a.line_weight = line_weight  # change the child, not the master shape
+
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.get_page(0)
+
+        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        master = sub_shape_a.master_shape
+
+        # check that child shape has changed to expected value
+        assert sub_shape_a.line_weight == line_weight
+        # check that master property has not changed
+        assert master.line_weight == original_master_weight
 
 
 @pytest.mark.parametrize(("filename", "shape_text"),

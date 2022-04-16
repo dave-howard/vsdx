@@ -1,6 +1,7 @@
 import pytest
 import os
 
+import vsdx
 from vsdx import DataProperty
 from vsdx import Page  # for typing
 from vsdx import Shape
@@ -336,3 +337,53 @@ def test_shape_equality(filename_1, page_index_1, shape_text_1, filename_2, page
         shape_2 = page.find_shape_by_text(shape_text_2)
 
     assert (shape_1 == shape_2) == are_equal
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_bounds", [
+    ("test1.vsdx", 0, "Shape Text", ['0.25', '9.87', '2.42', '11.44']),  # standard shape
+    ("test2.vsdx", 0, "Sub-shape 2", ['0.54', '0.17', '1.62', '0.51']),  # sub shape in a group
+    ("test2.vsdx", 0, "Scenario:", ['0.73', '8.19', '2.49', '8.97']),  # line
+    ])
+def test_shape_bounds(filename, page_index, shape_text, expected_bounds):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        print([f"{n:.2f}" for n in shape.bounds])
+        assert [f"{n:.2f}" for n in shape.bounds] == expected_bounds
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_bounds", [
+    ("test1.vsdx", 0, "Shape Text", ['0.25', '9.87', '2.42', '11.44']),  # standard shape
+    ("test2.vsdx", 0, "Sub-shape 2", ['0.79', '10.04', '1.87', '10.37']),  # sub shape in a group
+    ("test2.vsdx", 0, "Scenario:", ['0.73', '8.19', '2.49', '8.97']),  # line
+    ])
+def test_shape_relative_bounds(filename, page_index, shape_text, expected_bounds):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        print([f"{n:.2f}" for n in shape.relative_bounds])
+        assert [f"{n:.2f}" for n in shape.relative_bounds] == expected_bounds
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, arrow", [
+    ("test2.vsdx", 0, "Scenario:", True),  # add end arrow
+    ("test2.vsdx", 0, "Scenario:", False),  # no end arrow
+    ])
+def test_shape_end_arrow(filename, page_index, shape_text, arrow):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_shape_end_arrow_{arrow}.vsdx')
+
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        shape.end_arrow = arrow
+        print(shape.end_arrow)
+        print(vsdx.pretty_print_element(shape.xml))
+        assert shape.end_arrow == '13' if arrow else '0'
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        print(shape.end_arrow)
+        print(vsdx.pretty_print_element(shape.xml))
+        assert shape.end_arrow == '13' if arrow else '0'

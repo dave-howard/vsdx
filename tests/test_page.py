@@ -1,3 +1,5 @@
+import wsgiref.headers
+
 import pytest
 from datetime import datetime
 import os
@@ -36,27 +38,63 @@ def test_get_page_size(filename: str, page_index: int, height_width: tuple):
         assert (page.width, page.height) == height_width
 
 
-@pytest.mark.parametrize("filename, page_index",
-                         [("test1.vsdx", 0),
-                          ("test2.vsdx", 0),
-                          ("test1.vsdx", 1),
-                          ("test2.vsdx", 1),])
-def test_set_page_size(filename: str, page_index: int):
+@pytest.mark.parametrize("filename, page_index, page_scale",
+                         [("test1.vsdx", 0, 0.5),
+                          ("test2.vsdx", 0, 0.5),
+                          ("test1.vsdx", 1, 0.5),
+                          ("test2.vsdx", 1, 0.5),])
+def test_set_page_size(filename: str, page_index: int, page_scale: float):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_page_size_{page_index}.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.pages[page_index]
         #print(VisioFile.pretty_print_element(page._pagesheet_xml))
         print(f"\n w x h={page.width} x {page.height}")
-        page.width = page.width // 1
-        page.height = page.height // 1
+        page_width = page.width * page_scale
+        page_height = page.height * page_scale
+        page.width = page_width
+        page.height = page_height
+        print(f"\n w x h={page.width} x {page.height}")
         vis.save_vsdx(out_file)
 
         with VisioFile(out_file) as vis:
             page = vis.pages[page_index]
             print(f"\n w x h={page.width} x {page.height}")
-            assert page.width == page.width // 1
-            assert page.height == page.height // 1
+            assert page.width == page_width
+            assert page.height == page_height
 
+
+@pytest.mark.parametrize("filename, page_index, expected_shape_bounds",
+                         [("test1.vsdx", 0, (0, 0, 1, 1)),
+                          ("test2.vsdx", 0, (0, 0, 1, 1)),
+                          ("test1.vsdx", 2, (0, 0, 1, 1)),
+                          ("test2.vsdx", 2, (0, 0, 1, 1)),])
+def test_get_page_bounds(filename: str, page_index: int, expected_shape_bounds: tuple):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_get_page_bounds_{page_index}.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+
+        box = vsdx.media.Media().rectangle
+
+        for s in page.all_shapes():
+            #bx = s.begin_x or (s.x-s.loc_x)
+            #by = s.begin_y or (s.y-s.loc_y)
+            #ex = s.end_x or (bx + s.width)
+            #ey = s.end_y or (by + s.height)
+            bx, by, ex, ey = s.bounds
+            #print(f"{s.ID} bx:{bx} by:{by} ex:{ex} ey:{ey} x:{s.x} y:{s.y} lx:{s.loc_x} ly:{s.loc_y} w:{s.width} h:{s.height} {s.text} {s.geometry.rows if s.geometry else None}")
+            cbox = box.copy(page=page)
+            #print(vsdx.pretty_print_element(list(cbox.cells.values())[0].xml))
+            print(s.text, s.bounds, s.parent.shape_type)
+            cbox.line_color = '#ff2222'
+            cbox.x = bx
+            cbox.loc_x = 0
+            cbox.width = ex-bx
+            cbox.y = by
+            cbox.loc_y = 0
+            cbox.height = ey-by
+            cbox.text = f"{bx:.2g},{by:.2g}-{ex:.2g},{ey:.2g}"
+            #print(vsdx.pretty_print_element(cbox.xml))
+        vis.save_vsdx(out_file)
 
 
 @pytest.mark.parametrize("filename, page_index, page_name",
@@ -254,6 +292,7 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
         from_shape = page.find_shape_by_text(shape_a_text)
         to_shape = page.find_shape_by_text(shape_b_text)
         c = Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
+        c.end_arrow = True
         new_connector_id = c.ID
 
         c.text = "NEW"
@@ -380,3 +419,20 @@ def test_copy_and_move_line(filename: str, shape_text: str, start: tuple, finish
         add_shape_info(cp1)
 
         vis.save_vsdx(out_file)
+
+
+@pytest.mark.parametrize("filename, page_index, expected_ids", [
+    ("test1.vsdx", 0, ['1', '2', '5', '6']),
+    ("test1.vsdx", 1, []),  # empty page
+    ("test1.vsdx", 2, ['1']),
+    ("test2.vsdx", 0, ['6', '9', '1', '7', '8', '11', '2', '10', '14', '5', '12', '13', '16', '17']),
+    ("test2.vsdx", 1, []),  # empty page
+    ("test2.vsdx", 2, ['1', '2', '3', '4']),
+    ])
+def test_page_all_shapes(filename, page_index, expected_ids):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        # all_shapes() gets all shapes on a page, recursively
+        shape_ids = [s.ID for s in page.all_shapes()]
+        print(shape_ids)
+        assert shape_ids == expected_ids

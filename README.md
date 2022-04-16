@@ -57,6 +57,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.4.20: Shape.set_cell_value()/set_cell_formula() create new cell if missing, add Media().rectangle and circle props, add Shape.bounds, relative_bounds, and end_arrow props
 - v0.4.19: correctly position new connector shapes between 'from' and 'to' shapes 
 - v0.4.18: add page.page_name, width and height properties
 - v0.4.17: register xml namespaces to improve compatibility of xml output

@@ -122,7 +122,9 @@ class Page:
         :rtype: List[Shape]
         """
         # note that self.shapes should always return a single shape
-        return self.shapes[0].sub_shapes()
+        if self.shapes:
+            return self.shapes[0].sub_shapes()
+        return []  # empty list if no top shapes object
 
     def set_max_ids(self):
         # get maximum shape id from xml in page
@@ -211,6 +213,9 @@ class Page:
             if found:
                 shapes.extend(found)
         return shapes
+
+    def all_shapes(self):
+        return self.find_shapes_by_text('')
 
     def find_shape_by_property_label(self, property_label: str) -> Shape:
         # return first matching shape with label

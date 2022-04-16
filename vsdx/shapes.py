@@ -237,17 +237,48 @@ class Shape:
         cell = self.cells.get(name)
         if cell:  # only set value of existing item
             cell.value = value
-
-        elif self.master_page_ID is not None:
+            return
+        cell_xml = None
+        if self.master_page_ID is not None and self.master_shape:
+            # copy master if master has this Cell (this will default same formula)
             master_cell_xml = self.master_shape.xml.find(f'{namespace}Cell[@N="{name}"]')
-            new_cell = ET.fromstring(ET.tostring(master_cell_xml))
+            if master_cell_xml is not None:  # use master Cell if found
+                print("creating cell from:", ET.tostring(master_cell_xml))
+                cell_xml = ET.fromstring(ET.tostring(master_cell_xml))
+        if cell_xml is None:  # create a new Cell
+            cell_xml = ET.fromstring(f'<Cell xmlns="{namespace[1:-1]}" N="{name}" />')
+        # create new Cell from xml
+        self.cells[name] = Cell(xml=cell_xml, shape=self)
+        self.cells[name].value = value
+        cells = self.xml.findall(f'{namespace}Cell')
+        if len(cells):
+            self.xml.insert(list(self.xml).index(cells[-1])+1, cell_xml)  # insert after last Cell
+        else:
+            self.xml.insert(0, cell_xml)
 
-            self.cells[name] = Cell(xml=new_cell, shape=self)
-            self.cells[name].value = value
+    def set_cell_formula(self, name: str, value: str):
+        cell = self.cells.get(name)
+        if cell:  # only set value of existing item
+            cell.formula = value
+            return
+        cell_xml = None
+        if self.master_page_ID is not None and self.master_shape:
+            # copy master if master has this Cell (this will default same value)
+            master_cell_xml = self.master_shape.xml.find(f'{namespace}Cell[@N="{name}"]')
+            if master_cell_xml is not None:  # use master Cell if found
+                print("creating cell from:", ET.tostring(master_cell_xml))
+                cell_xml = ET.fromstring(ET.tostring(master_cell_xml))
+        if cell_xml is None:  # create a new Cell
+            cell_xml = ET.fromstring(f'<Cell xmlns:ns0="{namespace[1:-1]}" N="{name}" />')
+        # create new Cell from xml
+        self.cells[name] = Cell(xml=cell_xml, shape=self)
+        self.cells[name].formula = value
+        cells = self.xml.findall(f'{namespace}Cell')
+        if len(cells):
+            self.xml.insert(list(self.xml).index(cells[-1]) + 1, cell_xml)  # insert after last Cell
+        else:
+            self.xml.insert(0, cell_xml)
 
-            self.xml.append(self.cells[name].xml)
-
-    # LineStyle="7" FillStyle="7" TextStyle="7"
     @property
     def line_style_id(self):
         return self.xml.attrib.get('LineStyle')
@@ -288,6 +319,18 @@ class Shape:
     @line_color.setter
     def line_color(self, value: str):
         self.set_cell_value('LineColor', str(value))
+
+    @property
+    def end_arrow(self):
+        return self.cell_value('EndArrow')
+
+    @end_arrow.setter
+    def end_arrow(self, value):
+        if value is True:
+            value = 13  # 13 is standard arrow
+        if value is False:
+            value = 0  # no arrow
+        self.set_cell_value('EndArrow', str(value))
 
     @property
     def x(self):
@@ -404,6 +447,32 @@ class Shape:
         self.set_cell_value('Width', str(value))
 
     @property
+    def bounds(self) -> tuple:
+        # get absolute bounds of a shape relative to page
+        s = self
+        if s.begin_x is None and s.x is None and s.loc_x is None:
+            return 0, 0, 0, 0  # shape has no bounds
+        bx = s.begin_x or (s.x - s.loc_x)
+        by = s.begin_y or (s.y - s.loc_y)
+        ex = s.end_x or (bx + s.width)
+        ey = s.end_y or (by + s.height)
+
+        return bx, by, ex, ey
+
+    @property
+    def relative_bounds(self):
+        # get bounds of a shape relative to it's parent (if shape has a parent)
+        bx, by, ex, ey = self.bounds
+        if self.parent and self.parent.shape_type == 'Group':
+            pbx, pby, pex, pey = self.parent.bounds
+            bx += pbx
+            by += pby
+            ex += pbx
+            ey += pby
+
+        return bx, by, ex, ey
+
+    @property
     def center_x_y(self):
         if self.begin_x is not None:
             x = self.begin_x + (self.width / 2)
@@ -414,10 +483,12 @@ class Shape:
         return x, y
 
     def set_start_and_finish(self, start, finish):
-        self.x, self.y = start
-        if self.begin_x is not None:
+        # set start and finish of a simple line or connector
+        if self.begin_x is not None:  # only apply changes to lines and connector shapes
+            self.x, self.y = start
+            # lines/connectors are defined in different ways
             is_connector = self.shape_name == 'Dynamic connector'
-            # should work for lines
+
             self.begin_x, self.begin_y = start
             self.end_x, self.end_y = finish
             self.width = self.end_x - self.begin_x
@@ -425,7 +496,7 @@ class Shape:
                 self.height = self.end_y - self.begin_y  # connector has a height
             else:
                 self.height = 0.0  # line height is always zero
-            self.x, self.y = start  # cp1.center_x_y
+            self.x, self.y = start
             self.geometry.set_move_to(0.0, 0.0)
             self.geometry.set_line_to(self.width, self.height)
             txt_pin_x = self.cells.get('TxtPinX')

@@ -5,6 +5,8 @@ from .vsdxfile import VisioFile
 class Media:
     straight_connector_text = 'STRAIGHT_CONNECTOR'
     curved_connector_text = 'CURVED_CONNECTOR'
+    rectangle_text = "RECTANGLE"
+    circle_text = "CIRCLE"
 
     def __init__(self):
         basedir = str(os.path.relpath(__file__))
@@ -19,3 +21,11 @@ class Media:
     @property
     def curved_connector(self):
         return self._media_vsdx.pages[0].find_shape_by_text(Media.straight_connector_text)
+
+    @property
+    def rectangle(self):
+        return self._media_vsdx.pages[0].find_shape_by_text(Media.rectangle_text)
+
+    @property
+    def circle(self):
+        return self._media_vsdx.pages[0].find_shape_by_text(Media.circle_text)
