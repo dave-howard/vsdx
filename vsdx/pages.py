@@ -212,13 +212,8 @@ class Page:
 
     def find_shapes_with_same_master(self, shape: Shape) -> List[Shape]:
         # return all shapes with master
-        found = list()
-        for s in self._shapes:
-            found = s.find_shapes_by_master(master_page_ID=shape.master_page_ID,
-                                            master_shape_ID=shape.master_shape_ID)
-            if found:
-                return found
-        return found
+        return [s for s in self.all_shapes if
+                s.master_shape_ID == shape.master_shape_ID and s.master_page_ID == shape.master_page_ID]
 
     def find_shape_by_text(self, text: str) -> Shape:
         for s in self._shapes:

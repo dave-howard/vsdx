@@ -612,86 +612,40 @@ class Shape:
         Recursively search for a shape, based on a known shape_id, and return a single Shape
 
         :param shape_id:
-        :return: VisooFile.Shape
+        :return: vsdx.Shape
         """
         # recursively search for shapes by text and return first match
-        for shape in self.sub_shapes():  # type: Shape
+        for shape in self.all_shapes:  # type: Shape
             if shape.ID == shape_id:
                 return shape
-            if shape.shape_type == 'Group':
-                found = shape.find_shape_by_id(shape_id)
-                if found:
-                    return found
 
     def find_shapes_by_id(self, shape_id: str) -> List[Shape]:
         # recursively search for shapes by ID and return all matches
-        found = list()
-        for shape in self.sub_shapes():  # type: Shape
-            if shape.ID == shape_id:
-                found.append(shape)
-            if shape.shape_type == 'Group':
-                sub_found = shape.find_shapes_by_id(shape_id)
-                if sub_found:
-                    found.extend(sub_found)
-        return found  # return list of matching shapes
+        return [s for s in self.all_shapes if s.ID == shape_id]
 
     def find_shapes_by_master(self, master_page_ID: str, master_shape_ID: str) -> List[Shape]:
         # recursively search for shapes by master ID and return all matches
-        found = list()
-        for shape in self.sub_shapes():  # type: Shape
-            if shape.master_shape_ID == master_shape_ID and shape.master_page_ID == master_page_ID:
-                found.append(shape)
-            if shape.shape_type == 'Group':
-                sub_found = shape.find_shapes_by_master(master_shape_ID, master_shape_ID)
-                if sub_found:
-                    found.extend(sub_found)
-        return found  # return list of matching shapes
+        return [s for s in self.all_shapes if  s.master_shape_ID == master_shape_ID and s.master_page_ID == master_page_ID]
 
     def find_shape_by_text(self, text: str) -> Shape:  # returns Shape
         # recursively search for shapes by text and return first match
-        for shape in self.sub_shapes():  # type: Shape
+        for shape in self.all_shapes:  # type: Shape
             if text in shape.text:
                 return shape
-            if shape.shape_type == 'Group':
-                found = shape.find_shape_by_text(text)
-                if found:
-                    return found
 
     def find_shapes_by_text(self, text: str, shapes: List[Shape] = None) -> List[Shape]:
         # recursively search for shapes by text and return all matches
-        if not shapes:
-            shapes = list()
-        for shape in self.sub_shapes():  # type: Shape
-            if text in shape.text:
-                shapes.append(shape)
-            if shape.shape_type == 'Group':
-                found = shape.find_shapes_by_text(text)
-                if found:
-                    shapes.extend(found)
-        return shapes
+        return [s for s in self.all_shapes if text in s.text]
 
     def find_shape_by_property_label(self, property_label: str) -> Shape:  # returns Shape
         # recursively search for shapes by property name and return first match
-        for shape in self.sub_shapes():  # type: Shape
+        for shape in self.all_shapes:  # type: Shape
             if property_label in shape.data_properties.keys():
                 return shape
-            if shape.shape_type == 'Group':
-                found = shape.find_shape_by_property_label(property_label)
-                if found:
-                    return found
 
     def find_shapes_by_property_label(self, property_label: str, shapes: List[Shape] = None) -> List[Shape]:
         # recursively search for shapes by property name and return all matches
-        if not shapes:
-            shapes = list()
-        for shape in self.sub_shapes():  # type: Shape
-            if property_label in shape.data_properties.keys():
-                shapes.append(shape)
-            if shape.shape_type == 'Group':
-                found = shape.find_shapes_by_property_label(property_label)
-                if found:
-                    shapes.extend(found)
-        return shapes
+        return [s for s in self.all_shapes if property_label in s.data_properties.keys()]
 
     def apply_text_filter(self, context: dict):
         # check text against all context keys
