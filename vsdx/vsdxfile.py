@@ -746,7 +746,7 @@ class VisioFile:
     @staticmethod
     def jinja_render_shape(shape: Shape, context: dict, loop_shape_ids: list):
         prev_shape = None
-        for s in shape.sub_shapes():  # type: Shape
+        for s in shape.child_shapes:  # type: Shape
             # manage for loops in template
             loop_shape_id = VisioFile.jinja_create_for_loop_if(s, prev_shape)
             if loop_shape_id:
@@ -869,10 +869,10 @@ class VisioFile:
     def increment_sub_shape_ids(self, shape: Shape, page, id_map: dict = None):
         id_map = self.increment_shape_ids(shape.xml, page, id_map)
         self.update_ids(shape.xml, id_map)
-        for s in shape.sub_shapes():
+        for s in shape.child_shapes:
             id_map = self.increment_shape_ids(s.xml, page, id_map)
             self.update_ids(s.xml, id_map)
-            if s.sub_shapes():
+            if s.child_shapes:
                 id_map = self.increment_sub_shape_ids(s, page, id_map)
         return id_map
 

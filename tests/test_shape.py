@@ -18,7 +18,7 @@ def test_shape_locations(filename: str, expected_locations: str):
     print("=== list_shape_locations ===")
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
-        shapes = page.sub_shapes()
+        shapes = page.child_shapes
         locations = ""
         for s in shapes:  # type: Shape
             locations += f"{s.x:.2f},{s.y:.2f} "
@@ -37,7 +37,6 @@ def test_shape_center(filename: str, shape_id: str, expected_center: str):
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
-        print(f"Shape ids: {[s.ID for s in page.sub_shapes()]}")
         shape = page.find_shape_by_id(shape_id)
 
         print(f"shape {shape.ID} center={shape.center_x_y}")

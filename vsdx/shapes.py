@@ -184,7 +184,7 @@ class Shape:
         master_page = self.page.vis.get_master_page_by_id(self.master_page_ID)
         if not master_page:
             return   # None if no master page set for this Shape
-        master_shape = master_page._shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
+        master_shape = master_page.child_shapes[0]  # there's always a single master shape in a master page
 
         if self.master_shape_ID is not None:
             master_sub_shape = master_shape.find_shape_by_id(self.master_shape_ID)
@@ -601,7 +601,7 @@ class Shape:
     def get_max_id(self):
         max_id = int(self.ID)
         if self.shape_type == 'Group':
-            for shape in self.sub_shapes():
+            for shape in self.child_shapes:
                 new_max = shape.get_max_id()
                 if new_max > max_id:
                     max_id = new_max
@@ -655,7 +655,7 @@ class Shape:
             text = text.replace(r_key, str(context[key]))
         self.text = text
 
-        for s in self.sub_shapes():
+        for s in self.child_shapes:
             s.apply_text_filter(context)
 
     def find_replace(self, old: str, new: str):
@@ -663,7 +663,7 @@ class Shape:
         text = self.text
         self.text = text.replace(old, new)
 
-        for s in self.sub_shapes():
+        for s in self.child_shapes:
             s.find_replace(old, new)
 
     def remove(self):

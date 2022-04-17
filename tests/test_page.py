@@ -24,9 +24,9 @@ def test_get_page_shapes(filename: str, count: int, sub_count: int):
         page = vis.get_page(0)  # type: Page
         assert len(page._shapes) == count  # _shapes() is internal function to get container object
         # check expected number of sub shapes
-        assert len(page._shapes[0].sub_shapes()) == sub_count
+        assert len(page._shapes[0].child_shapes) == sub_count
         # check that same number of shapes can be found in _shapes and page
-        assert len(page._shapes[0].sub_shapes()) == len(page.sub_shapes())
+        assert len(page._shapes[0].child_shapes) == len(page.child_shapes)
 
 
 @pytest.mark.parametrize("filename, page_index, height_width",
@@ -135,7 +135,7 @@ def test_set_page_name(filename: str, page_index: int, page_name: str):
 def test_get_page_sub_shapes(filename: str, count: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
-        shapes = page.sub_shapes()
+        shapes = page.child_shapes
         print(f"shape count={len(shapes)}")
         assert len(shapes) == count
 

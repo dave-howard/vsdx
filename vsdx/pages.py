@@ -149,7 +149,7 @@ class Page:
     def set_max_ids(self):
         # get maximum shape id from xml in page
         for shapes in self._shapes:
-            for shape in shapes.sub_shapes():
+            for shape in shapes.child_shapes:
                 id = shape.get_max_id()
                 if id > self.max_id:
                     self.max_id = id

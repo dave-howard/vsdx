@@ -43,7 +43,7 @@ def test_master_inheritance(filename: str):
         assert shape_a.height == 0.75
 
         # test inheritance for subshapes
-        sub_shape_a = shape_a.sub_shapes()[0]
+        sub_shape_a = shape_a.child_shapes[0]
         assert sub_shape_a.cell_value('LineWeight') == '0.01875'
 
 
@@ -55,7 +55,7 @@ def test_set_master_child_property(filename: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)
         # find shape with master and set a child property
-        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        sub_shape_b = page.find_shape_by_text('Shape B').child_shapes[0]
 
         sub_shape_b.line_weight = 0.5
 
@@ -64,7 +64,7 @@ def test_set_master_child_property(filename: str):
     with VisioFile(out_file) as vis:
         page = vis.get_page(0)
 
-        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        sub_shape_b = page.find_shape_by_text('Shape B').child_shapes[0]
         assert sub_shape_b.master_shape  # shape has a master
         assert sub_shape_b.line_weight == 0.5  # child shape has value set
 
@@ -77,7 +77,7 @@ def test_master_property_change_is_inherited(filename: str, weight):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)
 
-        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        sub_shape_a = page.find_shape_by_text('Shape A').child_shapes[0]
         master = sub_shape_a.master_shape
         master.line_weight = weight
 
@@ -86,8 +86,8 @@ def test_master_property_change_is_inherited(filename: str, weight):
     with VisioFile(out_file) as vis:
         page = vis.get_page(0)
 
-        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
-        sub_shape_b = page.find_shape_by_text('Shape B').sub_shapes()[0]
+        sub_shape_a = page.find_shape_by_text('Shape A').child_shapes[0]
+        sub_shape_b = page.find_shape_by_text('Shape B').child_shapes[0]
 
         # check that both sub_shape values have changed based on master
         assert sub_shape_a.line_weight == weight
@@ -102,7 +102,7 @@ def test_child_property_change_is_not_inherited(filename: str, weight):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)
 
-        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        sub_shape_a = page.find_shape_by_text('Shape A').child_shapes[0]
         master = sub_shape_a.master_shape
         original_master_weight = master.line_weight
         # increment child property to ensure child and master are not the same
@@ -114,7 +114,7 @@ def test_child_property_change_is_not_inherited(filename: str, weight):
     with VisioFile(out_file) as vis:
         page = vis.get_page(0)
 
-        sub_shape_a = page.find_shape_by_text('Shape A').sub_shapes()[0]
+        sub_shape_a = page.find_shape_by_text('Shape A').child_shapes[0]
         master = sub_shape_a.master_shape
 
         # check that child shape has changed to expected value

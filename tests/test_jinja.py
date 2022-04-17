@@ -52,7 +52,7 @@ def test_jinja_if(filename: str, context: dict, shape_count: int):
     # open file and validate each shape id has expected text
     with VisioFile(out_file) as vis:
         page = vis.pages[1]  # second page has the shapes with if statements
-        count = len(page.sub_shapes())
+        count = len(page.child_shapes)
         print(f"expected {shape_count} and found {count}")
         assert count == shape_count
 
