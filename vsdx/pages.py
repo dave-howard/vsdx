@@ -5,8 +5,11 @@ from typing import List
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .vsdxfile import VisioFile
+import vsdx
 
 import xml.etree.ElementTree as ET
+
+import deprecation
 
 from .connectors import Connect
 from .shapes import Shape
@@ -107,6 +110,17 @@ class Page:
         self._xml = value
 
     @property
+    def _shapes(self):
+        """Return a list of :class:`Shape` objects - for each 'Shapes'
+
+        Note: typically returns one :class:`Shape` object which itself contains :class:`Shape` objects
+
+        """
+        return [Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")] or []
+
+    @property
+    @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
+                            details="Use Page.child_shapes property to access top level shapes of a Page")
     def shapes(self):
         """Return a list of :class:`Shape` objects
 
@@ -115,20 +129,26 @@ class Page:
         """
         return [Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")]
 
+    @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
+                            details="Use Page.child_shapes property to access top level shapes of a Page")
     def sub_shapes(self) -> List[Shape]:
+        return self.child_shapes
+
+    @property
+    def child_shapes(self):
         """Return list of Shape objects at top level of VisioFile.Page
 
-        :returns: list of `Shape` objects
-        :rtype: List[Shape]
-        """
+            :returns: list of `Shape` objects
+            :rtype: List[Shape]
+            """
         # note that self.shapes should always return a single shape
-        if self.shapes:
-            return self.shapes[0].sub_shapes()
+        if self._shapes:
+            return self._shapes[0].child_shapes
         return []  # empty list if no top shapes object
 
     def set_max_ids(self):
         # get maximum shape id from xml in page
-        for shapes in self.shapes:
+        for shapes in self._shapes:
             for shape in shapes.sub_shapes():
                 id = shape.get_max_id()
                 if id > self.max_id:
@@ -168,15 +188,15 @@ class Page:
         return connectors
 
     def apply_text_context(self, context: dict):
-        for s in self.shapes:
+        for s in self._shapes:
             s.apply_text_filter(context)
 
     def find_replace(self, old: str, new: str):
-        for s in self.shapes:
+        for s in self._shapes:
             s.find_replace(old, new)
 
     def find_shape_by_id(self, shape_id) -> Shape:
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shape_by_id(shape_id)
             if found:
                 return found
@@ -184,7 +204,7 @@ class Page:
     def _find_shapes_by_id(self, shape_id) -> List[Shape]:
         # return all shapes by ID - should only be used internally
         found = list()
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shapes_by_id(shape_id)
             if found:
                 return found
@@ -193,7 +213,7 @@ class Page:
     def find_shapes_with_same_master(self, shape: Shape) -> List[Shape]:
         # return all shapes with master
         found = list()
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shapes_by_master(master_page_ID=shape.master_page_ID,
                                             master_shape_ID=shape.master_shape_ID)
             if found:
@@ -201,26 +221,28 @@ class Page:
         return found
 
     def find_shape_by_text(self, text: str) -> Shape:
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shape_by_text(text)
             if found:
                 return found
 
     def find_shapes_by_text(self, text: str) -> List[Shape]:
         shapes = list()
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shapes_by_text(text)
             if found:
                 shapes.extend(found)
         return shapes
 
+    @property
     def all_shapes(self):
-        return self.find_shapes_by_text('')
+        # return all shapes within another shape, recursively, using same logic as find_shapes_by_text()
+        return self._shapes[0].all_shapes if len(self._shapes) else []
 
     def find_shape_by_property_label(self, property_label: str) -> Shape:
         # return first matching shape with label
         # note: use label rather than name as label is more easily visible in diagram
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shape_by_property_label(property_label)
             if found:
                 return found
@@ -228,7 +250,7 @@ class Page:
     def find_shapes_by_property_label(self, property_label: str) -> List[Shape]:
         # return all matching shapes with property label
         shapes = list()
-        for s in self.shapes:
+        for s in self._shapes:
             found = s.find_shapes_by_property_label(property_label)
             if found:
                 shapes.extend(found)

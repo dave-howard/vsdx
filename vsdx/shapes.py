@@ -6,7 +6,7 @@ from xml.etree.ElementTree import Element
 from typing import Dict
 from typing import List
 from typing import Optional
-
+import deprecation
 import vsdx
 from vsdx import namespace
 
@@ -167,7 +167,7 @@ class Shape:
         # set parent: location for new shape tag to be added
         if page:
             # set parent to first page Shapes tag if destination page passed
-            parent = page.shapes
+            parent = page._shapes
         else:
             # or set parent to source shapes own parent
             parent = self.parent
@@ -184,7 +184,7 @@ class Shape:
         master_page = self.page.vis.get_master_page_by_id(self.master_page_ID)
         if not master_page:
             return   # None if no master page set for this Shape
-        master_shape = master_page.shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
+        master_shape = master_page._shapes[0].sub_shapes()[0]  # there's always a single master shape in a master page
 
         if self.master_shape_ID is not None:
             master_sub_shape = master_shape.find_shape_by_id(self.master_shape_ID)
@@ -553,12 +553,18 @@ class Shape:
             text_element.text = value
         # todo: create new Text element if not found
 
+    @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
+                            details="Use Shape.child_shapes property to access shapes within a shape")
     def sub_shapes(self) -> List[Shape]:
+        return self.child_shapes
+
+    @property
+    def child_shapes(self):
         """Get child/sub shapes contained by a Shape
 
-        :returns: list of Shape objects
-        :rtype: List[Shape]
-        """
+                :returns: list of Shape objects
+                :rtype: List[Shape]
+                """
         shapes = list()
         # for each shapes tag, look for Shape objects
         # self can be either a Shapes or a Shape
@@ -573,6 +579,23 @@ class Shape:
             shapes = [Shape(xml=shape, parent=self, page=self.page) for shape in parent_element]
         else:
             shapes = []
+        return shapes
+
+    @property
+    def all_shapes(self):
+        # return all shapes within another shape, recursively
+        return self._all_shapes()
+
+    def _all_shapes(self, shapes: List[Shape] = None) -> List[Shape]:
+        # recursively search for shapes and return all found
+        if not shapes:
+            shapes = list()
+        for shape in self.child_shapes:  # type: Shape
+            shapes.append(shape)
+            if shape.shape_type == 'Group':
+                found = shape.child_shapes
+                if found:
+                    shapes.extend(found)
         return shapes
 
     def get_max_id(self):

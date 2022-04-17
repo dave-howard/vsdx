@@ -20,6 +20,7 @@ def pretty_print_element(xml: Element) -> str:
         return f"Not an Element. type={type(xml)}"
 
 
+__version__ = "0.5.0"
 from .shapes import Cell
 from .connectors import Connect
 from .shapes import DataProperty

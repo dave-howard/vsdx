@@ -50,17 +50,15 @@ def test_shape_center(filename: str, shape_id: str, expected_center: str):
 def test_remove_shape(filename: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_shape_removed.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[0].shapes
         # get shape to remove
-        s = shapes[0].find_shape_by_text('Shape to remove')  # type: Shape
+        s = vis.pages[0].find_shape_by_text('Shape to remove')  # type: Shape
         assert s  # check shape found
         s.remove()
         vis.save_vsdx(out_file)
 
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[0].shapes
         # get shape that should have been removed
-        s = shapes[0].find_shape_by_text('Shape to remove')  # type: Shape
+        s = vis.pages[0].find_shape_by_text('Shape to remove')  # type: Shape
         assert s is None  # check shape not found
 
 
@@ -69,10 +67,9 @@ def test_remove_shape(filename: str):
 def test_set_shape_location(filename: str, shape_names: set, shape_locations: set):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_shape_location.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[0].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_locations):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x
             assert s.y
@@ -83,10 +80,9 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
 
     # re-open saved file and check it is changed as expected
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[0].shapes
         # get each shape that should have been moved
         for (shape_name, x_y) in zip(shape_names, shape_locations):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x == x_y[0]
             assert s.y == x_y[1]
@@ -101,10 +97,9 @@ def test_move_shape(filename: str, page_index: int, shape_names: set, shape_x_y_
     expected_shape_locations = dict()
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[page_index].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_x_y_deltas):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x
             assert s.y
@@ -116,10 +111,9 @@ def test_move_shape(filename: str, page_index: int, shape_names: set, shape_x_y_
 
     # re-open saved file and check it is changed as expected
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[page_index].shapes
         # get each shape that should have been moved
         for shape_name in shape_names:
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x == expected_shape_locations[shape_name][0]
             assert s.y == expected_shape_locations[shape_name][1]

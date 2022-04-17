@@ -17,12 +17,16 @@ from vsdx import Cell
 basedir = os.path.dirname(os.path.relpath(__file__))
 
 
-@pytest.mark.parametrize("filename, count", [("test1.vsdx", 1), ("test2.vsdx", 1)])
-def test_get_page_shapes(filename: str, count: int):
+@pytest.mark.parametrize("filename, count, sub_count", [("test1.vsdx", 1, 4), ("test2.vsdx", 1, 6)])
+def test_get_page_shapes(filename: str, count: int, sub_count: int):
+    # there should always be one single Shapes object in the page that contains Shape objects
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
-        print(f"shape count={len(page.shapes)}")
-        assert len(page.shapes) == count
+        assert len(page._shapes) == count  # _shapes() is internal function to get container object
+        # check expected number of sub shapes
+        assert len(page._shapes[0].sub_shapes()) == sub_count
+        # check that same number of shapes can be found in _shapes and page
+        assert len(page._shapes[0].sub_shapes()) == len(page.sub_shapes())
 
 
 @pytest.mark.parametrize("filename, page_index, height_width",
@@ -75,7 +79,7 @@ def test_get_page_bounds(filename: str, page_index: int, expected_shape_bounds: 
 
         box = vsdx.media.Media().rectangle
 
-        for s in page.all_shapes():
+        for s in page.all_shapes:
             #bx = s.begin_x or (s.x-s.loc_x)
             #by = s.begin_y or (s.y-s.loc_y)
             #ex = s.end_x or (bx + s.width)
@@ -433,6 +437,6 @@ def test_page_all_shapes(filename, page_index, expected_ids):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.pages[page_index]
         # all_shapes() gets all shapes on a page, recursively
-        shape_ids = [s.ID for s in page.all_shapes()]
+        shape_ids = [s.ID for s in page.all_shapes]
         print(shape_ids)
         assert shape_ids == expected_ids

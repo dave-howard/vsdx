@@ -716,7 +716,7 @@ class VisioFile:
             # check if page should be removed
             if VisioFile.jinja_page_showif(page, context):
                 loop_shape_ids = list()
-                for shapes_by_id in page.shapes:  # type: Shape
+                for shapes_by_id in page._shapes:  # type: Shape
                     VisioFile.jinja_render_shape(shape=shapes_by_id, context=context, loop_shape_ids=loop_shape_ids)
 
                 source = ET.tostring(page.xml.getroot(), encoding='unicode')
