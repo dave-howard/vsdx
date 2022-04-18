@@ -644,8 +644,20 @@ class Shape:
                 return shape
 
     def find_shapes_by_property_label(self, property_label: str, shapes: List[Shape] = None) -> List[Shape]:
-        # recursively search for shapes by property name and return all matches
+        # recursively search for shapes by property label and return all matches
         return [s for s in self.all_shapes if property_label in s.data_properties.keys()]
+
+    def find_shape_by_property_label_value(self, property_label: str, property_value: str) -> Shape:  # returns Shape
+        # recursively search for shapes by property label and value, and return first match
+        for shape in self.all_shapes:  # type: Shape
+            if property_label in shape.data_properties.keys() and \
+                    str(shape.data_properties[property_label].value) == property_value:
+                return shape
+
+    def find_shapes_by_property_label_value(self, property_label: str, property_value: str, shapes: List[Shape] = None) -> List[Shape]:
+        # recursively search for shapes by property label and return all matches
+        return [s for s in self.all_shapes if property_label in s.data_properties.keys() and \
+                    str(s.data_properties[property_label].value) == property_value]
 
     def apply_text_filter(self, context: dict):
         # check text against all context keys

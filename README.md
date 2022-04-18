@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.1: added Page/Shape.find_shape_by_property_label_value()/find_shapes_by_property_label_value()
 - v0.5.0: deprecated Page.shapes property Page/Shape.sub_shapes() methods in favour of Page/Shape.child_shapes property. Add Shape.all_shapes property, convert Page.all_shapes() method to property
 - v0.4.20: Shape.set_cell_value()/set_cell_formula() create new cell if missing, add Media().rectangle and circle props, add Shape.bounds, relative_bounds, and end_arrow props
 - v0.4.19: correctly position new connector shapes between 'from' and 'to' shapes 

@@ -238,6 +238,50 @@ def test_find_shapes_by_data_property_label(filename: str, page_index: int, expe
             assert s.data_properties[property_label]
 
 
+@pytest.mark.parametrize(("filename", "page_index", "expected_shape_names", "property_label", "property_value"),
+                         [("test1.vsdx", 0, ["Shape Text"], "my_property_label", "property value"),
+                          ("test6_shape_properties.vsdx", 0, ["Shape One"], "my_property_label", "property value"),
+                          ("test6_shape_properties.vsdx", 0, ["Shape Three"], "my_second_property_label", "a different value"),
+                          ("test6_shape_properties.vsdx", 1, ["Shape A", "Shape C"], "label_one", "0"),
+                          ("test6_shape_properties.vsdx", 2, ["A", "B"], "master_Prop", "master prop value"),
+                          ("test6_shape_properties.vsdx", 2, ["C"], "master_Prop", "override"),
+                          ])
+def test_find_shapes_by_data_property_label_value(filename: str, page_index: int, expected_shape_names: list, property_label: str, property_value: str):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shapes = vis.pages[page_index].find_shapes_by_property_label_value(property_label, property_value)
+
+        # test that a shape is returned
+        assert len(shapes) == len(expected_shape_names)
+
+        # get list of shape names (text) without carriage returns
+        shape_names = sorted([s.text.replace('\n', '') for s in shapes])
+        print(f"shape names={shape_names}")
+
+        # test that the shapes returned have the expected names
+        assert shape_names == expected_shape_names
+
+        # test that each returned shape has a DataProperty with property_name
+        for s in shapes:
+            assert s.data_properties[property_label]
+            print(f"{property_label}='{s.data_properties[property_label].value}'")
+
+
+@pytest.mark.parametrize(("filename", "page_index", "expected_shape_name", "property_label", "property_value"),
+                         [("test1.vsdx", 0, "Shape Text", "my_property_label", "property value"),
+                          ("test6_shape_properties.vsdx", 0, "Shape One", "my_property_label", "property value"),
+                          ("test6_shape_properties.vsdx", 0, "Shape Three", "my_second_property_label", "a different value"),
+                          ("test6_shape_properties.vsdx", 1, "Shape A", "label_one", "0"),
+                          ("test6_shape_properties.vsdx", 2, "A", "master_Prop", "master prop value"),
+                          ("test6_shape_properties.vsdx", 2, "C", "master_Prop", "override"),
+                          ])
+def test_find_shape_by_data_property_label_value(filename: str, page_index: int, expected_shape_name: str, property_label: str, property_value: str):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shape = vis.pages[page_index].find_shape_by_property_label_value(property_label, property_value)
+
+        # test that the shapes returned have the expected names
+        assert shape.text.replace('\n', '') == expected_shape_name
+
+
 # Connectors
 
 @pytest.mark.parametrize(("filename", "expected_connects"),

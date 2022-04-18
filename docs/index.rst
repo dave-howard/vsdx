@@ -5,7 +5,7 @@
 
 Welcome to vsdx's documentation!
 ================================
-v0.5.0
+v0.5.1
 
 .. toctree::
    :maxdepth: 2

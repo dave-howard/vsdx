@@ -202,7 +202,7 @@ class Page:
                 return found
 
     def _find_shapes_by_id(self, shape_id) -> List[Shape]:
-        # return all shapes by ID - should only be used internally
+        # return all shapes by ID - should only be used internally where ID is not unique (i.e. copying shapes)
         found = list()
         for s in self._shapes:
             found = s.find_shapes_by_id(shape_id)
@@ -247,6 +247,23 @@ class Page:
         shapes = list()
         for s in self._shapes:
             found = s.find_shapes_by_property_label(property_label)
+            if found:
+                shapes.extend(found)
+        return shapes
+
+    def find_shape_by_property_label_value(self, property_label: str, property_value: str) -> Shape:
+        # return first matching shape with label
+        # note: use label rather than name as label is more easily visible in diagram
+        for s in self._shapes:
+            found = s.find_shape_by_property_label_value(property_label, property_value)
+            if found:
+                return found
+
+    def find_shapes_by_property_label_value(self, property_label: str, property_value: str) -> List[Shape]:
+        # return all matching shapes with property label
+        shapes = list()
+        for s in self._shapes:
+            found = s.find_shapes_by_property_label_value(property_label, property_value)
             if found:
                 shapes.extend(found)
         return shapes
