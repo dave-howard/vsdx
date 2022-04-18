@@ -123,12 +123,12 @@ def test_set_page_name(filename: str, page_index: int, page_name: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.pages[page_index]
         print(VisioFile.pretty_print_element(page._pagesheet_xml))
-        page.page_name = page_name
+        page.name = page_name
         vis.save_vsdx(out_file)
 
     with VisioFile(out_file) as vis:
         page = vis.pages[page_index]
-        assert page.page_name == page_name
+        assert page.name == page_name
 
 
 @pytest.mark.parametrize("filename, count", [("test1.vsdx", 4), ("test2.vsdx", 6)])

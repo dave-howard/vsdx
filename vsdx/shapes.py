@@ -625,7 +625,7 @@ class Shape:
 
     def find_shapes_by_master(self, master_page_ID: str, master_shape_ID: str) -> List[Shape]:
         # recursively search for shapes by master ID and return all matches
-        return [s for s in self.all_shapes if  s.master_shape_ID == master_shape_ID and s.master_page_ID == master_page_ID]
+        return [s for s in self.all_shapes if s.master_shape_ID == master_shape_ID and s.master_page_ID == master_page_ID]
 
     def find_shape_by_text(self, text: str) -> Shape:  # returns Shape
         # recursively search for shapes by text and return first match

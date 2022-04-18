@@ -741,6 +741,7 @@ class VisioFile:
                 pages_to_remove.append(page)
         # remove pages after processing
         for p in pages_to_remove:
+            print(f"Removing page:'{p.name}' index:{p.index_num}")
             self.remove_page_by_index(p.index_num)
 
     @staticmethod
@@ -859,7 +860,7 @@ class VisioFile:
                 return False  # page should be hidden
             # remove jinja statement from page name
             jinja_statement = re.match("{%.*?%}", page.name)[0]
-            page.page_name = page.page_name.replace(jinja_statement, '')
+            page.name = page.name.replace(jinja_statement, '')
         return True  # page should be left in
 
     @staticmethod

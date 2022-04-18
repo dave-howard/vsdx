@@ -27,21 +27,18 @@ def test_shape_locations(filename: str, expected_locations: str):
     assert locations == expected_locations
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("filename, shape_id, expected_center",
-                         [("test1.vsdx", "1", (1,1)),
-                          ("test1.vsdx", "2", (1,1)),
-                          ("test1.vsdx", "5", (1,1)),
-                          ("test1.vsdx", "6", (1,1))])
+                         [
+                             ("test1.vsdx", "1", (1.332677148526936, 10.65551182326173)),
+                             ("test2.vsdx", "2", (1.082677148526936, 0.7874015625650443)),  # center of a group shape
+                             ("test2.vsdx", "16", (1.6903102768832179, 8.188976116607332)),  # test center of a line
+                          ])
 def test_shape_center(filename: str, shape_id: str, expected_center: str):
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
         shape = page.find_shape_by_id(shape_id)
 
-        print(f"shape {shape.ID} center={shape.center_x_y}")
-        print(f"x {shape.x} y={shape.y}")
-        print(f"end_x {shape.end_x} end_y={shape.end_y}")
         assert shape.center_x_y == expected_center
 
 

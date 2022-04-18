@@ -40,7 +40,7 @@ class Page:
     def __init__(self, xml: ET.ElementTree, filename: str, page_name: str, vis: VisioFile):
         self._xml = xml
         self.filename = filename
-        self.name = page_name
+        self._name = page_name
         self.vis = vis
         self.max_id = 0
         # todo: add page id - from pages_xml - PageSheet[ID]
@@ -52,30 +52,43 @@ class Page:
     def connects(self):
         return self.get_connects()
 
+    @deprecation.deprecated(deprecated_in="v0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
+                            details="Use Page.name property instead")
     def set_name(self, value: str):
-        print("Warning: set_name() is deprecated")
-        # todo: change to name property
         from .vsdxfile import file_to_xml  # to break circular imports - is this really needed?
         pages_filename = self.vis._pages_filename()  # pages contains Page name, width, height, mapped to Id
         pages = file_to_xml(pages_filename)  # this contains a list of pages with rel_id and filename
         page = pages.getroot().find(f"{namespace}Page[{self.index_num + 1}]")
-        #print(f"set_name() page={VisioFile.pretty_print_element(page)}")
         if page:
             page.attrib['Name'] = value
             self.name = value
             self.vis.pages_xml = pages
 
     @property
+    def name(self):
+        if self._name:
+            return self._name
+        name = self.vis.pages_xml.find(f'{namespace}Page[{self.index_num + 1}]').attrib['Name']
+        name_u = self.vis.pages_xml.find(f'{namespace}Page[{self.index_num + 1}]').attrib['NameU']
+        return name_u or name or self._name  # return unicode name, or name if NameU not set
+
+    @name.setter
+    def name(self, value):
+        self.vis.pages_xml.find(f'{namespace}Page[{self.index_num + 1}]').attrib['Name'] = str(value)
+        self.vis.pages_xml.find(f'{namespace}Page[{self.index_num + 1}]').attrib['NameU'] = str(value)
+        self._name = str(value)
+
+    @property
+    @deprecation.deprecated(deprecated_in="v0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
+                            details="Use Page.name property instead")
     def page_name(self):
-        name = self.vis.pages_xml.find(f'{namespace}Page[{self.index_num+1}]').attrib['Name']
-        name_u = self.vis.pages_xml.find(f'{namespace}Page[{self.index_num+1}]').attrib['NameU']
-        return name or name_u  # return unicode name, or name if NameU not set
+        return self.name
 
     @page_name.setter
+    @deprecation.deprecated(deprecated_in="v0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
+                            details="Use Page.name property instead")
     def page_name(self, value):
-        self.vis.pages_xml.find(f'{namespace}Page[{self.index_num+1}]').attrib['Name'] = str(value)
-        self.vis.pages_xml.find(f'{namespace}Page[{self.index_num + 1}]').attrib['NameU'] = str(value)
-        self.name = str(value)
+        self.name = value
 
     @property
     def _pagesheet_xml(self):
