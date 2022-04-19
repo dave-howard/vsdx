@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.3: Fixed missing deprecation dependency in setup.py
 - v0.5.2: deprecated Page.set_name() method and page.page_name property, in favour of Page.name. Unskipped test: test_shape_center(). Added find_shape.rst doc page
 - v0.5.1: added Page/Shape.find_shape_by_property_label_value()/find_shapes_by_property_label_value()
 - v0.5.0: deprecated Page.shapes property Page/Shape.sub_shapes() methods in favour of Page/Shape.child_shapes property. Add Shape.all_shapes property, convert Page.all_shapes() method to property
