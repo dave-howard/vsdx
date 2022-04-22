@@ -38,15 +38,11 @@ def test_file_closure():
 
 def test_open_rel_path():
     # test opening media file (not in tests directory)with absolute path
-    print("__file__:" + __file__)
-    print("os.path.relpath(__file__):" + os.path.relpath(__file__))
-    print("basedir:" + basedir)
     filename = os.path.join(basedir, 'test1.vsdx')
-    print("filename:"+filename)
     assert(os.path.exists(filename))
     with VisioFile(filename) as vis:
         for p in vis.pages:
-            print(p.name, p.shapes)
+            print(p.name)
 
 
 def test_open_abs_path():
@@ -57,7 +53,7 @@ def test_open_abs_path():
     assert(os.path.exists(filename))
     with VisioFile(filename) as vis:
         for p in vis.pages:
-            print(p.name, p.shapes)
+            print(p.name)
 
 
 def test_open_abs_path_save_rel_path():

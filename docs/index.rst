@@ -5,13 +5,14 @@
 
 Welcome to vsdx's documentation!
 ================================
-v0.4.18
+v0.5.3
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    quickstart
+   find_shape
    classes
 
 * :ref:`genindex`

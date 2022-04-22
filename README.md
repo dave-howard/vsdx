@@ -17,21 +17,22 @@ For quick start documentation please see
 
 __Example 1__ code to find a shape with specific text, remove it, and
 then save the updated .vsdx file:
+
 ```python
 from vsdx import VisioFile
 
 filename = 'my_file.vsdx'
 # open a visio file
 with VisioFile(filename) as vis:
-    # get page shapes collection
-    shapes = vis.pages[0].shapes
-    # get shape to remove by its text value
-    s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
-    # remove the shape if found
-    if s:
-        s.remove()
-        # save a new copy
-        vis.save_vsdx('shape_removed.vsdx')
+  # get page shapes collection
+  shapes = vis.pages[0]._shapes
+  # get shape to remove by its text value
+  s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
+  # remove the shape if found
+  if s:
+    s.remove()
+    # save a new copy
+    vis.save_vsdx('shape_removed.vsdx')
 ```
 
 __Example 2__ creating a new vsdx file from a template and context data
@@ -57,6 +58,12 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.3: Fixed missing deprecation dependency in setup.py
+- v0.5.2: deprecated Page.set_name() method and page.page_name property, in favour of Page.name. Unskipped test: test_shape_center(). Added find_shape.rst doc page
+- v0.5.1: added Page/Shape.find_shape_by_property_label_value()/find_shapes_by_property_label_value()
+- v0.5.0: deprecated Page.shapes property Page/Shape.sub_shapes() methods in favour of Page/Shape.child_shapes property. Add Shape.all_shapes property, convert Page.all_shapes() method to property
+- v0.4.20: Shape.set_cell_value()/set_cell_formula() create new cell if missing, add Media().rectangle and circle props, add Shape.bounds, relative_bounds, and end_arrow props
+- v0.4.19: correctly position new connector shapes between 'from' and 'to' shapes 
 - v0.4.18: add page.page_name, width and height properties
 - v0.4.17: register xml namespaces to improve compatibility of xml output
 - v0.4.16: Add Geometry class to read Shape geometry

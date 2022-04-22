@@ -28,6 +28,7 @@ def test_create_visiodiff(filename_a: str, filename_b: str):
 
 
 # next test, open file, set text of shape, save as - then compare the two
+@pytest.mark.skip
 @pytest.mark.parametrize(("filename_a", "filename_b"),
                          [("test1.vsdx", "test1_outfile.vsdx" ),
                           ("test2.vsdx", "test2_outfile.vsdx" ),
@@ -57,7 +58,7 @@ def test_visiodiff_before_after(filename_a: str, filename_b: str):
 @pytest.mark.skip
 @pytest.mark.parametrize(("filename_a", "filename_b"),
                          [
-                          ("test1_outfile.vsdx", "test1_outfile2.vsdx" )
+                             ("connect_after.vsdx", "connect_after_arrow.vsdx" ),
                           ])
 def test_visiodiff_two_files(filename_a: str, filename_b: str):
     filepath_a = os.path.join(basedir, filename_a)

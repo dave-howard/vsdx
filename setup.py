@@ -12,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="vsdx",
-    version="0.4.18",
+    version="0.5.3",
     author="Dave Howard",
     author_email="dave@codypy.com",
     description="vsdx - A python library for processing .vsdx files",
@@ -22,6 +22,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'Jinja2',
+        'deprecation',
     ],
     classifiers=[
         "Programming Language :: Python :: 3.7",

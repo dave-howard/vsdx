@@ -52,7 +52,7 @@ def test_jinja_if(filename: str, context: dict, shape_count: int):
     # open file and validate each shape id has expected text
     with VisioFile(out_file) as vis:
         page = vis.pages[1]  # second page has the shapes with if statements
-        count = len(page.sub_shapes())
+        count = len(page.child_shapes)
         print(f"expected {shape_count} and found {count}")
         assert count == shape_count
 
@@ -220,9 +220,9 @@ def test_jinja_page_showif(filename: str, context: dict, expected_page_count, ex
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_show_{context["show"]}.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
         print(f"len(vis.pages)={len(vis.pages)} context={context}")
-        for p in vis.pages: # type: Page
-            print(f"page:{p.name}")
+        print("BEFORE", [(p.index_num, p.name) for p in vis.pages])
         vis.jinja_render_vsdx(context=context)
+        print("AFTER", [(p.index_num, p.name) for p in vis.pages])
         vis.save_vsdx(out_file)
 
     # open file and check shape has moved

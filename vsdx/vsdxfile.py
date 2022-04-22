@@ -716,7 +716,7 @@ class VisioFile:
             # check if page should be removed
             if VisioFile.jinja_page_showif(page, context):
                 loop_shape_ids = list()
-                for shapes_by_id in page.shapes:  # type: Shape
+                for shapes_by_id in page._shapes:  # type: Shape
                     VisioFile.jinja_render_shape(shape=shapes_by_id, context=context, loop_shape_ids=loop_shape_ids)
 
                 source = ET.tostring(page.xml.getroot(), encoding='unicode')
@@ -741,12 +741,13 @@ class VisioFile:
                 pages_to_remove.append(page)
         # remove pages after processing
         for p in pages_to_remove:
+            print(f"Removing page:'{p.name}' index:{p.index_num}")
             self.remove_page_by_index(p.index_num)
 
     @staticmethod
     def jinja_render_shape(shape: Shape, context: dict, loop_shape_ids: list):
         prev_shape = None
-        for s in shape.sub_shapes():  # type: Shape
+        for s in shape.child_shapes:  # type: Shape
             # manage for loops in template
             loop_shape_id = VisioFile.jinja_create_for_loop_if(s, prev_shape)
             if loop_shape_id:
@@ -859,7 +860,7 @@ class VisioFile:
                 return False  # page should be hidden
             # remove jinja statement from page name
             jinja_statement = re.match("{%.*?%}", page.name)[0]
-            page.page_name = page.page_name.replace(jinja_statement, '')
+            page.name = page.name.replace(jinja_statement, '')
         return True  # page should be left in
 
     @staticmethod
@@ -869,10 +870,10 @@ class VisioFile:
     def increment_sub_shape_ids(self, shape: Shape, page, id_map: dict = None):
         id_map = self.increment_shape_ids(shape.xml, page, id_map)
         self.update_ids(shape.xml, id_map)
-        for s in shape.sub_shapes():
+        for s in shape.child_shapes:
             id_map = self.increment_shape_ids(s.xml, page, id_map)
             self.update_ids(s.xml, id_map)
-            if s.sub_shapes():
+            if s.child_shapes:
                 id_map = self.increment_sub_shape_ids(s, page, id_map)
         return id_map
 

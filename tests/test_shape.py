@@ -1,6 +1,7 @@
 import pytest
 import os
 
+import vsdx
 from vsdx import DataProperty
 from vsdx import Page  # for typing
 from vsdx import Shape
@@ -17,7 +18,7 @@ def test_shape_locations(filename: str, expected_locations: str):
     print("=== list_shape_locations ===")
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
-        shapes = page.sub_shapes()
+        shapes = page.child_shapes
         locations = ""
         for s in shapes:  # type: Shape
             locations += f"{s.x:.2f},{s.y:.2f} "
@@ -26,22 +27,18 @@ def test_shape_locations(filename: str, expected_locations: str):
     assert locations == expected_locations
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("filename, shape_id, expected_center",
-                         [("test1.vsdx", "1", (1,1)),
-                          ("test1.vsdx", "2", (1,1)),
-                          ("test1.vsdx", "5", (1,1)),
-                          ("test1.vsdx", "6", (1,1))])
+                         [
+                             ("test1.vsdx", "1", (1.332677148526936, 10.65551182326173)),
+                             ("test2.vsdx", "2", (1.082677148526936, 0.7874015625650443)),  # center of a group shape
+                             ("test2.vsdx", "16", (1.6903102768832179, 8.188976116607332)),  # test center of a line
+                          ])
 def test_shape_center(filename: str, shape_id: str, expected_center: str):
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
-        print(f"Shape ids: {[s.ID for s in page.sub_shapes()]}")
         shape = page.find_shape_by_id(shape_id)
 
-        print(f"shape {shape.ID} center={shape.center_x_y}")
-        print(f"x {shape.x} y={shape.y}")
-        print(f"end_x {shape.end_x} end_y={shape.end_y}")
         assert shape.center_x_y == expected_center
 
 
@@ -49,17 +46,15 @@ def test_shape_center(filename: str, shape_id: str, expected_center: str):
 def test_remove_shape(filename: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_shape_removed.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[0].shapes
         # get shape to remove
-        s = shapes[0].find_shape_by_text('Shape to remove')  # type: Shape
+        s = vis.pages[0].find_shape_by_text('Shape to remove')  # type: Shape
         assert s  # check shape found
         s.remove()
         vis.save_vsdx(out_file)
 
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[0].shapes
         # get shape that should have been removed
-        s = shapes[0].find_shape_by_text('Shape to remove')  # type: Shape
+        s = vis.pages[0].find_shape_by_text('Shape to remove')  # type: Shape
         assert s is None  # check shape not found
 
 
@@ -68,10 +63,9 @@ def test_remove_shape(filename: str):
 def test_set_shape_location(filename: str, shape_names: set, shape_locations: set):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_shape_location.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[0].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_locations):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x
             assert s.y
@@ -82,10 +76,9 @@ def test_set_shape_location(filename: str, shape_names: set, shape_locations: se
 
     # re-open saved file and check it is changed as expected
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[0].shapes
         # get each shape that should have been moved
         for (shape_name, x_y) in zip(shape_names, shape_locations):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[0].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x == x_y[0]
             assert s.y == x_y[1]
@@ -100,10 +93,9 @@ def test_move_shape(filename: str, page_index: int, shape_names: set, shape_x_y_
     expected_shape_locations = dict()
 
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[page_index].shapes
         # move shapes in list
         for (shape_name, x_y) in zip(shape_names, shape_x_y_deltas):
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x
             assert s.y
@@ -115,10 +107,9 @@ def test_move_shape(filename: str, page_index: int, shape_names: set, shape_x_y_
 
     # re-open saved file and check it is changed as expected
     with VisioFile(out_file) as vis:
-        shapes = vis.pages[page_index].shapes
         # get each shape that should have been moved
         for shape_name in shape_names:
-            s = shapes[0].find_shape_by_text(shape_name)  # type: Shape
+            s = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
             assert s  # check shape found
             assert s.x == expected_shape_locations[shape_name][0]
             assert s.y == expected_shape_locations[shape_name][1]
@@ -336,3 +327,53 @@ def test_shape_equality(filename_1, page_index_1, shape_text_1, filename_2, page
         shape_2 = page.find_shape_by_text(shape_text_2)
 
     assert (shape_1 == shape_2) == are_equal
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_bounds", [
+    ("test1.vsdx", 0, "Shape Text", ['0.25', '9.87', '2.42', '11.44']),  # standard shape
+    ("test2.vsdx", 0, "Sub-shape 2", ['0.54', '0.17', '1.62', '0.51']),  # sub shape in a group
+    ("test2.vsdx", 0, "Scenario:", ['0.73', '8.19', '2.49', '8.97']),  # line
+    ])
+def test_shape_bounds(filename, page_index, shape_text, expected_bounds):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        print([f"{n:.2f}" for n in shape.bounds])
+        assert [f"{n:.2f}" for n in shape.bounds] == expected_bounds
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_bounds", [
+    ("test1.vsdx", 0, "Shape Text", ['0.25', '9.87', '2.42', '11.44']),  # standard shape
+    ("test2.vsdx", 0, "Sub-shape 2", ['0.79', '10.04', '1.87', '10.37']),  # sub shape in a group
+    ("test2.vsdx", 0, "Scenario:", ['0.73', '8.19', '2.49', '8.97']),  # line
+    ])
+def test_shape_relative_bounds(filename, page_index, shape_text, expected_bounds):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        print([f"{n:.2f}" for n in shape.relative_bounds])
+        assert [f"{n:.2f}" for n in shape.relative_bounds] == expected_bounds
+
+
+@pytest.mark.parametrize("filename, page_index, shape_text, arrow", [
+    ("test2.vsdx", 0, "Scenario:", True),  # add end arrow
+    ("test2.vsdx", 0, "Scenario:", False),  # no end arrow
+    ])
+def test_shape_end_arrow(filename, page_index, shape_text, arrow):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_shape_end_arrow_{arrow}.vsdx')
+
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        shape.end_arrow = arrow
+        print(shape.end_arrow)
+        print(vsdx.pretty_print_element(shape.xml))
+        assert shape.end_arrow == '13' if arrow else '0'
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        print(shape.end_arrow)
+        print(vsdx.pretty_print_element(shape.xml))
+        assert shape.end_arrow == '13' if arrow else '0'

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 
 import vsdx
@@ -20,7 +21,7 @@ class Geometry:
             self.cells = shape.master_shape.geometry.cells
 
         for cell in self.xml.findall(f"{namespace}Cell"):
-            self.cells.append(GeometryCell(xml=cell))
+            self.cells.append(GeometryCell(parent=self, xml=cell))
 
         if shape.master_shape:
             self.rows = shape.master_shape.geometry.rows  # type: dict
@@ -45,36 +46,68 @@ class Geometry:
         for r in self.rows.values():  # type: GeometryRow
             print(f"r={type(r)} {r}")
             if r.row_type.lower() in ['moveto', 'lineto']:  # todo: include other absolute row types
-                r.x = r.x + x_delta
-                r.y = r.y + y_delta
+                r.x = r.x + x_delta if type(r.x) is float else None
+                r.y = r.y + y_delta if type(r.y) is float else None
                 print(f"r={type(r)} {r} after move {x_delta}, {y_delta}")
+
+    def set_move_to(self, x: int, y: int, move_to_index: int=0):
+        move_tos = [r for r in self.rows.values() if r.row_type.lower() == 'moveto']
+        #print(f"move_tos={move_tos}")
+        if len(move_tos) > move_to_index:
+            move_to = move_tos[move_to_index]  # type: GeometryRow
+            if move_to.geometry.shape.master_page_ID != self.shape.master_page_ID:
+                move_to = GeometryRow(geometry=self, xml=None, master_geometry_row=move_to, T='MoveTo', IX=move_to.index)
+                print(f"set_move_to() created: {move_to}")
+            move_to.x = x
+            move_to.y = y
+            #print(f"move_to[{move_to_index}]={move_to.x},{move_to.y}")
 
     def set_line_to(self, x: int, y: int, line_to_index: int=0):
         line_tos = [r for r in self.rows.values() if r.row_type.lower() == 'lineto']
-        print(f"line_tos={line_tos}")
+        #print(f"line_tos={line_tos}")
         if len(line_tos) > line_to_index:
             line_to = line_tos[line_to_index]  # type: GeometryRow
+            if line_to.geometry.shape.master_page_ID != self.shape.master_page_ID:
+                line_to = GeometryRow(geometry=self, xml=None, master_geometry_row=line_to, T='LineTo', IX=line_to.index)
+                print(f"set_line_to() created: {line_to}")
             line_to.x = x
             line_to.y = y
-            print(f"line_to[{line_to_index}]={line_to.x},{line_to.y}")
+            #print(f"line_to[{line_to_index}]={line_to.x},{line_to.y}")
 
     def __repr__(self):
-        s = f"Geometry: {self.cells} {[(r.row_type, r.x,r.y) for r in self.rows.values()]}"
+        s = f"Geometry: {self.cells} {[(r.row_type, r.index, r.x,r.y) for r in self.rows.values()]}"
+        s += f"\nGeometry: {vsdx.pretty_print_element(self.xml)}"
         return s
 
 
 class GeometryRow:
     """A row with type(T) and index(IX), each containing a list of Cells"""
     """See: https://docs.microsoft.com/en-us/office/client-developer/visio/row-element-geometry-sectionvisio-xml """
-    def __init__(self, geometry: Geometry, xml: Element, master_geometry_row: GeometryRow):
+    def __init__(self, geometry: Geometry, xml: Element, master_geometry_row: GeometryRow, T=None, IX=None):
         self.geometry = geometry  # parent of this row
-        self.xml = xml
+        self.xml = xml if type(xml) is Element else self.create_row_xml(T, str(IX))
         # Create a dictionary of each Cell element, indexed by name
         self.cells = master_geometry_row.cells if master_geometry_row else dict()
         # add/overwrite cells values with master as basis id present
         for cell in self.xml.findall(f"{namespace}Cell"):
-            g_cell = GeometryCell(xml=cell)
+            g_cell = GeometryCell(parent=self, xml=cell)
             self.cells[g_cell.name] = g_cell
+
+    def create_row_xml(self, T: str, IX: str):
+        if T and IX:
+            # Create new row xml
+            row = ET.fromstring(f'<Row xmlns="{namespace[1:-1]}" T="{T}" IX="{IX}" />')
+            # get all indexes
+            indexes = [x.attrib.get('IX') for x in self.geometry.xml.findall(f"{namespace}Row")]
+            if IX in indexes:
+                row = None  # todo: replace existing row with new one
+            else:
+                indexes.append(IX)
+                indexes.sort()
+                self.geometry.xml.insert(indexes.index(IX), row)
+
+            self.geometry.rows[IX] = self
+            return row
 
     @property
     def row_type(self):
@@ -99,9 +132,12 @@ class GeometryRow:
 
     @x.setter
     def x(self, value):
-        x_cell = self.cells.get('X')
-        if x_cell:
-            x_cell.value = value
+        x_cell = self.cells.get('X')  # type: GeometryCell
+        if not x_cell or (type(x_cell.parent) is GeometryRow and x_cell.parent.geometry.shape.master_page_ID!=self.geometry.shape.master_page_ID):
+            # create new cell if none exists, or if existing cell is from master shape
+            x_cell = GeometryCell(parent=self, xml=None, name='X', value=value)
+            print(f"x_cell={x_cell}")
+        x_cell.value = value
 
     @property
     def y(self):
@@ -111,8 +147,11 @@ class GeometryRow:
     @y.setter
     def y(self, value):
         y_cell = self.cells.get('Y')
-        if y_cell:
-            y_cell.value = value
+        if not y_cell or (type(y_cell.parent) is GeometryRow and y_cell.parent.geometry.shape.master_page_ID != self.geometry.shape.master_page_ID):
+            # create new cell if none exists, or if existing cell is from master shape
+            y_cell = GeometryCell(parent=self, xml=None, name='Y', value=value)
+            print(f"y_cell={y_cell}")
+        y_cell.value = value
 
     @property
     def del_bool(self):
@@ -133,8 +172,21 @@ class GeometryRow:
 
 class GeometryCell:
     """class to represent a Cell element, a name value pair. This may be a child of Geometry or of GeometryRow"""
-    def __init__(self, xml: Element):
-        self.xml = xml
+    def __init__(self, parent: GeometryRow or Geometry, xml: Element, name: str = None, value: str = None):
+        self.parent = parent
+        self.parent_xml = parent.xml
+        self.xml = xml if type(xml) is Element else self.create_cell_xml(name)
+        if name:
+            self.name = name
+        if value:
+            self.value = value
+
+    def create_cell_xml(self, name: str):
+        # Create new row xml
+        cell = ET.fromstring(f'<Cell xmlns="{namespace[1:-1]}"  />')
+        self.parent_xml.append(cell)
+        self.parent.cells[name] = self
+        return cell
 
     @property
     def value(self):
@@ -155,6 +207,10 @@ class GeometryCell:
     @property
     def name(self):
         return self.xml.attrib.get('N')
+
+    @name.setter
+    def name(self, value: str):
+        self.xml.attrib['N'] = str(value)
 
     @property
     def func(self):  # assume F stands for function, i.e. F="Width*0.5"
