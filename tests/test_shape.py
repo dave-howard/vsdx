@@ -213,7 +213,8 @@ def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, 
 
 @pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
                          [("test1.vsdx", 0, "Shape Text", {"my_property_label": "property value",
-                                                        "my_second_property_label": "another value"}),
+                                                           "my_second_property_label": "another value",
+                                                           "Network Name": "Box01"}),
                           ("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "master prop value"}),
                           ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "master prop value",
                                                                    "shape_prop": "shape property value"}),
@@ -224,7 +225,7 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
         shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
 
         props = shape.data_properties
-
+        print(props)
         # check lengths are same
         assert len(props) == len(property_dict)
 
@@ -340,6 +341,21 @@ def test_shape_bounds(filename, page_index, shape_text, expected_bounds):
         shape = page.find_shape_by_text(shape_text)
         print([f"{n:.2f}" for n in shape.bounds])
         assert [f"{n:.2f}" for n in shape.bounds] == expected_bounds
+
+
+@pytest.mark.parametrize("filename, page_index", [
+    ("test1.vsdx", 0),
+    ("test1.vsdx", 2),
+    ("test2.vsdx", 0),
+    ])
+def test_all_shape_bounds(filename, page_index):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        for s in page.all_shapes:
+            # checl all shapes have bounds and relative bounds
+            print(s.ID, s.bounds, s.relative_bounds)
+            assert s.bounds
+            assert s.relative_bounds
 
 
 @pytest.mark.parametrize("filename, page_index, shape_text, expected_bounds", [

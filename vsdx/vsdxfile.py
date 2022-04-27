@@ -82,6 +82,8 @@ class VisioFile:
         self.document_xml = None  # type: ET.ElementTree
         self.document_xml_rels = None  # type: ET.ElementTree
         self.pages = list()  # type: List[Page]  # list of Page objects, populated by open_vsdx_file()
+        self.masters_xml = None  # type: ET.ElementTree
+        self.master_index = {}  # dict of master page info by item name e.g. 'Dynamic Connector'
         self.master_pages = list()  # type: List[Page]  # list of Page objects, populated by open_vsdx_file()
         self.open_vsdx_file()
 
@@ -145,8 +147,14 @@ class VisioFile:
             page_name = page.attrib['Name']
 
             page_path = page_dir + relid_page_dict.get(rel_id, None)
-
-            new_page = Page(file_to_xml(page_path), page_path, page_name, self)
+            page_id = ''  # todo: get from page xml
+            new_page = Page(file_to_xml(page_path), page_path, page_name, page_id, rel_id, self)
+            # look for visio/pages/_rels/page3.xml.rels
+            base_page_file_name = page_path.split('/')[-1]
+            page_rels_path = rel_dir+base_page_file_name+'.rels'
+            if os.path.exists(page_rels_path):
+                new_page.rels_xml_filename = page_rels_path
+                new_page.rels_xml = file_to_xml(page_rels_path)
             self.pages.append(new_page)
 
             if self.debug:
@@ -178,18 +186,21 @@ class VisioFile:
 
         # load masters.xml file
         masters_path = f'{self.directory}/visio/masters/masters.xml'
-        masters_data = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
-        masters = masters_data.getroot() if masters_data else []
+        masters_xml = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
+        self.masters_xml = masters_xml.getroot() if masters_xml else []
 
         # for each master page, create the Page object
-        for master in masters:
+        for master in self.masters_xml:
+            #rel = master.find(f"{namespace}Rel")
+            master_name = master.attrib['NameU']
             rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
             master_id = master.attrib['ID']
 
             master_path = relid_to_path[rel_id]
 
-            master_page = Page(file_to_xml(master_path), master_path, master_id, self)
+            master_page = Page(file_to_xml(master_path), master_path, master_name, master_id, rel_id, self)
             self.master_pages.append(master_page)
+            self.master_index[master_name] = master_page  # index by master_name
 
             if self.debug:
                 print(f"Master({master_path}, id={master_id})", VisioFile.pretty_print_element(master_page.xml.getroot()))
@@ -228,7 +239,7 @@ class VisioFile:
                 :return: :class:`Page` object representing the master page (or None if not found)
                 """
         for m in self.master_pages:
-            if m.name == id:
+            if m.page_id == id:
                 return m
 
     def remove_page_by_index(self, index: int):
@@ -496,7 +507,7 @@ class VisioFile:
             self._add_page_to_app_xml(page_name)
 
         # Update VisioFile object
-        new_page = Page(new_page_xml, new_page_path, page_name, self)
+        new_page = Page(new_page_xml, new_page_path, page_name, '', '', self)
 
         self.pages.insert(index, new_page)  # insert new page at defined index
 
@@ -958,10 +969,9 @@ class VisioFile:
 
     def close_vsdx(self):
         try:
-            # Remove extracted folder
+            # Remove extracted folder if there
             shutil.rmtree(self.directory)
-        except (FileNotFoundError, PermissionError) as e:
-            print(f"close_vsdx() {self.directory} error:{e}")
+        except (FileNotFoundError) as e:
             pass
 
     def save_vsdx(self, new_filename=None):
@@ -984,6 +994,8 @@ class VisioFile:
         # write the pages to file
         for page in self.pages:  # type: Page
             xml_to_file(page.xml, page.filename)
+            if page.rels_xml_filename:
+                xml_to_file(page.rels_xml, page.rels_xml_filename)
 
         # write [content_Types].xml
         xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml')
@@ -1012,4 +1024,3 @@ class VisioFile:
             if new_filename[-5:] != '.vsdx':
                 new_filename += '.vsdx'
             shutil.move(base_filename + '.zip', new_filename)
-        self.close_vsdx()

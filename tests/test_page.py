@@ -322,21 +322,21 @@ def test_find_connectors_between_shapes(filename: str, shape_a_text: str, shape_
         assert sorted(expected_connector_ids) == list(actual_connector_ids)
 
 
-@pytest.mark.parametrize(("filename", "shape_a_text", "shape_b_text"),
+@pytest.mark.parametrize(("filename", "page_index", "shape_a_text", "shape_b_text"),
                          [
-                             ('test8_simple_connector.vsdx', "Shape A", "Shape B"),
-                             ('test7_with_connector.vsdx', "Shape Text", "Shape to remove"),
-                             ('test1.vsdx', "Shape to remove", "Shape Text"),
-                             ('test1.vsdx', "Shape Text", "Shape to copy"),
-                             ('test1.vsdx', "Shape to copy", "Shape to remove"),
-                             ('test4_connectors.vsdx', "Shape A", "Shape C"),
-                             ('test4_connectors.vsdx', "Shape C", "Shape B"),
+                             ('test8_simple_connector.vsdx', 0, "Shape A", "Shape B"),
+                             ('test7_with_connector.vsdx', 0, "Shape Text", "Shape to remove"),
+                             ('test1.vsdx', 0, "Shape to remove", "Shape Text"),
+                             ('test1.vsdx', 0, "Shape Text", "Shape to copy"),
+                             ('test1.vsdx', 0, "Shape to copy", "Shape to remove"),
+                             ('test4_connectors.vsdx', 0, "Shape A", "Shape C"),
+                             ('test4_connectors.vsdx', 0, "Shape C", "Shape B"),
                           ])
-def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_text: str):
+def test_add_connect_between_shapes(filename: str, page_index: int, shape_a_text: str, shape_b_text: str):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_add_connect_between_'+shape_a_text+'_'+shape_b_text+'.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
         print(f"filename:{out_file}")
-        page = vis.pages[0]  # type: Page
+        page = vis.pages[page_index]  # type: Page
         from_shape = page.find_shape_by_text(shape_a_text)
         to_shape = page.find_shape_by_text(shape_b_text)
         c = Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
@@ -348,13 +348,62 @@ def test_add_connect_between_shapes(filename: str, shape_a_text: str, shape_b_te
 
         # re-open saved file and check it is changed as expected
         with VisioFile(out_file) as vis:
-            page = vis.pages[0]
+            page = vis.pages[page_index]
             connector_ids = [c.connector_shape_id for c in page.connects]
             # new shape is referenced as connector_shape for new connector relationship
             assert new_connector_id in connector_ids
             # new shape exists in page
             c = page.find_shape_by_id(new_connector_id)
             assert page.find_shape_by_id(new_connector_id)
+
+
+@pytest.mark.parametrize(("filename", "page_index", "shape_a_label", "shape_a_value", "shape_b_label", "shape_b_value"),
+                         [
+                             ('test1.vsdx', 0, "Network Name", "Box01", "Network Name", "Box02"),
+                             ('test3_house.vsdx', 0, "Network Name", "House01", "Network Name", "Box01"),
+                             ('test4_connectors.vsdx', 2, "Network Name", "Box01", "Network Name", "Box02"),
+                             ('test4_connectors.vsdx', 2, "Network Name", "Box01", "Network Name", "Router01"),
+                             ('test4_connectors.vsdx', 2, "Network Name", "Switch01", "Network Name", "Router01"),
+                          ])
+def test_add_connect_between_shapes_by_property(filename: str, page_index: int, shape_a_label: str, shape_a_value,
+                                                shape_b_label: str, shape_b_value: str):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_add_connect_between_labels_'+shape_a_value+'_'+shape_b_value+'.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        print(f"filename:{out_file}")
+        page = vis.pages[page_index]  # type: Page
+        from_shape = page.find_shape_by_property_label_value(shape_a_label, shape_a_value)
+        #print(from_shape)
+        to_shape = page.find_shape_by_property_label_value(shape_b_label, shape_b_value)
+        #print(to_shape)
+        #if from_shape.child_shapes:
+        #    print(f"from_shape:{from_shape.child_shapes}")
+        #    from_shape = from_shape.child_shapes[0]
+        #if to_shape.child_shapes:
+        #    print(f"to_shape:{to_shape.child_shapes}")
+        #    to_shape = to_shape.child_shapes[0]
+
+        #print(from_shape)
+        #print(to_shape)
+        c = Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
+        c.end_arrow = True
+        new_connector_id = c.ID
+
+        c.text = "NEW"
+        #print(vsdx.pretty_print_element(page.xml))
+        vis.save_vsdx(out_file)
+
+        # re-open saved file and check it is changed as expected
+        with VisioFile(out_file) as vis:
+            page = vis.pages[page_index]
+            connector_ids = [c.connector_shape_id for c in page.connects]
+            # new shape is referenced as connector_shape for new connector relationship
+            assert new_connector_id in connector_ids
+            # new shape exists in page
+            c = page.find_shape_by_id(new_connector_id)
+            #print("new connector", c)
+            assert page.find_shape_by_id(new_connector_id)
+            #print(vsdx.pretty_print_element(c.page.xml))
+            #print(vsdx.pretty_print_element(c.master_shape.page.xml))
 
 
 def fl(v: float):

@@ -75,5 +75,6 @@ def calc_value(shape: Shape, func_text: str):
     f = func_map.get(func_text)
     if f:
         return f(shape=shape)
-    else:
+    elif shape.page.vis.debug:
+        # show any non-matching formulae
         print(f"calc_value(func_text='{func_text}') no method found")

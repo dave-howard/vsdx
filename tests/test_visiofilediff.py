@@ -58,7 +58,7 @@ def test_visiodiff_before_after(filename_a: str, filename_b: str):
 @pytest.mark.skip
 @pytest.mark.parametrize(("filename_a", "filename_b"),
                          [
-                             ("connect_after.vsdx", "connect_after_arrow.vsdx" ),
+                             ("test4_connectors_out.vsdx", "test4_connectors_added.vsdx" ),
                           ])
 def test_visiodiff_two_files(filename_a: str, filename_b: str):
     filepath_a = os.path.join(basedir, filename_a)

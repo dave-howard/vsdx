@@ -48,12 +48,46 @@ class Connect:
                                                      part_name_path="/visio/masters/masters.xml")
                 page.vis._add_content_types_override(content_type="application/vnd.ms-visio.master+xml",
                                                      part_name_path="/visio/masters/master1.xml")
+            elif connector_shape.shape_name not in page.vis._titles_of_parts_list():
+                print(f"Warning: Updating existing Page/Master relationships not yet fully implemented. This may cause unexpected outputs.")
+                # vsdx has masters - but not this shape
+                # todo: Complete this scenario
+                #print("conn master page", connector_shape.master_shape.page.filename)
+                #print("max page file num", [p.filename[-5:-4] for p in page.vis.master_pages])
+                #print("max page id", [p.page_id for p in page.vis.master_pages])
+                rel_num = max([int(p.filename[-5:-4]) for p in page.vis.master_pages]) +1
+                master_file_path = os.path.join(page.vis.directory, 'visio', 'masters', f'master{rel_num}.xml')
+                #print(f"m_num={rel_num} master_file_path={master_file_path}")
+                shutil.copy(connector_shape.master_shape.page.filename, master_file_path)
+                # todo: ensure master page ID and RId is unique, update shape master_id to refer to new master
+                # todo: update mast file name, and add content type override
+                # todo: update masters.xml file contents?
+                # todo: update visio/pages/_rels/page3.xml.rels - add: <Relationship Id="rId3" Type="http://schemas.microsoft.com/visio/2010/relationships/master" Target="../masters/master1.xml"/>
+                rels = page.rels_xml.getroot()
+                new_rel = ET.fromstring(f'<Relationship  xmlns="{vsdx.document_rels_namespace[1:-1]}" '
+                                        f'Type="http://schemas.microsoft.com/visio/2010/relationships/master" />')
+                new_rel.attrib['Id'] = f"rID{rel_num}"
+                new_rel.attrib['Target'] = f"../masters/master{rel_num}.xml"
+                rels.append(new_rel)
+                page.vis._add_content_types_override(content_type="application/vnd.ms-visio.master+xml",
+                                                     part_name_path=f"/visio/masters/master{rel_num}.xml")
+            else:
+                # vsdx has this master shape, but not related to this page
+                master_page = page.vis.master_index.get(connector_shape.shape_name)  # type: vsdx.Page
+                rel_num = int(master_page.rel_id[-1])
+                rels = page.rels_xml.getroot()
+                new_rel = ET.fromstring(f'<Relationship  xmlns="{vsdx.document_rels_namespace[1:-1]}" '
+                                        f'Type="http://schemas.microsoft.com/visio/2010/relationships/master" />')
+                new_rel.attrib['Id'] = master_page.rel_id
+                new_rel.attrib['Target'] = "../masters/master1.xml"
+                rels.append(new_rel)
 
             # update HeadingPairs and TitlesOfParts in app.xml
             if page.vis._get_app_xml_value('Masters') is None:
                 page.vis._set_app_xml_value('Masters', '1')
-            if 'Dynamic connector' not in page.vis._titles_of_parts_list():  # todo: replace static string with name from shape
-                page.vis._add_titles_of_parts_item('Dynamic connector')
+
+            if connector_shape.shape_name not in page.vis._titles_of_parts_list():  # todo: replace static string with name from shape
+                page.vis._add_titles_of_parts_item(connector_shape.shape_name)
 
             # copy style used by new connector shape
             if not page.vis._get_style_by_id(connector_shape.master_shape.line_style_id):
@@ -77,10 +111,10 @@ class Connect:
             page.add_connect(Connect(xml=ET.fromstring(end_connect_xml), page=page))
             page.add_connect(Connect(xml=ET.fromstring(beg_connect_xml), page=page))
             #print(vsdx.pretty_print_element(connector_shape.xml))
-            print(connector_shape.geometry)
+            #print(connector_shape.geometry)
 
             connector_shape.set_start_and_finish(from_shape.center_x_y, to_shape.center_x_y)
-
+            print([(m.rel_id, m.page_id) for m in page.vis.master_pages])
             return connector_shape
 
     @property
