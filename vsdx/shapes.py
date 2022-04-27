@@ -10,6 +10,10 @@ import deprecation
 import vsdx
 from vsdx import namespace
 
+shape_type_names = {  # a map from English language shape to a list of know names for that Shape type
+    # note that Shape names may be appended with a number e.g. 'Dynamischer Verbinder.2'
+    'Dynamic Connector': ['dynamic connector', 'dynamischer verbinder']
+}
 
 def to_float(val: str):
     try:
@@ -105,7 +109,7 @@ class Shape:
         if self.master_page_ID is None and isinstance(parent, Shape):  # in case of a sub_shape
             self.master_page_ID = parent.master_page_ID
         self.shape_type = xml.attrib.get('Type', None)
-        self.shape_name = xml.attrib.get('Name')
+        self.shape_name = xml.attrib.get('NameU') or xml.get('Name')
         self.page = page
 
         # get Cells in Shape
@@ -490,7 +494,8 @@ class Shape:
         if self.begin_x is not None:  # only apply changes to lines and connector shapes
             self.x, self.y = start
             # lines/connectors are defined in different ways
-            is_connector = self.shape_name == 'Dynamic connector'
+            # Check whether shape is a connector based on name in known languages
+            is_connector = self.shape_name.split('.')[0].lower() in shape_type_names.get('Dynamic Connector', [])
 
             self.begin_x, self.begin_y = start
             self.end_x, self.end_y = finish

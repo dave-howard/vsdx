@@ -372,24 +372,13 @@ def test_add_connect_between_shapes_by_property(filename: str, page_index: int, 
         print(f"filename:{out_file}")
         page = vis.pages[page_index]  # type: Page
         from_shape = page.find_shape_by_property_label_value(shape_a_label, shape_a_value)
-        #print(from_shape)
         to_shape = page.find_shape_by_property_label_value(shape_b_label, shape_b_value)
-        #print(to_shape)
-        #if from_shape.child_shapes:
-        #    print(f"from_shape:{from_shape.child_shapes}")
-        #    from_shape = from_shape.child_shapes[0]
-        #if to_shape.child_shapes:
-        #    print(f"to_shape:{to_shape.child_shapes}")
-        #    to_shape = to_shape.child_shapes[0]
 
-        #print(from_shape)
-        #print(to_shape)
         c = Connect.create(page=page, from_shape=from_shape, to_shape=to_shape)
         c.end_arrow = True
         new_connector_id = c.ID
 
         c.text = "NEW"
-        #print(vsdx.pretty_print_element(page.xml))
         vis.save_vsdx(out_file)
 
         # re-open saved file and check it is changed as expected
@@ -400,10 +389,7 @@ def test_add_connect_between_shapes_by_property(filename: str, page_index: int, 
             assert new_connector_id in connector_ids
             # new shape exists in page
             c = page.find_shape_by_id(new_connector_id)
-            #print("new connector", c)
             assert page.find_shape_by_id(new_connector_id)
-            #print(vsdx.pretty_print_element(c.page.xml))
-            #print(vsdx.pretty_print_element(c.master_shape.page.xml))
 
 
 def fl(v: float):
