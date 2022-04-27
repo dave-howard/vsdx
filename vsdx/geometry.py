@@ -17,13 +17,13 @@ class Geometry:
         self.rows = dict()  # and list of rows with type(T) and index(IX), each containing a list of Cells
         self.shape = shape
 
-        if shape.master_shape:
+        if shape.master_shape and shape.master_shape.geometry:
             self.cells = shape.master_shape.geometry.cells
 
         for cell in self.xml.findall(f"{namespace}Cell"):
             self.cells.append(GeometryCell(parent=self, xml=cell))
 
-        if shape.master_shape:
+        if shape.master_shape and shape.master_shape.geometry:
             self.rows = shape.master_shape.geometry.rows  # type: dict
         for row in self.xml.findall(f"{namespace}Row"):
             index = row.attrib.get('IX')
