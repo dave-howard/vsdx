@@ -520,7 +520,6 @@ class Shape:
                 formula = c.formula
                 if formula:
                     if formula == 'Inh' and self.master_shape:
-                        print(f'Inh: {c.name} {self.master_shape.cells.get(c.name)}')
                         master_c = self.master_shape.cells.get(c.name)
                         formula = master_c.formula if master_c else formula
                     v = vsdx.calc_value(self, formula)
@@ -576,7 +575,7 @@ class Shape:
         else:  # a Shapes
             parent_element = self.xml
         if parent_element:
-            shapes = [Shape(xml=shape, parent=self, page=self.page) for shape in parent_element]
+            shapes = [Shape(xml=shape, parent=self, page=self.page) for shape in parent_element if 'Shape' in shape.tag]
         else:
             shapes = []
         return shapes
