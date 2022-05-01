@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.5: Added Shape.universal_name and used in Shape.set_start_and_finish(). Set Page.page_id on open file.
 - v0.5.4: Added better (but still incomplete) support for adding connectors between shapes
 - v0.5.3: Fixed missing deprecation dependency in setup.py
 - v0.5.2: deprecated Page.set_name() method and page.page_name property, in favour of Page.name. Unskipped test: test_shape_center(). Added find_shape.rst doc page

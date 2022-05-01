@@ -519,3 +519,48 @@ def test_page_all_shapes(filename, page_index, expected_ids):
         shape_ids = [s.ID for s in page.all_shapes]
         print(shape_ids)
         assert shape_ids == expected_ids
+
+
+@pytest.mark.parametrize("filename, page_index, expected_page_id", [
+    ("test1.vsdx", 0, "0"), ("test1.vsdx", 1, "4"), ("test1.vsdx", 2, "7"),
+    ("test2.vsdx", 0, "0"), ("test2.vsdx", 1, "4"), ("test2.vsdx", 2, "5"),
+    ("test4_connectors.vsdx", 0, "0"), ("test4_connectors.vsdx", 1, "4"), ("test4_connectors.vsdx", 2, "7"),
+    ])
+def test_page_id(filename, page_index, expected_page_id):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        assert page.page_id == expected_page_id
+
+
+@pytest.mark.parametrize("filename, master_index, expected_page_id", [
+    ("test3_house.vsdx", 0, "2"),
+    ("test5_master.vsdx", 0, "1"),
+    ("test4_connectors.vsdx", 0, "2"), ("test4_connectors.vsdx", 1, "6"), ("test4_connectors.vsdx", 2, "7"),
+    ])
+def test_master_page_id(filename, master_index, expected_page_id):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.master_pages[master_index]
+        assert page.page_id == expected_page_id
+
+
+@pytest.mark.parametrize("filename", [
+    ("test1.vsdx"),
+    ("test2.vsdx"),
+    ("test4_connectors.vsdx"),
+    ])
+def test_page_has_page_sheet_xml(filename):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        for page in vis.pages:
+            assert page._pagesheet_xml is not None
+
+
+@pytest.mark.parametrize("filename", [
+    ("test3_house.vsdx"),
+    ("test5_master.vsdx"),
+    ("test4_connectors.vsdx"),
+    ])
+def test_master_page_has_sheet_xml(filename):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        for page in vis.master_pages:
+            print(page.page_id, page.page_name)
+            assert page._pagesheet_xml is not None

@@ -154,6 +154,17 @@ class Shape:
     def __hash__(self):
         return hash((self.ID, self.page.name, self.page.vis.filename))
 
+    @property
+    def universal_name(self):
+        name_univ = self.xml.attrib.get('NameU')  # default to shapes own unicode name
+        if self.master_shape:
+            page_sheet = self.master_shape.page._pagesheet_xml
+            layer = page_sheet.find(f'{namespace}Section[@N="Layer"]')
+            name_univ_cell = layer.find(f'{namespace}Cell[@N="NameUniv"]') if layer is not None else None
+            if name_univ_cell is not None:
+                name_univ = name_univ_cell.attrib.get('V') or name_univ
+        return name_univ
+
     def copy(self, page: Optional[vsdx.Page] = None) -> Shape:
         """Copy this Shape to the specified destination Page, and return the copy.
 
@@ -495,13 +506,13 @@ class Shape:
             self.x, self.y = start
             # lines/connectors are defined in different ways
             # Check whether shape is a connector based on name in known languages
-            is_connector = self.shape_name.split('.')[0].lower() in shape_type_names.get('Dynamic Connector', [])
+            is_connector = self.universal_name == 'Dynamic connector'
 
             self.begin_x, self.begin_y = start
             self.end_x, self.end_y = finish
             self.width = self.end_x - self.begin_x
             if is_connector:
-                self.height = self.end_y - self.begin_y  # connector has a height
+                self.height = self.end_y - self.begin_y  # connector has a height, where a Line does not
             else:
                 self.height = 0.0  # line height is always zero
             self.x, self.y = start

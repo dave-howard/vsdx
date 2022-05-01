@@ -5,6 +5,7 @@ r_namespace = '{http://schemas.openxmlformats.org/officeDocument/2006/relationsh
 document_rels_namespace = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 cont_types_namespace = '{http://schemas.openxmlformats.org/package/2006/content-types}'
 
+# Ref: https://docs.microsoft.com/en-us/office/client-developer/visio/visio-file-format-reference
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -20,7 +21,7 @@ def pretty_print_element(xml: Element) -> str:
         return f"Not an Element. type={type(xml)}"
 
 
-__version__ = "0.5.4"
+__version__ = "0.5.5"
 from .shapes import Cell
 from .connectors import Connect
 from .shapes import DataProperty

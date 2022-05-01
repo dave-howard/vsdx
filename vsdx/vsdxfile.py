@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 import xml.dom.minidom as minidom   # minidom used for prettyprint
 
+import vsdx
 from .pages import Page
 from .pages import PagePosition
 
@@ -143,11 +144,12 @@ class VisioFile:
             print(f"Pages({pages_filename})", VisioFile.pretty_print_element(pages))
 
         for page in pages:  # type: Element
-            rel_id = page[1].attrib['{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id']
+            rel_id = page.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
             page_name = page.attrib['Name']
 
             page_path = page_dir + relid_page_dict.get(rel_id, None)
-            page_id = ''  # todo: get from page xml
+            page_id = page.attrib.get('ID')
+
             new_page = Page(file_to_xml(page_path), page_path, page_name, page_id, rel_id, self)
             # look for visio/pages/_rels/page3.xml.rels
             base_page_file_name = page_path.split('/')[-1]
@@ -191,7 +193,6 @@ class VisioFile:
 
         # for each master page, create the Page object
         for master in self.masters_xml:
-            #rel = master.find(f"{namespace}Rel")
             master_name = master.attrib['NameU']
             rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
             master_id = master.attrib['ID']

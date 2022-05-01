@@ -393,3 +393,15 @@ def test_shape_end_arrow(filename, page_index, shape_text, arrow):
         print(shape.end_arrow)
         print(vsdx.pretty_print_element(shape.xml))
         assert shape.end_arrow == '13' if arrow else '0'
+
+@pytest.mark.parametrize("filename, page_index, shape_text, expected_universal_name", [
+    ("test4_connectors.vsdx", 1, "Shape A", None),  # no master and no name
+    ("test4_connectors.vsdx", 1, "A to B", "Dynamic connector"),  # master with Layer and UnivName Cell
+    ("test4_connectors.vsdx", 2, "Switch", "Switch"),  # master with no Layer
+    ("test4_connectors.vsdx", 2, "Router", "Router"),  # master with no Layer
+    ])
+def test_shape_universal_name(filename, page_index, shape_text, expected_universal_name):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]
+        shape = page.find_shape_by_text(shape_text)
+        assert shape.universal_name == expected_universal_name

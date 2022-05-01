@@ -96,9 +96,11 @@ class Page:
 
     @property
     def _pagesheet_xml(self):
-        # get page sheet based on 1-based in index
-        #print(pretty_print_element(self.vis.pages_xml.find(f'{namespace}Page[{self.index_num+1}]')))
-        return self.vis.pages_xml.find(f'{namespace}Page[{self.index_num+1}]/{namespace}PageSheet')
+        # get PageSheet element from pages_xml based on page_id
+        ps = self.vis.pages_xml.find(f'{namespace}Page[@ID="{self.page_id}"]/{namespace}PageSheet')
+        if not ps:
+            ps = self.vis.masters_xml.find(f'{namespace}Master[@ID="{self.page_id}"]/{namespace}PageSheet')
+        return ps
 
     @property
     def width(self):
