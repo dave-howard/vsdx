@@ -394,7 +394,9 @@ def test_shape_end_arrow(filename, page_index, shape_text, arrow):
         print(vsdx.pretty_print_element(shape.xml))
         assert shape.end_arrow == '13' if arrow else '0'
 
+
 @pytest.mark.parametrize("filename, page_index, shape_text, expected_universal_name", [
+    ("test3_house.vsdx", 0, "context filter", "House"),
     ("test4_connectors.vsdx", 1, "Shape A", None),  # no master and no name
     ("test4_connectors.vsdx", 1, "A to B", "Dynamic connector"),  # master with Layer and UnivName Cell
     ("test4_connectors.vsdx", 2, "Switch", "Switch"),  # master with no Layer
