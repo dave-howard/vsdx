@@ -136,7 +136,12 @@ def test_app_xml_page_names(filename: str):
         assert page_names == app_xml_page_names
 
 
-@pytest.mark.parametrize(("filename", "page_index"), [("test1.vsdx", 0)])
+@pytest.mark.parametrize(("filename", "page_index"),
+                         [
+                             ("test1.vsdx", 0),
+                             ("test5_master.vsdx", 0),
+                         ]
+                         )
 def test_remove_page_by_index(filename: str, page_index: int):
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_remove_page.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
@@ -147,6 +152,69 @@ def test_remove_page_by_index(filename: str, page_index: int):
     # re-open file and confirm it has one less page
     with VisioFile(out_file) as vis:
         assert len(vis.pages) == page_count - 1
+
+
+@pytest.mark.parametrize(("filename", "page_name"),
+                         [
+                             ("test1.vsdx", '1'),
+                             ("test2.vsdx", '2'),
+                             ("test3_house.vsdx", '1'),
+                             ("test4_connectors.vsdx", '2'),
+                             ("test5_master.vsdx", '1'),
+                             ("test6_shape_properties.vsdx", '2'),
+                             ("test7_with_connector.vsdx", '3'),
+                             ("test8_simple_connector.vsdx", 'none'),
+                         ])
+def test_remove_page_by_page_index(filename: str, page_name: str):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_remove_page_by_page_index.vsdx')
+    expected_page_names = []
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        print(f"Found {len(vis.pages)} pages, {sorted([p.name for p in vis.pages])}")
+        for page in list(vis.pages):
+            print(f"page.name='{page.name}' page.page_name='{page.page_name}' index:{page.index_num}")
+            if page_name in page.name:
+                print(f"Removing page index {page.index_num}")
+                vis.remove_page_by_index(page.index_num)
+            else:
+                expected_page_names.append(page.name)
+
+        vis.save_vsdx(out_file)
+
+    print(f"expected names={expected_page_names}")
+    # re-open file and confirm it contains all and only those not deleted
+    with VisioFile(out_file) as vis:
+        print(f"Found {len(vis.pages)} pages, {sorted([p.name for p in vis.pages])}")
+        assert sorted(expected_page_names) == sorted([p.name for p in vis.pages])
+
+
+@pytest.mark.parametrize(("filename", "page_name"),
+                         [
+                             ("test1.vsdx", 'Page-1'),
+                             ("test2.vsdx", 'Page-2'),
+                             ("test3_house.vsdx", 'Page-1'),
+                             ("test4_connectors.vsdx", 'Page-2'),
+                             ("test5_master.vsdx", 'Page 1'),
+                             ("test6_shape_properties.vsdx", 'Page-2'),
+                             ("test7_with_connector.vsdx", 'Page-3'),
+                             ("test8_simple_connector.vsdx", 'none'),  # no match
+                         ])
+def test_remove_page_by_name(filename: str, page_name: str):
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_remove_page_by_name.vsdx')
+    expected_page_names = []
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        print(f"Found {len(vis.pages)} pages, {sorted([p.name for p in vis.pages])}")
+        for page in list(vis.pages):
+            print(f"page.name='{page.name}' page.page_name='{page.page_name}' index:{page.index_num}")
+            if page_name != page.name:
+                expected_page_names.append(page.name)
+        vis.remove_page_by_name(page_name)
+        vis.save_vsdx(out_file)
+
+    print(f"expected names={expected_page_names}")
+    # re-open file and confirm it contains all and only those not deleted
+    with VisioFile(out_file) as vis:
+        print(f"Found {len(vis.pages)} pages, {sorted([p.name for p in vis.pages])}")
+        assert sorted(expected_page_names) == sorted([p.name for p in vis.pages])
 
 
 @pytest.mark.parametrize(("filename", "remove_index"),

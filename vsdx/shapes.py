@@ -559,7 +559,7 @@ class Shape:
 
         if isinstance(text_element, Element):
             return "".join(text_element.itertext())  # get all text from <Text> sub elements
-        elif self.master_page_ID:
+        elif self.master_page_ID and self.master_shape:
             return self.master_shape.text  # get text from master shape
         return ""
 

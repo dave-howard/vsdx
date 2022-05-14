@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.6: Fix error in `Shape.text` with missing master shape. Improve `VisioFile.remove_page_by_index()` and add `VisioFile.remove_page_by_name()`.
 - v0.5.5: Added Shape.universal_name and used in Shape.set_start_and_finish(). Set Page.page_id on open file.
 - v0.5.4: Added better (but still incomplete) support for adding connectors between shapes
 - v0.5.3: Fixed missing deprecation dependency in setup.py

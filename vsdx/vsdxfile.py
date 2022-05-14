@@ -253,13 +253,36 @@ class VisioFile:
         """
 
         # remove Page element from pages.xml file - zero based index
-        # todo:  similar function by page id, and by page title
-        page = self.pages_xml.find(f"{namespace}Page[{index+1}]")
-        if page:
-            self.pages_xml.getroot().remove(page)
-            page = self.pages[index]  # type: Page
-            self._remove_page_from_app_xml(page.name)
-            del self.pages[index]
+        if type(index) is int:
+            page = self.pages_xml.find(f"{namespace}Page[{index+1}]")
+            if page:
+                self.pages_xml.getroot().remove(page)
+                page = self.pages[index]  # type: Page
+
+                # remove internal references to page
+                self._remove_page_from_app_xml(page.name)
+
+                # remove page<index>.xml file
+                print(self.pages[index].filename)
+                os.remove(self.pages[index].filename)
+                del self.pages[index]
+
+
+    def remove_page_by_name(self, page_name):
+        """Remove first page from VisioFile object that matches the page_name
+
+        :param page_name: page of page to delete
+        :type page_name: str
+
+        :return: None
+        """
+
+        # get index and then pass to remove_page_by_index() to perform deletion
+        for p in self.pages:
+            if p.name == page_name:
+                self.remove_page_by_index(p.index_num)
+                break  # exit after first match - delete only one page
+
 
     def _update_pages_xml_rels(self, new_page_filename: str) -> str:
         '''Updates the pages.xml.rels file with a reference to the new page and returns the new relid
@@ -455,21 +478,23 @@ class VisioFile:
         vector.set('size', str(vector_size+1))  # increment as page added
 
     def _remove_page_from_app_xml(self, page_name: str):
-        HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
-        i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
-        num_pages = int(i4.text)
-        i4.text = str(num_pages-1)  # decrement as page removed
+        if self.app_xml is not None:
+            print(f"_remove_page_from_app_xml()")
+            HeadingPairs = self.app_xml.getroot().find(f'{ext_prop_namespace}HeadingPairs')
+            i4 = HeadingPairs.find(f'.//{vt_namespace}i4')
+            num_pages = int(i4.text)
+            i4.text = str(num_pages-1)  # decrement as page removed
 
-        TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
-        vector = TitlesOfParts.find(f'{vt_namespace}vector')
+            TitlesOfParts = self.app_xml.getroot().find(f'{ext_prop_namespace}TitlesOfParts')
+            vector = TitlesOfParts.find(f'{vt_namespace}vector')
 
-        for lpstr in vector.findall(f'{vt_namespace}lpstr'):
-            if lpstr.text == page_name:
-                vector.remove(lpstr)  # remove page from list of names
-                break
+            for lpstr in vector.findall(f'{vt_namespace}lpstr'):
+                if lpstr.text == page_name:
+                    vector.remove(lpstr)  # remove page from list of names
+                    break
 
-        vector_size = int(vector.attrib['size'])
-        vector.set('size', str(vector_size-1))  # decrement as page removed
+            vector_size = int(vector.attrib['size'])
+            vector.set('size', str(vector_size-1))  # decrement as page removed
 
     def _create_page(
         self,
@@ -1019,6 +1044,7 @@ class VisioFile:
                 if not os.path.exists(directory):
                     os.mkdir(directory)
         shutil.make_archive(base_filename, 'zip', self.directory)
+
         if not new_filename:
             shutil.move(base_filename + '.zip', base_filename + '_new.vsdx')
         else:
