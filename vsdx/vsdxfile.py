@@ -193,12 +193,7 @@ class VisioFile:
 
         # for each master page, create the Page object
         for master in self.masters_xml:
-            try:
-	        master_name = master.attrib['NameU']
-	    except KeyError as e:
-	        print(f'NameU not defined for object: {master.attrib["ID"]}')
-		master.attrib['NameU'] = "Unknown"
-                master_name = master.attrib['NameU']
+            master_name = master.attrib.get('NameU') or master.attrib.get('Name') or 'Unknown'
             rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
             master_id = master.attrib['ID']
 
