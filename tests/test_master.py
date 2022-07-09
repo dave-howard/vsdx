@@ -11,10 +11,21 @@ basedir = os.path.dirname(os.path.relpath(__file__))
 
 
 @pytest.mark.parametrize(("filename", "expected_length"),
-                         [('test5_master.vsdx', 1)])
+                         [('test5_master.vsdx', 1),
+                          ('test3_house.vsdx', 1),])
 def test_load_master_file(filename: str, expected_length: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         assert len(vis.master_pages) == expected_length
+
+
+@pytest.mark.parametrize(("filename", "expected_length"),
+                         [('test3_house.vsdx', 1),])
+def test_master_base_id(filename: str, expected_length: int):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        # note: master base id does not exist in test5_master.vsdx a file created by LucidChart
+        for m in vis.master_pages:
+            # check master base id exists
+            assert m.master_base_id is not None
 
 
 @pytest.mark.parametrize(("filename", "shape_text"),

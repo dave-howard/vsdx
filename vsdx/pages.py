@@ -37,12 +37,13 @@ class Page:
     :type connects: List of :class:`Connect`
 
     """
-    def __init__(self, xml: ET.ElementTree, filename: str, page_name: str, page_id: str, rel_id: str, vis: VisioFile):
+    def __init__(self, xml: ET.ElementTree, filename: str, page_name: str, page_id: str, rel_id: str, base_id: str, vis: VisioFile):
         self._xml = xml
         self.filename = filename
         self._name = page_name
         self.page_id = page_id
         self.rel_id = rel_id
+        self.master_base_id = base_id
         self.rels_xml_filename = None
         self.rels_xml = None  # type: ET.ElementTree
         self.vis = vis

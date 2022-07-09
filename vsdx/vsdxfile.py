@@ -149,8 +149,9 @@ class VisioFile:
 
             page_path = page_dir + relid_page_dict.get(rel_id, None)
             page_id = page.attrib.get('ID')
+            base_id = page.attrib.get('BaseID')
 
-            new_page = Page(file_to_xml(page_path), page_path, page_name, page_id, rel_id, self)
+            new_page = Page(file_to_xml(page_path), page_path, page_name, page_id, rel_id, base_id, self)
             # look for visio/pages/_rels/page3.xml.rels
             base_page_file_name = page_path.split('/')[-1]
             page_rels_path = rel_dir+base_page_file_name+'.rels'
@@ -196,10 +197,11 @@ class VisioFile:
             master_name = master.attrib.get('NameU') or master.attrib.get('Name') or 'Unknown'
             rel_id = master.find(f"{namespace}Rel").attrib[f"{r_namespace}id"]
             master_id = master.attrib['ID']
+            base_id = master.attrib.get('BaseID')
 
             master_path = relid_to_path[rel_id]
 
-            master_page = Page(file_to_xml(master_path), master_path, master_name, master_id, rel_id, self)
+            master_page = Page(file_to_xml(master_path), master_path, master_name, master_id, rel_id, base_id, self)
             self.master_pages.append(master_page)
             self.master_index[master_name] = master_page  # index by master_name
 
@@ -533,7 +535,7 @@ class VisioFile:
             self._add_page_to_app_xml(page_name)
 
         # Update VisioFile object
-        new_page = Page(new_page_xml, new_page_path, page_name, '', '', self)
+        new_page = Page(new_page_xml, new_page_path, page_name, '', '', '', self)
 
         self.pages.insert(index, new_page)  # insert new page at defined index
 
