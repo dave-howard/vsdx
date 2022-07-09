@@ -102,7 +102,8 @@ def test_child_property_change_is_not_inherited(filename: str, weight):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)
 
-        sub_shape_a = page.find_shape_by_text('Shape A').child_shapes[0]
+        shape_a = page.find_shape_by_text('Shape A')
+        sub_shape_a = shape_a.child_shapes[0]
         master = sub_shape_a.master_shape
         original_master_weight = master.line_weight
         # increment child property to ensure child and master are not the same

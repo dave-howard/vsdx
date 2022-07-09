@@ -11,6 +11,40 @@ from vsdx import VisioFile
 basedir = os.path.dirname(os.path.relpath(__file__))
 
 
+@pytest.mark.parametrize("filename, shape_id, child_count", [
+    ("test3_house.vsdx", "7", 3),
+    ("test3_house.vsdx", "11", 3),
+    ("test2.vsdx", "9", 3),
+    ("test10_nested_shapes.vsdx", "7", 2),
+    ])
+def test_get_shape_child_shapes(filename: str, shape_id: str, child_count: int):
+    # Check that page has expected number of top level shapes
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        shape = page.find_shape_by_id(shape_id)
+
+        # check that page has expected number of child shapes
+        assert len(shape.child_shapes) == child_count
+
+
+@pytest.mark.parametrize("filename, shape_id, all_count", [
+    ("test3_house.vsdx", "7", 3),
+    ("test3_house.vsdx", "11", 3),
+    ("test2.vsdx", "9", 3),
+    ("test10_nested_shapes.vsdx", "7", 6),
+    ])
+def test_get_shape_all_shapes(filename: str, shape_id: str, all_count: int):
+    # Check that page has expected number of top level shapes
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+
+        shape = page.find_shape_by_id(shape_id)
+        for s in shape.all_shapes:
+            print(s)
+        # check that page has expected number of child shapes
+        assert len(shape.all_shapes) == all_count
+
+
 @pytest.mark.parametrize("filename, expected_locations",
                          [("test1.vsdx", "1.33,10.66 4.13,10.66 6.94,10.66 2.33,9.02 "),
                           ("test2.vsdx", "2.33,8.72 1.33,10.66 4.13,10.66 5.91,8.72 1.61,8.58 3.25,8.65 ")])

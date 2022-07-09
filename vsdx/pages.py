@@ -27,7 +27,7 @@ class PagePosition(IntEnum):
 
 
 class Page:
-    """Represents a page in a vsdx file
+    """Represents a page or a master page in a vsdx file
 
     :param vis: the VisioFile object the page belongs to
     :type vis: :class:`VisioFile`
@@ -93,6 +93,10 @@ class Page:
                             details="Use Page.name property instead")
     def page_name(self, value):
         self.name = value
+
+    @property
+    def is_master_page(self):
+        return type(self.vis.masters_xml)==ET.Element and self.vis.masters_xml.find(f'{namespace}Master[@ID="{self.page_id}"]/{namespace}PageSheet') is not None
 
     @property
     def _pagesheet_xml(self):

@@ -143,7 +143,7 @@ class Shape:
         self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
 
     def __repr__(self):
-        return f"<Shape tag={self.tag} ID={self.ID} type={self.shape_type} text='{self.text}' >"
+        return f"<Shape tag={self.tag} ID={self.ID} is_master=({self.is_master_shape}) type={self.shape_type} text='{self.text}' >"
 
     def __eq__(self, other: vsdx.Shape) -> bool:
         if not isinstance(other, vsdx.Shape):
@@ -153,6 +153,10 @@ class Shape:
 
     def __hash__(self):
         return hash((self.ID, self.page.name, self.page.vis.filename))
+
+    @property
+    def is_master_shape(self):
+        return self.page.is_master_page
 
     @property
     def universal_name(self):
@@ -593,10 +597,12 @@ class Shape:
             parent_element = self.xml.find(f"{namespace}Shapes")
         else:  # a Shapes
             parent_element = self.xml
+
         if parent_element:
             shapes = [Shape(xml=shape, parent=self, page=self.page) for shape in parent_element if 'Shape' in shape.tag]
         else:
             shapes = []
+
         return shapes
 
     @property
@@ -611,7 +617,7 @@ class Shape:
         for shape in self.child_shapes:  # type: Shape
             shapes.append(shape)
             if shape.shape_type == 'Group':
-                found = shape.child_shapes
+                found = shape.all_shapes
                 if found:
                     shapes.extend(found)
         return shapes

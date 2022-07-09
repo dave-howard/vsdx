@@ -17,16 +17,43 @@ from vsdx import Cell
 basedir = os.path.dirname(os.path.relpath(__file__))
 
 
-@pytest.mark.parametrize("filename, count, sub_count", [("test1.vsdx", 1, 4), ("test2.vsdx", 1, 6)])
-def test_get_page_shapes(filename: str, count: int, sub_count: int):
+@pytest.mark.parametrize("filename, count", [("test1.vsdx", 1), ("test2.vsdx", 1)])
+def test_get_page_shapes(filename: str, count: int):
     # there should always be one single Shapes object in the page that contains Shape objects
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
         assert len(page._shapes) == count  # _shapes() is internal function to get container object
-        # check expected number of sub shapes
-        assert len(page._shapes[0].child_shapes) == sub_count
+
+
+@pytest.mark.parametrize("filename, child_count",
+                         [("test1.vsdx", 4),
+                          ("test2.vsdx", 6),
+                          ("test10_nested_shapes.vsdx", 2)
+                          ])
+def test_get_page_child_shapes(filename: str, child_count: int):
+    # Check that page has expected number of top level shapes
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        # check that page has expected number of child shapes
+        assert len(page.child_shapes) == child_count
         # check that same number of shapes can be found in _shapes and page
         assert len(page._shapes[0].child_shapes) == len(page.child_shapes)
+
+
+@pytest.mark.parametrize("filename, all_count",
+                         [("test1.vsdx", 4),
+                          ("test2.vsdx", 14),
+                          ("test10_nested_shapes.vsdx", 8),
+                          ])
+def test_get_page_all_shapes(filename: str, all_count: int):
+    # Check that page has expected number of total shapes (all_shapes searches recursively)
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        # check that page has expected number of all_shapes
+        print(page.all_shapes)
+        assert len(page.all_shapes) == all_count
+        # check that same number of shapes can be found in _shapes and page
+        assert len(page._shapes[0].all_shapes) == len(page.all_shapes)
 
 
 @pytest.mark.parametrize("filename, page_index, height_width",
