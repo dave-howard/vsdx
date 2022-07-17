@@ -18,9 +18,19 @@ def test_load_master_file(filename: str, expected_length: int):
         assert len(vis.master_pages) == expected_length
 
 
-@pytest.mark.parametrize(("filename", "expected_length"),
-                         [('test3_house.vsdx', 1),])
-def test_master_base_id(filename: str, expected_length: int):
+@pytest.mark.parametrize(("filename"),
+                         [('test3_house.vsdx'),])
+def test_master_unique_id(filename: str):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        # note: master base id does not exist in test5_master.vsdx a file created by LucidChart
+        for m in vis.master_pages:
+            # check master base id exists
+            assert m.master_unique_id is not None
+
+
+@pytest.mark.parametrize(("filename"),
+                         [('test3_house.vsdx'),])
+def test_master_base_id(filename: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         # note: master base id does not exist in test5_master.vsdx a file created by LucidChart
         for m in vis.master_pages:
