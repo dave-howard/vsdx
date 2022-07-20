@@ -212,6 +212,15 @@ class Shape:
         return master_shape
 
     @property
+    def master_page(self):
+        """Get this pages master
+
+        Returns this Page's master as a Page object (or None)
+
+        """
+        return self.page.vis.get_master_page_by_id(self.master_page_ID)
+
+    @property
     def data_properties(self) -> Dict[str, DataProperty]:
         """
         Get data properties of the shape - which labels, names, and values
@@ -563,8 +572,10 @@ class Shape:
 
         if isinstance(text_element, Element):
             return "".join(text_element.itertext())  # get all text from <Text> sub elements
-        elif self.master_page_ID and self.master_shape:
+        elif self.master_page_ID and self.master_shape and self.master_shape.text:
             return self.master_shape.text  # get text from master shape
+        elif self.master_page_ID and self.master_page:
+            return self.master_page.name   # get text from master page
         return ""
 
     @text.setter
