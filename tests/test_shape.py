@@ -441,3 +441,13 @@ def test_shape_universal_name(filename, page_index, shape_text, expected_univers
         page = vis.pages[page_index]
         shape = page.find_shape_by_text(shape_text)
         assert shape.universal_name == expected_universal_name
+
+
+@pytest.mark.parametrize("filename, expected_master_shape_name",
+                         [("test_master_multiple_child_shapes.vsdx",  # master with multiple child shapes
+                           "AWS Step Functions workflow ")])  # expected master shape name
+def test_get_master_page(filename: str, expected_master_shape_name: str):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        child_shape = vis.get_page(0).child_shapes[0]
+        assert child_shape.master_page.name == expected_master_shape_name
+
