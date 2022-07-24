@@ -451,10 +451,3 @@ def test_get_master_page(filename: str, expected_master_shape_name: str):
         child_shape = vis.get_page(0).child_shapes[0]
         assert child_shape.master_page.name == expected_master_shape_name
 
-
-@pytest.mark.parametrize("filename",
-                         ["test_master_multiple_child_shapes.vsdx"])  # master with multiple child shapes
-def test_get_text_from_master_page_name(filename: str):
-    with VisioFile(os.path.join(basedir, filename)) as vis:
-        child_shape = vis.get_page(0).child_shapes[0]
-        assert child_shape.master_page.name == child_shape.text

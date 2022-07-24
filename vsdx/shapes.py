@@ -574,8 +574,6 @@ class Shape:
             return "".join(text_element.itertext())  # get all text from <Text> sub elements
         elif self.master_page_ID and self.master_shape and self.master_shape.text:
             return self.master_shape.text  # get text from master shape
-        elif self.master_page_ID and self.master_page:
-            return self.master_page.name   # get text from master page
         return ""
 
     @text.setter
