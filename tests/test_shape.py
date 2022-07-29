@@ -11,6 +11,22 @@ from vsdx import VisioFile
 basedir = os.path.dirname(os.path.relpath(__file__))
 
 
+@pytest.mark.parametrize("filename, shape_id, expected_text", [
+    ("test3_house.vsdx", "1", "Shape Text\n"),
+    ("test3_house.vsdx", "11", "Shape to remove\n"),
+    ("test2.vsdx", "9", "Group shape text\n"),
+    ("test10_nested_shapes.vsdx", "5", "Shape 1.2.1\n"),
+    ("test_master_multiple_child_shapes.vsdx", "3", "AWS Step Functions workflow \n")
+    ])
+def test_get_shape_text(filename: str, shape_id: str, expected_text: str):
+    # Check that a specific shape on a page has expected text value
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        shape = page.find_shape_by_id(shape_id)
+        # check that shape has expected text
+        assert shape.text == expected_text
+
+
 @pytest.mark.parametrize("filename, shape_id, child_count", [
     ("test3_house.vsdx", "7", 3),
     ("test3_house.vsdx", "11", 3),
