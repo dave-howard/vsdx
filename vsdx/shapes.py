@@ -478,6 +478,14 @@ class Shape:
         self.set_cell_value('Width', str(value))
 
     @property
+    def angle(self):
+        return to_float(self.cell_value('Angle'))
+
+    @angle.setter
+    def angle(self, value: float or str):
+        self.set_cell_value('Angle', str(value))
+
+    @property
     def bounds(self) -> tuple:
         # get absolute bounds of a shape relative to page
         s = self

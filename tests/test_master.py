@@ -19,7 +19,8 @@ def test_load_master_file(filename: str, expected_length: int):
 
 
 @pytest.mark.parametrize(("filename"),
-                         [('test3_house.vsdx'),])
+                         [('test3_house.vsdx'),
+                          ('test_master_multiple_child_shapes.vsdx'),])
 def test_master_unique_id(filename: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         # note: master base id does not exist in test5_master.vsdx a file created by LucidChart
@@ -29,7 +30,8 @@ def test_master_unique_id(filename: str):
 
 
 @pytest.mark.parametrize(("filename"),
-                         [('test3_house.vsdx'),])
+                         [('test3_house.vsdx'),
+                          ('test_master_multiple_child_shapes.vsdx'),])
 def test_master_base_id(filename: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         # note: master base id does not exist in test5_master.vsdx a file created by LucidChart

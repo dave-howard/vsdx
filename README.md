@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.10: Add Shape.angle property
 - v0.5.9: Add tests for master shape text property
 - v0.5.8: Add `Page.master_base_id` property
 - v0.5.7: Add support for nested shapes in `Page.all_shapes` and `Shape.all_shapes`. Add `Page.is_master_page` and `Shape.is_master_shape`. 

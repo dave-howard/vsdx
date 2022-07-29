@@ -446,8 +446,21 @@ def test_shape_universal_name(filename, page_index, shape_text, expected_univers
 @pytest.mark.parametrize("filename, expected_master_shape_name",
                          [("test_master_multiple_child_shapes.vsdx",  # master with multiple child shapes
                            "AWS Step Functions workflow ")])  # expected master shape name
-def test_get_master_page(filename: str, expected_master_shape_name: str):
+def test_get_shape_master_page(filename: str, expected_master_shape_name: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         child_shape = vis.get_page(0).child_shapes[0]
         assert child_shape.master_page.name == expected_master_shape_name
 
+
+@pytest.mark.parametrize("filename, shape_id, expected_angle",
+                         [
+                             ("test11_rotate.vsdx", "1", 0.52),
+                             ("test11_rotate.vsdx", "2", -1.39),
+                             ("test11_rotate.vsdx", "5", 2.53),
+                             ("test11_rotate.vsdx", "6", -0.26),
+                         ])
+def test_get_shape_angle(filename: str, shape_id: str, expected_angle: float):
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[0]
+        # check angle is close enough to expected
+        assert abs(page.find_shape_by_id(shape_id).angle - expected_angle) < 0.01
