@@ -1,0 +1,7 @@
+/build/
+/dist/
+/.pytest_cache/
+/venv*/
+/vsdx.egg-info/
+/docs/_build/
+/tests/out/
