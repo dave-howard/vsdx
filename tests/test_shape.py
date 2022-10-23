@@ -480,3 +480,26 @@ def test_get_shape_angle(filename: str, shape_id: str, expected_angle: float):
         page = vis.pages[0]
         # check angle is close enough to expected
         assert abs(page.find_shape_by_id(shape_id).angle - expected_angle) < 0.01
+
+@pytest.mark.parametrize(("filename", "regex", "expected_shape_ids"),
+                         [
+                             ('test1.vsdx', r'\s(\S{2})\s', ['2', '5', '6']),
+                             
+                          ])
+def test_find_shapes_by_regex(filename: str, regex: str, expected_shape_ids: list):
+    """ Test function Shape.find_shapes_by_regex(regex: str) 
+        test1.vsdx contains Shapes with text fields
+            [(shp.ID,shp.text) for shp in shapes.all_shapes]:
+            ('1', 'Shape Text\n')
+            ('2', 'Shape to remove\n')
+            ('5', 'Shape to copy\n')
+            ('6', 'Shape for context filter: The scenario is {{scenario}} and this file was created on {{date}}\n')
+        
+    the regex matches the sequence '(whitespace)(two non-whitespace)(whitespace)' as for example with the strings ' to ' in ID=2,5 and also ' is ' and ' on ' in ID=6
+    so we expect IDs=[2,5,6]
+    """
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shapes = vis.pages[0].shapes[0]  # type: Page
+        assert len(shapes.find_shapes_by_regex('')) == len(shapes.all_shapes)
+        fil_shapes = shapes.find_shapes_by_regex(regex)
+        assert [shp.ID for shp in fil_shapes] == expected_shape_ids
