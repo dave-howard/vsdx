@@ -309,6 +309,30 @@ def test_find_shape_by_data_property_label_value(filename: str, page_index: int,
         assert shape.text.replace('\n', '') == expected_shape_name
 
 
+@pytest.mark.parametrize(("filename", "page_index", "regex", "expected_shape_ids"),
+                         [
+                             ('test1.vsdx', 0, r'\s(\S{2})\s', ['2', '5', '6']),
+
+                         ])
+def test_find_shapes_by_regex(filename: str, page_index, regex: str, expected_shape_ids: list):
+    """ Test function Shape.find_shapes_by_regex(regex: str)
+        test1.vsdx contains Shapes with text fields
+            [(shp.ID,shp.text) for shp in shapes.all_shapes]:
+            ('1', 'Shape Text\n')
+            ('2', 'Shape to remove\n')
+            ('5', 'Shape to copy\n')
+            ('6', 'Shape for context filter: The scenario is {{scenario}} and this file was created on {{date}}\n')
+
+    the regex matches the sequence '(whitespace)(two non-whitespace)(whitespace)' as for example with the strings ' to ' in ID=2,5 and also ' is ' and ' on ' in ID=6
+    so we expect IDs=[2,5,6]
+    """
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[page_index]  # type: Page
+        assert len(page.find_shapes_by_regex('')) == len(page.all_shapes)
+        fil_shapes = page.find_shapes_by_regex(regex)
+        assert [shp.ID for shp in fil_shapes] == expected_shape_ids
+
+
 # Connectors
 
 @pytest.mark.parametrize(("filename", "expected_connects"),

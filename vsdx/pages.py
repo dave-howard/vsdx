@@ -254,18 +254,19 @@ class Page:
                 shapes.extend(found)
         return shapes
 
+    def find_shapes_by_regex(self, regex: str) -> List[Shape]:
+        """Search for shapes in this page's top shape by regex"""
+        return self._shapes[0].find_shapes_by_regex(regex) if len(self._shapes) else []
+
     @property
     def all_shapes(self):
-        # return all shapes within another shape, recursively, using same logic as find_shapes_by_text()
+        # return all shapes in page
         return self._shapes[0].all_shapes if len(self._shapes) else []
 
     def find_shape_by_property_label(self, property_label: str) -> Shape:
-        # return first matching shape with label
+        """Search for shapes in this page's top shape by property label"""
         # note: use label rather than name as label is more easily visible in diagram
-        for s in self._shapes:
-            found = s.find_shape_by_property_label(property_label)
-            if found:
-                return found
+        return self._shapes[0].find_shape_by_property_label(property_label) if len(self._shapes) else None
 
     def find_shapes_by_property_label(self, property_label: str) -> List[Shape]:
         # return all matching shapes with property label

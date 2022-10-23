@@ -49,6 +49,11 @@ def xml_to_file(xml: ET.ElementTree, filename: str):
     xml.write(filename, xml_declaration=True, method='xml', encoding='UTF-8')
 
 
+class VisioFileNotOpen(BaseException):
+    """Error class to report when a VisioFile is attempted to be saved when no longer open"""
+    pass
+
+
 class VisioFile:
     """Represents a vsdx file
 
@@ -86,6 +91,7 @@ class VisioFile:
         self.masters_xml = None  # type: ET.ElementTree
         self.master_index = {}  # dict of master page info by item name e.g. 'Dynamic Connector'
         self.master_pages = list()  # type: List[Page]  # list of Page objects, populated by open_vsdx_file()
+        self.file_open = False
         self.open_vsdx_file()
 
     def __enter__(self):
@@ -110,6 +116,7 @@ class VisioFile:
         # load each page file into an ElementTree object
         self.load_pages()
         self.load_master_pages()
+        self.file_open = True
 
     def _pages_filename(self):
         page_dir = f'{self.directory}/visio/pages/'
@@ -1003,6 +1010,7 @@ class VisioFile:
             shutil.rmtree(self.directory)
         except (FileNotFoundError) as e:
             pass
+        self.file_open = False
 
     def save_vsdx(self, new_filename=None):
         """save the VisioFile object as new vsdx file
@@ -1011,6 +1019,8 @@ class VisioFile:
         :type new_filename: str
 
         """
+        if not self.file_open:
+            raise VisioFileNotOpen("Unable to save a file after being closed or outside of 'with' block.")
         # write pages.xml.rels
         xml_to_file(self.pages_xml_rels, f'{self.directory}/visio/pages/_rels/pages.xml.rels')
 

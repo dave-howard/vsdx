@@ -675,14 +675,13 @@ class Shape:
             if text in shape.text:
                 return shape
 
-    def find_shapes_by_text(self, text: str, shapes: List[Shape] = None) -> List[Shape]:
+    def find_shapes_by_text(self, text: str) -> List[Shape]:
         # recursively search for shapes by text and return all matches
         return [s for s in self.all_shapes if text in s.text]
 
     def find_shapes_by_regex(self, regex: str) -> List[Shape]:
         # recursively search for shapes by regex and return all matches
         return [shape for shape in self.all_shapes if re.search(regex, shape.text)]
-
 
     def find_shape_by_property_label(self, property_label: str) -> Shape:  # returns Shape
         # recursively search for shapes by property name and return first match

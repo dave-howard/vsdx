@@ -481,6 +481,7 @@ def test_get_shape_angle(filename: str, shape_id: str, expected_angle: float):
         # check angle is close enough to expected
         assert abs(page.find_shape_by_id(shape_id).angle - expected_angle) < 0.01
 
+
 @pytest.mark.parametrize(("filename", "regex", "expected_shape_ids"),
                          [
                              ('test1.vsdx', r'\s(\S{2})\s', ['2', '5', '6']),
