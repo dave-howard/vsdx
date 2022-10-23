@@ -9,6 +9,7 @@ from typing import Optional
 import deprecation
 import vsdx
 from vsdx import namespace
+import re
 
 shape_type_names = {  # a map from English language shape to a list of know names for that Shape type
     # note that Shape names may be appended with a number e.g. 'Dynamischer Verbinder.2'
@@ -677,6 +678,11 @@ class Shape:
     def find_shapes_by_text(self, text: str, shapes: List[Shape] = None) -> List[Shape]:
         # recursively search for shapes by text and return all matches
         return [s for s in self.all_shapes if text in s.text]
+
+    def find_shapes_by_regex(self, regex: str) -> List[Shape]:
+        # recursively search for shapes by regex and return all matches
+        return [shape for shape in self.all_shapes if re.search(regex, shape.text)]
+
 
     def find_shape_by_property_label(self, property_label: str) -> Shape:  # returns Shape
         # recursively search for shapes by property name and return first match
