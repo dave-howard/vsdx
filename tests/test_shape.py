@@ -243,22 +243,23 @@ def test_shape_copy_other_page(filename: str, shape_name: str):
 
 # DataProperty
 
-@pytest.mark.parametrize(("filename", "shape_name"),
-                         [("test1.vsdx", "Shape Text",),
+@pytest.mark.parametrize(("filename", "page_index", "shape_name"),
+                         [("test1.vsdx", 0, "Shape Text"),
+                          ("test6_shape_properties.vsdx", 2, "A")
                           ])
-def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, shape_name: str):
-    # check that Shape.data_properties is a dict of ShapeProperty
+def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, page_index: int, shape_name: str):
+    """ check that Shape.data_properties is a dict of ShapeProperty """
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shape = vis.pages[0].find_shape_by_text(shape_name)  # type: Shape
+        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
 
         props = shape.data_properties
 
         # check overall type
-        assert type(props) is dict
+        assert isinstance(props, dict)
 
         # check each item type
         for prop in props.values():
-            assert type(prop) is DataProperty
+            assert isinstance(prop, DataProperty)
 
 
 @pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
@@ -269,6 +270,7 @@ def test_get_shape_data_properties_type_is_dict_of_data_property(filename: str, 
                           ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "master prop value",
                                                                    "shape_prop": "shape property value"}),
                           ("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "override"}),
+                          ("test6_shape_properties.vsdx", 2, "D", {"LongProp": 'value not in an "attrib"'}),
                           ])
 def test_get_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
     with VisioFile(os.path.join(basedir, filename)) as vis:

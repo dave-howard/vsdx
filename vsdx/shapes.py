@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
+import re
 
 from typing import Dict
 from typing import List
 from typing import Optional
+
 import deprecation
 import vsdx
 from vsdx import namespace
-import re
 
 shape_type_names = {  # a map from English language shape to a list of know names for that Shape type
     # note that Shape names may be appended with a number e.g. 'Dynamischer Verbinder.2'
@@ -17,6 +18,7 @@ shape_type_names = {  # a map from English language shape to a list of know name
 }
 
 def to_float(val: str):
+    """Convert a value to float or 0.0"""
     try:
         if val is None:
             return
@@ -26,6 +28,7 @@ def to_float(val: str):
 
 
 class Cell:
+    """Represents a Cell element in a vsdx xml file"""
     def __init__(self, xml: Element, shape: Shape):
         self.xml = xml
         self.shape = shape
@@ -59,42 +62,53 @@ class Cell:
 
 
 class DataProperty:
+    """Represents a single Data Property item associated with a Shape object"""
     def __init__(self, *, xml: Element, shape: Shape):
-        """Represents a single Data Property item associated with a Shape object"""
+        """init a DataProperty from a property xml element in a Shape object"""
         name = xml.attrib.get('N')
         # get Cell element for each property of DataProperty
         label_cell = xml.find(f'{namespace}Cell[@N="Label"]')
         value_cell = xml.find(f'{namespace}Cell[@N="Value"]')
-        value = value_cell.attrib.get('V') if type(value_cell) is Element else None
+        value = None
+        if isinstance(value_cell, Element) and value_cell.attrib.get('V') is not None:
+            value = value_cell.attrib.get('V')  # populate value from V attribute
+        elif value_cell.text:
+            value = value_cell.text  # populate value from element inner text
 
-        if type(label_cell) is Element:
+        # initialise empty DataProperty properties
+        self.shape = shape  # reference back to Shape object
+        self.xml = xml  # reference to xml used to create DataProperty
+        self.name = name
+        self.value = value
+        self.value_type = None
+        self.label = None
+        self.prompt = None
+        self.sort_key = None
+
+        self.shape = shape  # reference back to Shape object
+        self.xml = xml  # reference to xml used to create DataProperty
+
+        if isinstance(label_cell, Element):
             value_type_cell = xml.find(f'{namespace}Cell[@N="Type"]')
             prompt_cell = xml.find(f'{namespace}Cell[@N="Prompt"]')
             sort_key_cell = xml.find(f'{namespace}Cell[@N="SortKey"]')
 
             # get values from each Cell Element
-            value_type = value_type_cell.attrib.get('V') if type(value_type_cell) is Element else None
-            label = label_cell.attrib.get('V') if type(label_cell) is Element else None
-            prompt = prompt_cell.attrib.get('V') if type(prompt_cell) is Element else None
-            sort_key = sort_key_cell.attrib.get('V') if type(sort_key_cell) is Element else None
+            self.value_type = value_type_cell.attrib.get('V') if isinstance(value_type_cell, Element) else None
+            self.label = label_cell.attrib.get('V') if isinstance(label_cell, Element) else None
+            self.prompt = prompt_cell.attrib.get('V') if isinstance(prompt_cell, Element) else None
+            self.sort_key = sort_key_cell.attrib.get('V') if isinstance(sort_key_cell, Element) else None
         else:
             # over-ridden master shape properties have no label - only a name and value
-            master_prop = [p for p in shape.master_shape.data_properties.values() if p.name == name][0]  # type: DataProperty
-            label = master_prop.label
-            value_type = master_prop.value_type
-            prompt = master_prop.prompt
-            sort_key = master_prop.sort_key
-
-        # set DataProperty properties from xml
-        self.name = name
-        self.value = value
-        self.value_type = value_type
-        self.label = label
-        self.prompt = prompt
-        self.sort_key = sort_key
-
-        self.shape = shape  # reference back to Shape object
-        self.xml = xml  # reference to xml used to create DataProperty
+            master_props = [p for p in shape.master_shape.data_properties.values()
+                           if p.name == name]
+            if master_props:
+                # get first match 0 - there should always be one item
+                master_prop = master_props[0]  # type: DataProperty
+                self.label = master_prop.label
+                self.value_type = master_prop.value_type
+                self.prompt = master_prop.prompt
+                self.sort_key = master_prop.sort_key
 
 
 class Shape:
