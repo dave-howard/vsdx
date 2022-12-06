@@ -353,6 +353,30 @@ class Shape:
         self.set_cell_value('LineColor', str(value))
 
     @property
+    def fill_color(self) -> str:
+        return self.cell_value('FillForegnd')
+
+    @fill_color.setter
+    def fill_color(self, value: str):
+        self.set_cell_value('FillForegnd', str(value))
+
+    @property
+    def text_color(self):
+        """Get text color of shape - returns only first color attribute if there are many"""
+        char_section = self.xml.find(f'{namespace}Section[@N="Character"]')
+        color_cells = char_section.findall(f'{namespace}Row/{namespace}Cell[@N="Color"]') if char_section is not None else None
+        if color_cells:
+            return color_cells[0].attrib.get('V')
+
+    @text_color.setter
+    def text_color(self, value):
+        """Set text color of shape - sets only first color attribute if there are many"""
+        char_section = self.xml.find(f'{namespace}Section[@N="Character"]')
+        color_cells = char_section.findall(f'{namespace}Row/{namespace}Cell[@N="Color"]') if char_section is not None else None
+        if color_cells:
+            color_cells[0].attrib['V'] = value
+
+    @property
     def end_arrow(self):
         return self.cell_value('EndArrow')
 

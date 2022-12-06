@@ -504,3 +504,61 @@ def test_find_shapes_by_regex(filename: str, regex: str, expected_shape_ids: lis
         assert len(shapes.find_shapes_by_regex('')) == len(shapes.all_shapes)
         fil_shapes = shapes.find_shapes_by_regex(regex)
         assert [shp.ID for shp in fil_shapes] == expected_shape_ids
+
+
+@pytest.mark.parametrize(("filename", "page_index", "shape_text", "color_param", "expected_colour"),
+                         [
+                             ('test12_colors.vsdx', 0, "Line Color", "line", "#ff0000"),
+                             ('test12_colors.vsdx', 0, "Text Color", "text", "#ff0000"),
+                             ('test12_colors.vsdx', 0, "Fill Color", "fill", "#ff0000"),
+                             ('test12_colors.vsdx', 1, "Line Color", "line", "#00ff00"),
+                             ('test12_colors.vsdx', 1, "Text Color", "text", "#00ff00"),
+                             ('test12_colors.vsdx', 1, "Fill Color", "fill", "#00ff00"),
+
+                         ])
+def test_get_shape_line_color(filename: str, page_index: int, shape_text: str, color_param: str, expected_colour: str):
+    """Test that we can get a shapes line, text, or fill color"""
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shape = vis.pages[page_index].find_shape_by_text(shape_text)
+        print(f"LineColor={shape.line_color} FillColor={shape.fill_color} TextColor={shape.text_color}")
+        if color_param == "line":
+            assert shape.line_color == expected_colour
+        elif color_param == "text":
+            assert shape.text_color == expected_colour
+        elif color_param == "fill":
+            assert shape.fill_color == expected_colour
+
+
+@pytest.mark.parametrize(("filename", "page_index", "shape_text", "color_param", "expected_colour"),
+                         [
+                             ('test12_colors.vsdx', 0, "Line Color", "line", "#00ff00"),
+                             ('test12_colors.vsdx', 0, "Text Color", "text", "#00ff00"),
+                             ('test12_colors.vsdx', 0, "Fill Color", "fill", "#00ff00"),
+                             ('test12_colors.vsdx', 1, "Line Color", "line", "#0000ff"),
+                             ('test12_colors.vsdx', 1, "Text Color", "text", "#0000ff"),
+                             ('test12_colors.vsdx', 1, "Fill Color", "fill", "#0000ff"),
+
+                         ])
+def test_set_shape_line_color(filename: str, page_index: int, shape_text: str, color_param: str, expected_colour: str):
+    """Test that we can set a shapes line, text, or fill color"""
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_{page_index}_set_shape_{color_param}_color.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shape = vis.pages[page_index].find_shape_by_text(shape_text)
+        print(f"LineColor={shape.line_color} FillColor={shape.fill_color} TextColor={shape.text_color}")
+        if color_param == "line":
+           shape.line_color = expected_colour
+        elif color_param == "text":
+            shape.text_color = expected_colour
+        elif color_param == "fill":
+            shape.fill_color = expected_colour
+        vis.save_vsdx(out_file)
+
+    with VisioFile(out_file) as vis:
+        shape = vis.pages[page_index].find_shape_by_text(shape_text)
+        print(f"LineColor={shape.line_color} FillColor={shape.fill_color} TextColor={shape.text_color}")
+        if color_param == "line":
+            assert shape.line_color == expected_colour
+        elif color_param == "text":
+            assert shape.text_color == expected_colour
+        elif color_param == "fill":
+            assert shape.fill_color == expected_colour
