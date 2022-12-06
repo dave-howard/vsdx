@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.13: Update DataProperty class to get value of a property from V attrib or text
 - v0.5.12: Add `Shape.fill_color` and `Shape.text_color` properties with get and set tests
 - v0.5.11: Add `Shape.find_shapes_by_regex()` & `Page.find_shapes_by_regex()` - add check in `save_vsdx()` that file is open with more meaningful `VisioFileNotOpen` error
 - v0.5.10: Add Shape.angle property
