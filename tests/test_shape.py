@@ -292,6 +292,7 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
                          [("test6_shape_properties.vsdx", 1, "Container", "Shape A", "label_one"),
                           ])
 def test_find_sub_shape_by_data_property_label(filename: str, page_index: int, container_shape_name: str, expected_shape_name: list, property_label: str):
+    """Test that we can find a shape and it's text inside a container shape based on the sub shapes labels"""
     with VisioFile(os.path.join(basedir, filename)) as vis:
         container_shape = vis.pages[page_index].find_shape_by_text(container_shape_name)
 
@@ -302,6 +303,26 @@ def test_find_sub_shape_by_data_property_label(filename: str, page_index: int, c
 
         # test that the shape returned has the expected names
         assert shape.text.replace('\n', '') == expected_shape_name
+
+
+@pytest.mark.parametrize(("filename", "page_index", "property_label", "expected_shape_text"),
+                          [("test_master_multiple_child_shapes.vsdx", 0, "title",
+                            "AWS Step Functions workflow ")
+                          ])
+def test_find_shape_by_data_property_label(filename: str, page_index: int, property_label: str,
+                                           expected_shape_text: str):
+    """Test that we can find a shape and it's text inside a page based on the shapes labels"""
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shape = vis.pages[page_index].find_shape_by_property_label(property_label)
+
+        # test that a shape is returned
+        assert shape
+
+        # test that shape has a DataProperty with expected property label
+        assert [prop for prop in shape.data_properties.values() if prop.label == property_label]
+
+        # test that the shape returned has the expected text
+        assert shape.text.replace('\n', '') == expected_shape_text
 
 
 # Connectors
