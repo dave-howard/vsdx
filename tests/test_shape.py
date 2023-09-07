@@ -29,10 +29,6 @@ def test_get_shape_text(filename: str, shape_id: str, expected_text: str):
 
 @pytest.mark.parametrize("filename, attr, attr_value, expected_id", [
     ("test3_house.vsdx", "NameU", "House", "7"),
-    #("test3_house.vsdx", "11", "Shape to remove\n"),
-    #("test2.vsdx", "9", "Group shape text\n"),
-    #("test10_nested_shapes.vsdx", "5", "Shape 1.2.1\n"),
-    #("test_master_multiple_child_shapes.vsdx", "3", "AWS Step Functions workflow \n")
     ])
 def test_get_shape_attr_value(filename: str, attr: str, attr_value: str, expected_id: str):
     # Check that a specific shape on a page has expected text value
@@ -41,10 +37,6 @@ def test_get_shape_attr_value(filename: str, attr: str, attr_value: str, expecte
         shape = page.find_shape_by_attr(attr, attr_value)
         # check that shape has expected text
         assert shape.ID == expected_id
-
-
-
-
 
 
 @pytest.mark.parametrize("filename, shape_id, child_count", [
