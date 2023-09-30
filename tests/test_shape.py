@@ -27,6 +27,18 @@ def test_get_shape_text(filename: str, shape_id: str, expected_text: str):
         assert shape.text == expected_text
 
 
+@pytest.mark.parametrize("filename, attr, attr_value, expected_id", [
+    ("test3_house.vsdx", "NameU", "House", "7"),
+    ])
+def test_get_shape_attr_value(filename: str, attr: str, attr_value: str, expected_id: str):
+    # Check that a specific shape on a page has expected text value
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        shape = page.find_shape_by_attr(attr, attr_value)
+        # check that shape has expected text
+        assert shape.ID == expected_id
+
+
 @pytest.mark.parametrize("filename, shape_id, child_count", [
     ("test3_house.vsdx", "7", 3),
     ("test3_house.vsdx", "11", 3),

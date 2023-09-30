@@ -703,6 +703,20 @@ class Shape:
         # recursively search for shapes by ID and return all matches
         return [s for s in self.all_shapes if s.ID == shape_id]
 
+    def find_shape_by_attr(self, attr: str, attr_value: str) -> Shape:  # returns Shape
+        """
+        Search for a shape, based on attribute name and value, and return a single Shape
+
+        :param attr:
+        :param attr_value:
+        :return: vsdx.Shape
+        """
+        #  xml.attrib.get('NameU') or xml.get('Name')
+        # recursively search for shapes by text and return first match
+        for shape in self.all_shapes:  # type: Shape
+            if str(shape.xml.attrib.get(attr)) == attr_value:
+                return shape
+
     def find_shapes_by_master(self, master_page_ID: str, master_shape_ID: str) -> List[Shape]:
         # recursively search for shapes by master ID and return all matches
         return [s for s in self.all_shapes if s.master_shape_ID == master_shape_ID and s.master_page_ID == master_page_ID]

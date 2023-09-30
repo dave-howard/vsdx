@@ -235,6 +235,12 @@ class Page:
                 return found
         return found
 
+    def find_shape_by_attr(self, attr, attr_value) -> Shape:
+        for s in self._shapes:
+            found = s.find_shape_by_attr(attr, attr_value)
+            if found:
+                return found
+
     def find_shapes_with_same_master(self, shape: Shape) -> List[Shape]:
         # return all shapes with master
         return [s for s in self.all_shapes if
