@@ -108,20 +108,22 @@ class DataProperty:
         """Get the value of the data property"""
         value_cell = self.xml.find(f'{namespace}Cell[@N="Value"]')
         value = None
-        if isinstance(value_cell, Element) and value_cell.attrib.get('V') is not None:
-            value = value_cell.attrib.get('V')  # populate value from V attribute
-        elif value_cell.text:
-            value = value_cell.text  # populate value from element inner text
+        if isinstance(value_cell, Element):
+            if value_cell.attrib.get('V') is not None:
+                value = value_cell.attrib.get('V')  # populate value from V attribute
+            elif value_cell.text:
+                value = value_cell.text  # populate value from element inner text
         return value
 
     @value.setter
     def value(self, value):
         """Set the value of the data property"""
         value_cell = self.xml.find(f'{namespace}Cell[@N="Value"]')
-        if isinstance(value_cell, Element) and value_cell.attrib.get('V') is not None:
-            value_cell.attrib['V'] = value  # populate value in V attribute
-        elif value_cell.text:
-            value_cell.text = value  # populate value in0 element inner text
+        if isinstance(value_cell, Element):
+            if value_cell.attrib.get('V') is not None:
+                value_cell.attrib['V'] = value  # populate value in V attribute
+            elif value_cell.text:
+                value_cell.text = value  # populate value in element inner text
 
 
 class Shape:
