@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.15: Change DataProperty.value from field to property (get/set)
 - v0.5.14: Add Page.find_shape_by_attr()
 - v0.5.13: Update DataProperty class to get value of a property from V attrib or text
 - v0.5.12: Add `Shape.fill_color` and `Shape.text_color` properties with get and set tests
