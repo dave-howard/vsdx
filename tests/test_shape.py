@@ -300,6 +300,49 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
             assert prop.value == property_dict.get(property_label)
 
 
+@pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
+                         [("test1.vsdx", 0, "Shape Text", {"my_property_label": "1",
+                                                           "my_second_property_label": "2",
+                                                           "Network Name": "3"}),
+                          ("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "1"}),
+                          ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "1",
+                                                                   "shape_prop": "2"}),
+                          ("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "1"}),
+                          ("test6_shape_properties.vsdx", 2, "D", {"LongProp": '1"'}),
+                          ])
+def test_set_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
+    """Check that we can set a prop value, and this change persists through save and load"""
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_shape_data_properties.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
+
+        props = shape.data_properties
+
+        # check each key/value is not already set to required value
+        for property_label in property_dict.keys():
+            prop = props[property_label]
+            print(f"prop: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
+            assert prop.value != property_dict.get(property_label)
+
+        # check each key/value is expected after being set
+        for property_label in property_dict.keys():
+            prop = props[property_label]
+            prop.value = property_dict.get(property_label)
+            print(f"checking prop after set: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
+            assert prop.value == property_dict.get(property_label)
+
+        vis.save_vsdx(out_file)
+
+    # re-open saved file and check it is changed as expected
+    with VisioFile(out_file) as vis:
+        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
+        # check each key/value is not already set to required value
+        for property_label in property_dict.keys():
+            prop = props[property_label]
+            print(f"checking prop after load: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
+            assert prop.value == property_dict.get(property_label)
+
+
 @pytest.mark.parametrize(("filename", "page_index", "container_shape_name", "expected_shape_name", "property_label"),
                          [("test6_shape_properties.vsdx", 1, "Container", "Shape A", "label_one"),
                           ])

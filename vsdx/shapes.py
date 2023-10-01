@@ -68,18 +68,11 @@ class DataProperty:
         name = xml.attrib.get('N')
         # get Cell element for each property of DataProperty
         label_cell = xml.find(f'{namespace}Cell[@N="Label"]')
-        value_cell = xml.find(f'{namespace}Cell[@N="Value"]')
-        value = None
-        if isinstance(value_cell, Element) and value_cell.attrib.get('V') is not None:
-            value = value_cell.attrib.get('V')  # populate value from V attribute
-        elif value_cell.text:
-            value = value_cell.text  # populate value from element inner text
 
         # initialise empty DataProperty properties
         self.shape = shape  # reference back to Shape object
         self.xml = xml  # reference to xml used to create DataProperty
         self.name = name
-        self.value = value
         self.value_type = None
         self.label = None
         self.prompt = None
@@ -109,6 +102,26 @@ class DataProperty:
                 self.value_type = master_prop.value_type
                 self.prompt = master_prop.prompt
                 self.sort_key = master_prop.sort_key
+
+    @property
+    def value(self):
+        """Get the value of the data property"""
+        value_cell = self.xml.find(f'{namespace}Cell[@N="Value"]')
+        value = None
+        if isinstance(value_cell, Element) and value_cell.attrib.get('V') is not None:
+            value = value_cell.attrib.get('V')  # populate value from V attribute
+        elif value_cell.text:
+            value = value_cell.text  # populate value from element inner text
+        return value
+
+    @value.setter
+    def value(self, value):
+        """Set the value of the data property"""
+        value_cell = self.xml.find(f'{namespace}Cell[@N="Value"]')
+        if isinstance(value_cell, Element) and value_cell.attrib.get('V') is not None:
+            value_cell.attrib['V'] = value  # populate value in V attribute
+        elif value_cell.text:
+            value_cell.text = value  # populate value in0 element inner text
 
 
 class Shape:
