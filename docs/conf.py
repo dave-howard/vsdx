@@ -20,11 +20,11 @@ import vsdx
 # -- Project information -----------------------------------------------------
 
 project = 'vsdx'
-copyright = '2021, Dave Howard'
+copyright = '2023, Dave Howard'
 author = 'Dave Howard'
 
 # The full version, including alpha/beta/rc tags
-release = '0.4.18'
+release = '0.5.15'
 
 
 # -- General configuration ---------------------------------------------------
