@@ -58,6 +58,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.16: Add support & commit hook tests for Python 3.11 and 3.12
 - v0.5.15: Change DataProperty.value from field to property (get/set)
 - v0.5.14: Add Page.find_shape_by_attr()
 - v0.5.13: Update DataProperty class to get value of a property from V attrib or text
