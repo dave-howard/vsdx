@@ -58,7 +58,7 @@ vsdx allow you to create vsdx files from vsdx templates, with just a few lines o
       vis.save_vsdx('my_new_file.vsdx')
 
 ... it's as simple as that. The data passed in the 'context' dictionary is available to the Jinja template.
-For example `{{ author }}` would result in 'dave', and `{{ author|lower }}` would result in 'dave'.
+For example `{{ author }}` would result in 'Dave', and `{{ author|lower }}` would result in 'dave'.
 
 
 Attribute Manipulation
