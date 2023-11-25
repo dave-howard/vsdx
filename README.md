@@ -56,6 +56,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.17: Fix bug with adding multiple connectors to a vsdx with no existing master files/rels
 - v0.5.16: Add support & commit hook tests for Python 3.11 and 3.12
 - v0.5.15: Change DataProperty.value from field to property (get/set)
 - v0.5.14: Add Page.find_shape_by_attr()
