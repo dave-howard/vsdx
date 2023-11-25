@@ -314,7 +314,7 @@ def test_set_shape_data_properties(filename: str, page_index: int, shape_name: s
     """Check that we can set a prop value, and this change persists through save and load"""
     out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_set_shape_data_properties.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shape = vis.pages[page_index].find_shape_by_text(shape_name)  # type: Shape
+        shape = vis.pages[page_index].find_shape_by_text(shape_name)
 
         props = shape.data_properties
 

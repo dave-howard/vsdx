@@ -35,7 +35,7 @@ but first - let's use a context manager to make sure the file is closed when we 
 
     with VisioFile('diagram.vsdx') as vis:
         # open first page
-        page = vis.pages_objects[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: VisioFile.Page
         # find a shape by text
         shape = page.find_shape_by_text('foo')  # type: VisioFile.Shape
         shape.text = 'bar'
@@ -51,7 +51,7 @@ You'll want save your changes - lets just add that one line
 
     with VisioFile('diagram.vsdx') as vis:
         # open first page
-        page = vis.pages_objects[0]  # type: VisioFile.Page
+        page = vis.pages[0]  # type: VisioFile.Page
         # find a shape by text
         shape = page.find_shape_by_text('foo')  # type: VisioFile.Shape
         shape.text = 'bar'

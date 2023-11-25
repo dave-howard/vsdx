@@ -24,13 +24,11 @@ from vsdx import VisioFile
 filename = 'my_file.vsdx'
 # open a visio file
 with VisioFile(filename) as vis:
-  # get page shapes collection
-  shapes = vis.pages[0]._shapes
-  # get shape to remove by its text value
-  s = shapes[0].find_shape_by_text('Shape to remove')  # type: VisioFile.Shape
+  # find shape by its text on first page
+  shape = vis.pages[0].find_shape_by_text('Shape to remove')
   # remove the shape if found
-  if s:
-    s.remove()
+  if shape:
+    shape.remove()
     # save a new copy
     vis.save_vsdx('shape_removed.vsdx')
 ```

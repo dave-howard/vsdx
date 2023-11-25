@@ -66,7 +66,7 @@ Attribute Manipulation
 
 The VisioFile object provides access to a list of VisioFile.Page objects
 
-Shape's can be found in a Page either by ID (if known) or by the text they contain.
+Shape's can be found in a Page either by ID (if known) or by various properties such as labels, the text they contain.
 
 Various methods can then be applied to a VisioFile.Shape object - such as updating the shape text, position, or even
 removing or copying the shape.
@@ -76,7 +76,7 @@ removing or copying the shape.
    from vsdx import VisioFile  # import the package
 
    with VisioFile('diagram.vsdx') as vis:  # open file using context manager
-      page = vis.page_objects[0]  # type: VisioFile.Page
+      page = vis.pages[0]  # type: VisioFile.Page
       shape = page.find_shape_by_text('the shape you are looking for')  # type: VisioFile.Shape
       shape.text = "some new text for the shape"  # update the text
       shape.x += 1.0  # move the shape to where you want it
