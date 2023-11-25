@@ -413,7 +413,7 @@ def test_add_connect_between_shapes(filename: str, page_index: int, shape_a_text
                              ('test8_simple_connector.vsdx'),
                           ])
 def test_add_multiple_connectors(filename: str):
-    with VisioFile(filename) as vis:
+    with VisioFile(os.path.join(basedir, filename)) as vis:
         src_page = vis.pages[0]
         block_shape = src_page.child_shapes[0]
         new_page = vis.add_page('new page')
