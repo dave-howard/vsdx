@@ -161,6 +161,7 @@ class VisioFile:
             # look for visio/pages/_rels/page3.xml.rels
             base_page_file_name = page_path.split('/')[-1]
             page_rels_path = rel_dir+base_page_file_name+'.rels'
+
             if os.path.exists(page_rels_path):
                 new_page.rels_xml_filename = page_rels_path
                 new_page.rels_xml = file_to_xml(page_rels_path)

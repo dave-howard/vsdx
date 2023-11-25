@@ -1,6 +1,7 @@
 from __future__ import annotations
 import shutil
 import os
+import copy
 
 
 import xml.etree.ElementTree as ET
@@ -30,7 +31,6 @@ class Connect:
         :returns: a new Connect object
         :rtype: Shape
         """
-
         if from_shape and to_shape:  # create new connector shape and connect items between this and the two shapes
             # create new connect shape and get id
             media = vsdx.Media()
@@ -48,8 +48,12 @@ class Connect:
                                                      part_name_path="/visio/masters/masters.xml")
                 page.vis._add_content_types_override(content_type="application/vnd.ms-visio.master+xml",
                                                      part_name_path="/visio/masters/master1.xml")
+                # create an initial copy of page_rels from media and attach to this page
+                page_rels_xml = copy.deepcopy(media.rels_xml)
+                page.rels_xml = page_rels_xml
             elif connector_shape.shape_name not in page.vis._titles_of_parts_list():
-                print(f"Warning: Updating existing Page/Master relationships not yet fully implemented. This may cause unexpected outputs.")
+                print(f"Warning: Updating existing Page/Master relationships not yet fully implemented. "
+                      f"This may cause unexpected outputs.")
                 # vsdx has masters - but not this shape
                 # todo: Complete this scenario
                 #print("conn master page", connector_shape.master_shape.page.filename)

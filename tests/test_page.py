@@ -408,6 +408,32 @@ def test_add_connect_between_shapes(filename: str, page_index: int, shape_a_text
             assert page.find_shape_by_id(new_connector_id)
 
 
+@pytest.mark.parametrize(("filename"),
+                         [
+                             ('test8_simple_connector.vsdx'),
+                          ])
+def test_add_multiple_connectors(filename: str):
+    with VisioFile(filename) as vis:
+        src_page = vis.pages[0]
+        block_shape = src_page.child_shapes[0]
+        new_page = vis.add_page('new page')
+        # 1
+        # adding new_shape1, new_shape2 and connecting them
+        new_shape1 = block_shape.copy(new_page)
+        new_shape1.text = 'new shape 1'
+        new_shape2 = block_shape.copy(new_page)
+        new_shape2.text = 'new shape 2'
+        Connect.create(page=new_page, from_shape=new_shape1, to_shape=new_shape2)
+        out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_new_test_1.vsdx')
+        vis.save_vsdx(out_file)
+        # 2
+        # adding new_shape3 and connecting it to new_shape2
+        new_shape3 = block_shape.copy(new_page)
+        new_shape3.text = 'new shape 3'
+        Connect.create(page=new_page, from_shape=new_shape2, to_shape=new_shape3)  # ERROR
+        out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_new_test_2.vsdx')
+        vis.save_vsdx(out_file)
+
 @pytest.mark.parametrize(("filename", "page_index", "shape_a_label", "shape_a_value", "shape_b_label", "shape_b_value"),
                          [
                              ('test1.vsdx', 0, "Network Name", "Box01", "Network Name", "Box02"),

@@ -15,6 +15,10 @@ class Media:
         self._media_vsdx = VisioFile(file_path)
 
     @property
+    def rels_xml(self):
+        return self._media_vsdx.pages[0].rels_xml
+
+    @property
     def straight_connector(self):
         return self._media_vsdx.pages[0].find_shape_by_text(Media.straight_connector_text)
 
