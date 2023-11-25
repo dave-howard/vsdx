@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-These versions of the project are currently being supported with security updates.
+Only the latest version of the project will be supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -11,8 +11,4 @@ These versions of the project are currently being supported with security update
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+If you have identified a vulnerabilty please report it here: https://github.com/dave-howard/vsdx/security
