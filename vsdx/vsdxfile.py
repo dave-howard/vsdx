@@ -77,7 +77,7 @@ class VisioFile:
         if debug:
             print(f"VisioFile(filename={filename})")
         file_type = self.filename.split('.')[-1]  # last text after dot
-        if not file_type.lower() == 'vsdx':
+        if not file_type.lower() == 'vsdx' and not file_type.lower() == 'vsdm':
             raise TypeError(f'Invalid File Type:{file_type}')
 
         self.directory = os.path.abspath(filename)[:-5]
