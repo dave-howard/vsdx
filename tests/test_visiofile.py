@@ -36,13 +36,17 @@ def test_file_closure():
     assert not os.path.exists(directory)
 
 
-def test_open_rel_path():
-    # test opening media file (not in tests directory)with absolute path
-    filename = os.path.join(basedir, 'test1.vsdx')
-    assert(os.path.exists(filename))
+@pytest.mark.parametrize("filename", [
+    "test1.vsdx",
+    "diagram_with_macro.vsdm",
+])
+def test_open_rel_path(filename: str):
+    # test opening a file in tests directory with relative path
+    filename = os.path.join(basedir, filename)
+    assert os.path.exists(filename)
     with VisioFile(filename) as vis:
-        for p in vis.pages:
-            print(p.name)
+        for page in vis.pages:
+            print(page.name)
 
 
 def test_open_abs_path():
