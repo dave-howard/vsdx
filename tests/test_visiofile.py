@@ -1,5 +1,6 @@
-import pytest
+"""Pytest Tests for VisioFile class"""
 import os
+import pytest
 
 from vsdx import ext_prop_namespace
 from vsdx import namespace
@@ -16,14 +17,16 @@ basedir = os.path.dirname(os.path.relpath(__file__))
 
 # file structure
 
+
 def test_invalid_file_type():
+    """Test that opening an invalid file name results in a TypeError"""
     filename = __file__
     print(f"Opening invalid but existing {filename}")
     try:
         with VisioFile(filename):
             assert False  # don't expect to get here
-    except TypeError as e:
-        print(e)  # expect to get here
+    except TypeError as error:
+        print(type(error), error)  # expect to get here
 
 
 def test_file_closure():
@@ -54,10 +57,10 @@ def test_open_abs_path():
     media_file_path = Media()._media_vsdx.filename
     filename = os.path.abspath(media_file_path)
 
-    assert(os.path.exists(filename))
+    assert os.path.exists(filename)
     with VisioFile(filename) as vis:
-        for p in vis.pages:
-            print(p.name)
+        for page in vis.pages:
+            print(page.name)
 
 
 def test_open_abs_path_save_rel_path():
@@ -65,7 +68,7 @@ def test_open_abs_path_save_rel_path():
     media_file_path = Media()._media_vsdx.filename
     filename = os.path.abspath(media_file_path)
 
-    assert(os.path.exists(filename))
+    assert os.path.exists(filename)
     output_file = os.path.join(basedir, 'out', 'abs_to_rel_out.vsdx')
     with VisioFile(filename) as vis:
         vis.save_vsdx(output_file)
@@ -76,7 +79,7 @@ def test_open_abs_path_save_abs_path():
     media_file_path = Media()._media_vsdx.filename
     filename = os.path.abspath(media_file_path)
 
-    assert(os.path.exists(filename))
+    assert os.path.exists(filename)
     output_file = os.path.abspath(os.path.join(basedir, 'out', 'abs_to_abs_out.vsdx'))
     print('output_file', output_file)
     with VisioFile(filename) as vis:
@@ -84,7 +87,12 @@ def test_open_abs_path_save_abs_path():
 
 # Helpers
 
-@pytest.mark.parametrize(("filename", "shape_elements"), [("test1.vsdx", 4), ("test2.vsdx", 14), ("test3_house.vsdx", 10)])
+
+@pytest.mark.parametrize(("filename", "shape_elements"), [
+    ("test1.vsdx", 4),
+    ("test2.vsdx", 14),
+    ("test3_house.vsdx", 10)
+])
 def test_xml_findall_shapes(filename: str, shape_elements: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
@@ -96,7 +104,11 @@ def test_xml_findall_shapes(filename: str, shape_elements: int):
         assert len(elements) == shape_elements
 
 
-@pytest.mark.parametrize(("filename", "group_shape_elements"), [("test1.vsdx", 0), ("test2.vsdx", 3), ("test3_house.vsdx", 2)])
+@pytest.mark.parametrize(("filename", "group_shape_elements"), [
+    ("test1.vsdx", 0),
+    ("test2.vsdx", 3),
+    ("test3_house.vsdx", 2)
+])
 def test_xml_findall_group_shapes(filename: str, group_shape_elements: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
@@ -404,7 +416,8 @@ def test_copy_page_positions(filename: str, page_index_to_copy:int, page_positio
         page = vis.pages[page_index_to_copy]  # type: Page
         new_page = vis.copy_page(page, index=page_position)
         index = vis.pages.index(new_page)
-        print(f"page_index_to_copy:{page_index_to_copy} page_position:{page_position} out_page_index:{out_page_index} actual:{index}")
+        print(f"page_index_to_copy:{page_index_to_copy} page_position:{page_position} out_page_index:{out_page_index} "
+              f"actual:{index}")
         assert index == out_page_index  # check new page has expected index
         vis.save_vsdx(out_file)
 
