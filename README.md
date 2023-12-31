@@ -56,6 +56,7 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.5.19: Fix Page.is_master_page prop and add tests
 - v0.5.18: Add support for reading (not creating/saving) .vsdm files (macro-enabled)
 - v0.5.17: Fix bug with adding multiple connectors to a vsdx with no existing master files/rels
 - v0.5.16: Add support & commit hook tests for Python 3.11 and 3.12
