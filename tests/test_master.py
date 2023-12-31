@@ -151,13 +151,34 @@ def test_child_property_change_is_not_inherited(filename: str, weight):
                          [("test_master.vsdx", "Page Shape"),
                           ("test_master.vsdx", "Master Shape A"),
                           ("test_master.vsdx", "Master Shape B"),
-                          ("test_master.vsdx", "Master B with updated text"), ])
+                          ("test_master.vsdx", "Master B with updated text"),
+                          ])
 def test_master_find_shapes(filename: str, shape_text: str):
     # Check that shape with text can be found - whether in page, master or overridden in master
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
         shape = page.find_shape_by_text(shape_text)
         assert shape  # shape found
+
+
+@pytest.mark.parametrize(("filename", "shape_text", "has_master"),
+                         [("test1.vsdx", "Shape to remove", False),  # no master file
+                          ("test_master.vsdx", "Page Shape", False),  # shape with no master
+                          ("test_master.vsdx", "Master Shape A", True),  # shape with master
+                          ("test_master.vsdx", "Master Shape B", True),
+                          ("test_master.vsdx", "Master B with updated text", True),
+                          ])
+def test_shape_has_master(filename: str, shape_text: str, has_master: bool):
+    # Check that shape.master_shape returns a shape or None as expected
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        shape = page.find_shape_by_text(shape_text)
+        assert shape  # shape found
+        if has_master:
+            assert shape.master_shape  # shape has a master
+            assert shape.master_shape.is_master_shape  # master is a valid master shape
+        else:
+            assert not shape.master_shape  # shape does not have a master
 
 
 @pytest.mark.parametrize(("filename", "shape_text", "has_master", "inherits_text"),

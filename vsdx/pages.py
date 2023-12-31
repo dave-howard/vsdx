@@ -97,8 +97,13 @@ class Page:
         self.name = value
 
     @property
-    def is_master_page(self):
-        return type(self.vis.masters_xml)==ET.Element and self.vis.masters_xml.find(f'{namespace}Master[@ID="{self.page_id}"]/{namespace}PageSheet') is not None
+    def is_master_page(self) -> bool:
+        """Return True if this page has a master unique id and there is a match in masters xml """
+        if isinstance(self.vis.masters_xml, ET.Element) and self.master_unique_id:
+            master_match = f'{namespace}Master[@UniqueID="{self.master_unique_id}"]'
+            master_element = self.vis.masters_xml.find(master_match)
+            return master_element is not None
+        return False
 
     @property
     def _pagesheet_xml(self):

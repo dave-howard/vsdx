@@ -185,8 +185,9 @@ class Shape:
         return hash((self.ID, self.page.name, self.page.vis.filename))
 
     @property
-    def is_master_shape(self):
-        return self.page.is_master_page
+    def is_master_shape(self) -> bool:
+        """Returns True if the shape is a master or False if the shape inherits from a master shape or has no master"""
+        return self.page.is_master_page  # shape is a 'master' if it is contained by a master page
 
     @property
     def universal_name(self):
