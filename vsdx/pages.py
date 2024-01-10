@@ -51,6 +51,8 @@ class Page:
         self.max_id = 0
         # todo: add page id - from pages_xml - PageSheet[ID]
 
+        self.__shapes = None
+
     def __repr__(self):
         return f"<Page name={self.name} file={self.filename} >"
 
@@ -146,7 +148,10 @@ class Page:
         Note: typically returns one :class:`Shape` object which itself contains :class:`Shape` objects
 
         """
-        return [Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")] or []
+        if self.__shapes is not None:
+            return self.__shapes
+        self.__shapes = [Shape(xml=shapes, parent=self, page=self) for shapes in self.xml.findall(f"{namespace}Shapes")] or []
+        return self.__shapes
 
     @property
     @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
