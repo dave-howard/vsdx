@@ -85,11 +85,11 @@ def test_get_shape_all_shapes(filename: str, shape_id: str, all_count: int):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.get_page(0)  # type: Page
 
-        shape = page.find_shape_by_id(shape_id)
-        for shape in shape.all_shapes:
+        shape_group = page.find_shape_by_id(shape_id)
+        for shape in shape_group.all_shapes:
             print(shape)
         # check that page has expected number of child shapes
-        assert len(shape.all_shapes) == all_count
+        assert len(shape_group.all_shapes) == all_count
 
 
 @pytest.mark.parametrize(
