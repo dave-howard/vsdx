@@ -323,15 +323,15 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
 
 
 @pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
-                         [#("test1.vsdx", 0, "Shape Text", {"my_property_label": "1",
-                          #                                 "my_second_property_label": "2",
-                          #                                 "Network Name": "3"}),
-                          #("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "1"}),
-                          #("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "1",
-                          #                                         "shape_prop": "2"}),
-                          #("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "1"}),
-                          #("test6_shape_properties.vsdx", 2, "D", {"LongProp": '1"'}),
-                          ("test_shape_with_field.vsdx", 0, "Here is field", {"field_label": 'updated field value'}),
+                         [("test1.vsdx", 0, "Shape Text", {"my_property_label": "1",
+                                                           "my_second_property_label": "2",
+                                                           "Network Name": "3"}),
+                          ("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "1"}),
+                          ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "1",
+                                                                   "shape_prop": "2"}),
+                          ("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "1"}),
+                          ("test6_shape_properties.vsdx", 2, "D", {"LongProp": '1"'}),
+                          #("test_shape_with_field.vsdx", 0, "Here is field", {"field_label": 'updated field value'}),
                           ])
 def test_set_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
     """Check that we can set a prop value, and this change persists through save and load"""
