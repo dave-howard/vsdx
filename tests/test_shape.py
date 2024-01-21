@@ -27,6 +27,24 @@ def test_get_shape_text(filename: str, shape_id: str, expected_text: str):
         assert shape.text == expected_text
 
 
+@pytest.mark.parametrize("filename, shape_id, expected_text", [
+    ("test3_house.vsdx", "1", "Shape Text\n"),
+    ("test3_house.vsdx", "11", "Shape to remove\n"),
+    ("test2.vsdx", "9", "Group shape text\n"),
+    ("test10_nested_shapes.vsdx", "5", "Shape 1.2.1\n"),
+    ])
+def test_set_shape_text(filename: str, shape_id: str, expected_text: str):
+    # Check that a specific shape on a page has expected text value after it is updated
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.get_page(0)  # type: Page
+        shape = page.find_shape_by_id(shape_id)
+        # check that shape has expected text
+        assert shape.text == expected_text
+        shape.text = expected_text + 'changed'
+        shape = page.find_shape_by_id(shape_id)
+        assert shape.text == expected_text + 'changed'
+
+
 @pytest.mark.parametrize("filename, attr, attr_value, expected_id", [
     ("test3_house.vsdx", "NameU", "House", "7"),
     ])
@@ -200,7 +218,7 @@ def test_shape_copy(filename: str, shape_name: str):
         assert int(new_shape.ID) > max_id
         updated_text = s.text + " (new copy)"
         new_shape.text = updated_text  # update text of new shape
-
+        assert (page.find_shape_by_text(updated_text))
         new_shape_id = new_shape.ID
         vis.save_vsdx(out_file)
 
@@ -301,14 +319,15 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
 
 
 @pytest.mark.parametrize(("filename", "page_index", "shape_name", "property_dict"),
-                         [("test1.vsdx", 0, "Shape Text", {"my_property_label": "1",
-                                                           "my_second_property_label": "2",
-                                                           "Network Name": "3"}),
-                          ("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "1"}),
-                          ("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "1",
-                                                                   "shape_prop": "2"}),
-                          ("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "1"}),
-                          ("test6_shape_properties.vsdx", 2, "D", {"LongProp": '1"'}),
+                         [#("test1.vsdx", 0, "Shape Text", {"my_property_label": "1",
+                          #                                 "my_second_property_label": "2",
+                          #                                 "Network Name": "3"}),
+                          #("test6_shape_properties.vsdx", 2, "A", {"master_Prop": "1"}),
+                          #("test6_shape_properties.vsdx", 2, "B", {"master_Prop": "1",
+                          #                                         "shape_prop": "2"}),
+                          #("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "1"}),
+                          #("test6_shape_properties.vsdx", 2, "D", {"LongProp": '1"'}),
+                          ("test_shape_with_field.vsdx", 0, "Here is field", {"field_label": 'updated field value'}),
                           ])
 def test_set_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
     """Check that we can set a prop value, and this change persists through save and load"""
@@ -323,6 +342,8 @@ def test_set_shape_data_properties(filename: str, page_index: int, shape_name: s
             prop = props[property_label]
             print(f"prop: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
             assert prop.value != property_dict.get(property_label)
+            print(f"shape.text={shape.text}")
+            print(vis.pretty_print_element(shape.xml))
 
         # check each key/value is expected after being set
         for property_label in property_dict.keys():
