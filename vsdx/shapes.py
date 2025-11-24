@@ -125,6 +125,17 @@ class DataProperty:
             elif value_cell.text:
                 value_cell.text = value  # populate value in element inner text
 
+    def get_attribute(self, name: str, attrib: str) -> Optional[str]:
+        """Get the attribute value of the cell element"""
+        element = self._get_element(name)
+        if isinstance(element, Element):
+            return element.attrib.get(attrib)
+
+    def _get_element(self, name: str) -> Optional[Element]:
+        """Get the value of the data property as an xml element"""
+        element = self.xml.find(f'{namespace}Cell[@N="{name}"]')
+        return element
+
 
 class Shape:
     """Represents a single shape, or a group shape containing other shapes
