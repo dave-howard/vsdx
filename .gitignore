@@ -5,3 +5,4 @@
 /vsdx.egg-info/
 /docs/_build/
 /tests/out/
+__pycache__/
