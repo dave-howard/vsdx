@@ -367,6 +367,8 @@ def test_set_shape_data_properties(filename: str, page_index: int, shape_name: s
             prop = props[property_label]
             print(f"checking prop after load: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
             assert prop.value == property_dict.get(property_label)
+            # check that Value doesn't contain a 'F="No Formula"' attribute
+            assert prop.get_attribute('Value', 'F') != 'No Formula'
 
 
 @pytest.mark.parametrize(("filename", "page_index", "container_shape_name", "expected_shape_name", "property_label"),
