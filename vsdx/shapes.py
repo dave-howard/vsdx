@@ -111,6 +111,9 @@ class DataProperty:
         if isinstance(value_cell, Element):
             if value_cell.attrib.get('V') is not None:
                 value = value_cell.attrib.get('V')  # populate value from V attribute
+                if self.get_attribute('Value', 'F') == 'No Formula':
+                    self.remove_attribute('Value', 'F')  # clean up 'No Formula' attribute if present
+                    self.set_attribute('Value', 'U', 'STR')  # set type to string
             elif value_cell.text:
                 value = value_cell.text  # populate value from element inner text
         return value
@@ -124,6 +127,34 @@ class DataProperty:
                 value_cell.attrib['V'] = value  # populate value in V attribute
             elif value_cell.text:
                 value_cell.text = value  # populate value in element inner text
+
+    def get_attribute(self, name: str, attrib: str) -> Optional[str]:
+        """Get the attribute value of the cell element"""
+        element = self._get_element(name)
+        if isinstance(element, Element):
+            return element.attrib.get(attrib)
+        
+    def set_attribute(self, name: str, attrib: str, value: str) -> bool:
+        """Set the attribute value of the cell element"""
+        element = self._get_element(name)
+        if isinstance(element, Element):
+            element.attrib[attrib] = value
+            return True
+        return False
+        
+    def remove_attribute(self, name: str, attrib: str) -> bool:
+        """Remove the attribute from the cell element"""
+        element = self._get_element(name)
+        if isinstance(element, Element):
+            if attrib in element.attrib:
+                del element.attrib[attrib]
+                return True
+        return False
+
+    def _get_element(self, name: str) -> Optional[Element]:
+        """Get the value of the data property as an xml element"""
+        element = self.xml.find(f'{namespace}Cell[@N="{name}"]')
+        return element
 
 
 class Shape:
