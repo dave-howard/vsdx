@@ -111,6 +111,9 @@ class DataProperty:
         if isinstance(value_cell, Element):
             if value_cell.attrib.get('V') is not None:
                 value = value_cell.attrib.get('V')  # populate value from V attribute
+                if self.get_attribute('Value', 'F') == 'No Formula':
+                    self.remove_attribute('Value', 'F')  # clean up 'No Formula' attribute if present
+                    self.set_attribute('Value', 'U', 'STR')  # set type to string
             elif value_cell.text:
                 value = value_cell.text  # populate value from element inner text
         return value
