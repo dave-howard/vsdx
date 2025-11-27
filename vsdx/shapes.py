@@ -221,6 +221,11 @@ class Shape:
         return self.page.is_master_page  # shape is a 'master' if it is contained by a master page
 
     @property
+    def name(self):
+        name = self.xml.get('Name')
+        return name
+        
+    @property
     def universal_name(self):
         name_univ = self.xml.attrib.get('NameU')  # default to shapes own unicode name
         if self.master_shape:
