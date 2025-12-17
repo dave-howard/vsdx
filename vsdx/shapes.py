@@ -544,20 +544,19 @@ class Shape:
 
     @property
     def flip_x(self):
-        return bool(self.cell_value('FlipX'))
+        return self.cell_value('FlipX') == '1'
 
     @flip_x.setter
     def flip_x(self, value: bool):
-        self.set_cell_value('FlipX', bool(value))
+        self.set_cell_value('FlipX', '1' if value else '0')
 
     @property
     def flip_y(self):
-        return bool(self.cell_value('FlipY'))
-
+        return self.cell_value('FlipY') == '1'
     @flip_y.setter
     def flip_y(self, value: bool):
-        self.set_cell_value('FlipY', bool(value))
-        
+        self.set_cell_value('FlipY', '1' if value else '0')
+
     def move(self, x_delta: float, y_delta: float):
         if self.geometry:
             self.geometry.move(x_delta, y_delta)
