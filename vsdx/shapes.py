@@ -542,6 +542,22 @@ class Shape:
     def end_y(self, value: float or str):
         self.set_cell_value('EndY', str(value))
 
+    @property
+    def flip_x(self):
+        return bool(self.cell_value('FlipX'))
+
+    @flip_x.setter
+    def flip_x(self, value: bool):
+        self.set_cell_value('FlipX', bool(value))
+
+    @property
+    def flip_y(self):
+        return bool(self.cell_value('FlipY'))
+
+    @flip_y.setter
+    def flip_y(self, value: bool):
+        self.set_cell_value('FlipY', bool(value))
+        
     def move(self, x_delta: float, y_delta: float):
         if self.geometry:
             self.geometry.move(x_delta, y_delta)
