@@ -201,6 +201,12 @@ class Shape:
                         key = f"Control/{row_type}/{cell.name}"
                         self.cells[key] = cell
 
+        self.foreign_data = None
+        foreign_data = self.xml.find(f"{namespace}ForeignData")
+        if type(foreign_data) is Element:
+            # print(f"ForiegnData({type(foreign_data)}):{foreign_data}")
+            self.foreign_data = vsdx.ForeignData(xml=foreign_data, page=page)
+
         self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
 
     def __repr__(self):

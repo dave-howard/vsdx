@@ -150,6 +150,11 @@ class VisioFile:
         path = f"{self.directory}/visio/masters"
         return path
 
+    @property
+    def pages_folder(self):
+        path = f'{self.directory}/visio/pages'
+        return path
+
     def load_pages(self):
         rel_dir = f'{self.directory}/visio/pages/_rels/'
         page_dir = f'{self.directory}/visio/pages/'
