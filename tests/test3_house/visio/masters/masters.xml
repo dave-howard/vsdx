@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<Masters xmlns='http://schemas.microsoft.com/office/visio/2012/main' xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships' xml:space='preserve'><Master ID='2' NameU='House' IsCustomNameU='1' Name='House' IsCustomName='1' Prompt='Drag onto the page and then type to add text.' IconSize='1' AlignName='2' MatchByName='0' IconUpdate='1' UniqueID='{23327B30-0009-0000-8E40-00608CF305B2}' BaseID='{F65450CE-F0E8-4495-824F-5D1BB028D948}' PatternFlags='0' Hidden='0' MasterType='2'><PageSheet LineStyle='0' FillStyle='0' TextStyle='0'><Cell N='PageWidth' V='3.937007874015748' U='MM'/><Cell N='PageHeight' V='3.937007874015748' U='MM'/><Cell N='ShdwOffsetX' V='0.1181102362204724'/><Cell N='ShdwOffsetY' V='-0.1181102362204724'/><Cell N='PageScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingScale' V='0.03937007874015748' U='MM'/><Cell N='DrawingSizeType' V='0'/><Cell N='DrawingScaleType' V='0'/><Cell N='InhibitSnap' V='0'/><Cell N='PageLockReplace' V='0' U='BOOL'/><Cell N='PageLockDuplicate' V='0' U='BOOL'/><Cell N='UIVisibility' V='0'/><Cell N='ShdwType' V='0'/><Cell N='ShdwObliqueAngle' V='0'/><Cell N='ShdwScaleFactor' V='1'/><Cell N='DrawingResizeType' V='1'/><Cell N='LangID' V='en-US' F='Inh'/><Cell N='ShapeKeywords' V='House,location,site,place,installation,home'/></PageSheet><Icon>
+AAABAAEAICAQHAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/w
+D/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAN3d3d3d3d3d3d3cAA
+AAAAI/4AAB////////4AAAAAACP/wAAf///////+AAAAAAAj/8AAH////////gAAAAAAI//AAB///
+/////4AAAAAACP+AAAf///////+AAAAAAAj/8AAH////////gAAAAAAI//AAB////////4AAAAAAC
+P/wAAf//wB3AP+AAAAAAAj/8AAI//8AdwD/gAAAAAAI////////h4h4/4AAAAAACP///////zB3B/
++AAAAAAAj///////8AdwD/gAAAAAAI////////MHcH/4AAAAAACP////////////+AAAAAAAD////
+/////////AAAAAAj4CP//////////8H/wAAAAD4B/////////+Aj4AAAAAAf/AP///////3CPgAAA
+AAAA//cP//////AP9wAAAAAAAP//gI////8H/wAAAAAAAAD/iP8H//+Aj4AAAAAAAAAA/wAP8A/3C
+PgAAAAAAAAAAP8AAP+AAP9wAAAAAAAAAAAAAAAP+H/wAAAAAAAAAAAAAAAAAI//AAAAAAAAAAAAAA
+AAAAAIgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAD///////////gAAA/4AAAP+AAAD/gAAA/4AAAP+AAAD/gAAA/4AAAP+AAAD/gAAA/4AAAP+AAA
+D/gAAA/4AAAP+AAAD4AAAAHAAAAD6AAAB/gAAA/4AAA/+AAAf/gAAP/4pAH/+PAD//hwH///+B///
+/w/////f////////////w==</Icon><Rel r:id='rId1'/></Master></Masters>
