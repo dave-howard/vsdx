@@ -267,7 +267,7 @@ class VisioFile:
         # remove Page element from pages.xml file - zero based index
         if type(index) is int:
             page = self.pages_xml.find(f"{namespace}Page[{index+1}]")
-            if page:
+            if isinstance(page, Element):
                 self.pages_xml.getroot().remove(page)
                 page = self.pages[index]  # type: Page
 

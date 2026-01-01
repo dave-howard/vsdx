@@ -94,7 +94,7 @@ class Connect:
                 page.vis._add_titles_of_parts_item(connector_shape.shape_name)
 
             # copy style used by new connector shape
-            if not page.vis._get_style_by_id(connector_shape.master_shape.line_style_id):
+            if not isinstance(page.vis._get_style_by_id(connector_shape.master_shape.line_style_id), Element):
                 # assume same if is ok, todo: use names for match and increment IDs
                 media_style = media._media_vsdx._get_style_by_id(connector_shape.master_shape.line_style_id)
                 page.vis._style_sheets().append(media_style)

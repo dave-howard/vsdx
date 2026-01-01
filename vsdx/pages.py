@@ -109,7 +109,7 @@ class Page:
     def _pagesheet_xml(self):
         # get PageSheet element from pages_xml based on page_id
         ps = self.vis.pages_xml.find(f'{namespace}Page[@ID="{self.page_id}"]/{namespace}PageSheet')
-        if not ps:
+        if not isinstance(ps, ET.Element):
             ps = self.vis.masters_xml.find(f'{namespace}Master[@ID="{self.page_id}"]/{namespace}PageSheet')
         return ps
 
