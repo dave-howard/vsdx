@@ -331,6 +331,7 @@ def test_get_shape_data_properties(filename: str, page_index: int, shape_name: s
                                                                    "shape_prop": "2"}),
                           ("test6_shape_properties.vsdx", 2, "C", {"master_Prop": "1"}),
                           ("test6_shape_properties.vsdx", 2, "D", {"LongProp": '1"'}),
+                          ("test6_shape_properties.vsdx", 2, "E", {"empty_prop": "E1"}),
                           #("test_shape_with_field.vsdx", 0, "Here is field", {"field_label": 'updated field value'}),
                           ])
 def test_set_shape_data_properties(filename: str, page_index: int, shape_name: str, property_dict: dict):
@@ -366,6 +367,8 @@ def test_set_shape_data_properties(filename: str, page_index: int, shape_name: s
             prop = props[property_label]
             print(f"checking prop after load: lbl:'{prop.label}' name:'{prop.name}': val:'{prop.value}'")
             assert prop.value == property_dict.get(property_label)
+            # check that Value doesn't contain a 'F="No Formula"' attribute
+            assert prop.get_attribute('Value', 'F') != 'No Formula'
 
 
 @pytest.mark.parametrize(("filename", "page_index", "container_shape_name", "expected_shape_name", "property_label"),
