@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import zipfile
+import tempfile
 import shutil
 import os
 import re
@@ -80,7 +81,11 @@ class VisioFile:
         if not file_type.lower() == 'vsdx' and not file_type.lower() == 'vsdm':
             raise TypeError(f'Invalid File Type:{file_type}')
 
-        self.directory = os.path.abspath(filename)[:-5]
+        if debug:
+            # Extract to local path for easier inspection
+            self.directory = os.path.abspath(filename)[:-5]
+        else:
+            self.directory = tempfile.mkdtemp(prefix=os.path.basename(filename)[:-5])
         self.pages_xml = None  # type: ET.ElementTree
         self.pages_xml_rels = None  # type: ET.ElementTree
         self.content_types_xml = None  # type: ET.ElementTree
