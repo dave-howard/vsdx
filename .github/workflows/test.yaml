@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, '3.10', 3.11, 3.12]
+        python-version: ['3.7.17', '3.8.18', '3.9.25', '3.10.19', '3.11.14', '3.12.12', '3.13.11']
 
     steps:
     - uses: actions/checkout@v2
@@ -34,7 +34,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, '3.10', 3.11, 3.12]
+        python-version: [3.7, 3.8, 3.9, '3.10', 3.11, 3.12, 3.13]
 
     steps:
       - uses: actions/checkout@v2
