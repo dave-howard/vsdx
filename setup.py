@@ -12,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="vsdx",
-    version="0.5.19",
+    version="0.5.20",
     author="Dave Howard",
     author_email="dave@codypy.com",
     description="vsdx - A python library for processing .vsdx files",
@@ -31,6 +31,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Development Status :: 4 - Beta",
