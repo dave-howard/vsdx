@@ -172,6 +172,7 @@ class Shape:
         self.shape_type = xml.attrib.get('Type', None)
         self.shape_name = xml.attrib.get('NameU') or xml.get('Name')
         self.page = page
+        self._child_shapes = None
 
         # get Cells in Shape
         self.cells = dict()
@@ -202,6 +203,8 @@ class Shape:
                         self.cells[key] = cell
 
         self._data_properties = None  # internal field to hold Shape.data_propertes, set by property
+
+        self.__all_shapes = None
 
     def __repr__(self):
         return f"<Shape tag={self.tag} ID={self.ID} is_master=({self.is_master_shape}) type={self.shape_type} text='{self.text}' >"
@@ -690,6 +693,9 @@ class Shape:
                 :returns: list of Shape objects
                 :rtype: List[Shape]
                 """
+        if self._child_shapes is not None:
+            return self._child_shapes
+
         shapes = list()
         # for each shapes tag, look for Shape objects
         # self can be either a Shapes or a Shape
@@ -706,12 +712,16 @@ class Shape:
         else:
             shapes = []
 
+        self._child_shapes = shapes
         return shapes
 
     @property
     def all_shapes(self):
         # return all shapes within another shape, recursively
-        return self._all_shapes()
+        if self.__all_shapes is not None:
+            return self.__all_shapes
+        self.__all_shapes = self._all_shapes()
+        return self.__all_shapes
 
     def _all_shapes(self, shapes: List[Shape] = None) -> List[Shape]:
         # recursively search for shapes and return all found
