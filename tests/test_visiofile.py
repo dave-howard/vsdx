@@ -1,7 +1,10 @@
 """Pytest Tests for VisioFile class"""
 import os
+import io
+
 import pytest
 from xml.etree.ElementTree import Element
+import xml.etree.ElementTree as ET
 
 from vsdx import ext_prop_namespace
 from vsdx import namespace
@@ -12,6 +15,8 @@ from vsdx import Page
 from vsdx import PagePosition
 from vsdx import Shape
 from vsdx import VisioFile
+from vsdx.vsdxfile import file_to_xml
+
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -503,3 +508,19 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
         s = page3.find_shape_by_id(page3_new_shape_id)
         assert s
         assert s.text == shape_text
+
+
+def test_load_zip_file_contents():
+    with VisioFile(os.path.join(basedir, 'test1.vsdx')) as vis:
+        assert vis.zip_file_contents
+        assert len(vis.zip_file_contents) > 0
+        for file_path, file_content in vis.zip_file_contents.items():
+            print(f"file_path:{file_path} file_content:{type(file_content)}")
+            assert file_content
+            assert isinstance(file_content, io.BytesIO)
+
+            # validate we can load xml
+            if file_path.endswith('.xml'):
+                xml = file_to_xml(file_path, vis.zip_file_contents)
+                print(f"xml={type(xml)}")
+                assert isinstance(xml, ET.ElementTree)

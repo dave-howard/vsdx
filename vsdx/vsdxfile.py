@@ -4,6 +4,7 @@ import zipfile
 import shutil
 import os
 import re
+import io
 
 from jinja2 import Template
 
@@ -35,18 +36,33 @@ ET.register_namespace('', document_rels_namespace[1:-1])
 ET.register_namespace('', cont_types_namespace[1:-1])
 
 
-def file_to_xml(filename: str) -> ET.ElementTree:
+def file_to_xml(filename: str, zip_file_contents: dict = None) -> ET.ElementTree:
     """Import a file as an ElementTree"""
     try:
+        if zip_file_contents and zip_file_contents.get(filename):
+            print(f'loading {filename} from zip_file_contents')
+            content : io.BytesIO = zip_file_contents[filename]
+            print(f'content type={type(content)}')
+            tree = ET.parse(io.BytesIO(content.getvalue()))
+            return tree
         tree = ET.parse(filename)
         return tree
     except FileNotFoundError:
         pass  # return None
 
 
-def xml_to_file(xml: ET.ElementTree, filename: str):
-    """Save an ElementTree to a file"""
-    xml.write(filename, xml_declaration=True, method='xml', encoding='UTF-8')
+def xml_to_file(xml: ET.ElementTree, filename: str, zip_file_contents: dict = None):
+    """Save an ElementTree to a file or zip_file_contents"""
+    if zip_file_contents:
+        file : io.BytesIO = io.BytesIO()
+        print(f'befoe writing {filename} file={file} {len(file.getvalue())}')
+        xml.write(file, xml_declaration=True, method='xml', encoding='UTF-8')
+        print(f'after writing {filename} file={file} {len(file.getvalue())}')
+        zip_file_contents[filename] = io.BytesIO(file.getvalue())
+        print(f'saved {filename} to zip_file_contents\n{zip_file_contents[filename].getvalue()[:100]}')
+    else:
+        xml.write(filename, xml_declaration=True, method='xml', encoding='UTF-8')
+        print(f'saved {filename} to file')
 
 
 class VisioFileNotOpen(BaseException):
@@ -92,6 +108,7 @@ class VisioFile:
         self.master_index = {}  # dict of master page info by item name e.g. 'Dynamic Connector'
         self.master_pages = list()  # type: List[Page]  # list of Page objects, populated by open_vsdx_file()
         self.file_open = False
+        self.zip_file_contents = {}  # dict of file contents by file_path
         self.open_vsdx_file()
 
     def __enter__(self):
@@ -109,7 +126,36 @@ class VisioFile:
         else:
             return f"Not an Element. type={type(xml)}"
 
+    def _load_zip_file_contents_to_memory(self):
+        """Open zip file and create a dictionary of file like objects by file_path"""
+        with zipfile.ZipFile(self.filename, "r") as zip_ref:
+            for file_path in zip_ref.namelist():
+                path = f"{self.directory}/{file_path}"
+                print(f"file_path:{path}")
+                if not path.endswith('/'):  # ignore directories
+                    content = zip_ref.read(file_path)
+                    self.zip_file_contents[path] = io.BytesIO(content)
+                #print(f"path={path} content type={type(self.zip_file_contents.get(path))}")
+        print(f'_load_zip_file_contents_to_memory() zip_file_contents={self.zip_file_contents.keys()}')
+
+    def _save_zip_file_contents_to_disk(self, save_filename: str):
+        """Save the zip_file_contents to disk"""
+        print(f'_save_zip_file_contents_to_memory() zip_file_contents={self.zip_file_contents.keys()}')
+        with zipfile.ZipFile(save_filename, "w") as zipf:
+            for file_path, file_content in self.zip_file_contents.items(): # type: tuple(str, io.BytesIO)
+                file_path_in_zip : str = file_path.replace(self.directory+'/', '')
+                print(f'writing {file_path_in_zip} to zip file')
+                try:
+                    if file_path_in_zip.endswith('.xml') or file_path_in_zip.endswith('.rels'):
+                        zipf.writestr(file_path_in_zip, file_content.read().decode('utf-8'))
+                    else:
+                        zipf.writestr(file_path_in_zip, file_content.read())
+                except Exception as e:
+                    print(f'Error writing {file_path_in_zip} to zip file: {e}')
+                    raise e
+
     def open_vsdx_file(self):
+        self._load_zip_file_contents_to_memory()
         with zipfile.ZipFile(self.filename, "r") as zip_ref:
             zip_ref.extractall(self.directory)
 
@@ -133,8 +179,8 @@ class VisioFile:
         page_dir = f'{self.directory}/visio/pages/'
 
         rel_filename = rel_dir + 'pages.xml.rels'
-        rels = file_to_xml(rel_filename).getroot()  # rels contains page filenames
-        self.pages_xml_rels = file_to_xml(rel_filename)  # store pages.xml.rels so pages can be added or removed
+        rels = file_to_xml(rel_filename, self.zip_file_contents).getroot()  # rels contains page filenames
+        self.pages_xml_rels = file_to_xml(rel_filename, self.zip_file_contents)  # store pages.xml.rels so pages can be added or removed
         if self.debug:
             print(f"Relationships({rel_filename})", VisioFile.pretty_print_element(rels))
         relid_page_dict = {}
@@ -145,8 +191,8 @@ class VisioFile:
             relid_page_dict[rel_id] = page_file
 
         pages_filename = self._pages_filename()  # pages contains Page name, width, height, mapped to Id
-        pages = file_to_xml(pages_filename).getroot()  # this contains a list of pages with rel_id and filename
-        self.pages_xml = file_to_xml(pages_filename)  # store xml so pages can be removed
+        pages = file_to_xml(pages_filename, self.zip_file_contents).getroot()  # this contains a list of pages with rel_id and filename
+        self.pages_xml = file_to_xml(pages_filename, self.zip_file_contents)  # store xml so pages can be removed
         if self.debug:
             print(f"Pages({pages_filename})", VisioFile.pretty_print_element(pages))
 
@@ -157,32 +203,32 @@ class VisioFile:
             page_path = page_dir + relid_page_dict.get(rel_id, None)
             page_id = page.attrib.get('ID')
 
-            new_page = Page(file_to_xml(page_path), page_path, page_name, page_id, rel_id, self)
+            new_page = Page(file_to_xml(page_path, self.zip_file_contents), page_path, page_name, page_id, rel_id, self)
             # look for visio/pages/_rels/page3.xml.rels
             base_page_file_name = page_path.split('/')[-1]
             page_rels_path = rel_dir+base_page_file_name+'.rels'
 
             if os.path.exists(page_rels_path):
                 new_page.rels_xml_filename = page_rels_path
-                new_page.rels_xml = file_to_xml(page_rels_path)
+                new_page.rels_xml = file_to_xml(page_rels_path, self.zip_file_contents)
             self.pages.append(new_page)
 
             if self.debug:
                 print(f"Page({new_page.filename})", VisioFile.pretty_print_element(new_page.xml.getroot()))
 
-        self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml')
+        self.content_types_xml = file_to_xml(f'{self.directory}/[Content_Types].xml', self.zip_file_contents)
         # TODO: add correctness cross-check. Or maybe the other way round, start from [Content_Types].xml
         #       to get page_dir and other paths...
 
-        self.app_xml = file_to_xml(f'{self.directory}/docProps/app.xml')  # note: files in docProps may be missing
-        self.document_xml = file_to_xml(f'{self.directory}/visio/document.xml')
-        self.document_xml_rels = file_to_xml(f'{self.directory}/visio/_rels/document.xml.rels')
+        self.app_xml = file_to_xml(f'{self.directory}/docProps/app.xml', self.zip_file_contents)  # note: files in docProps may be missing
+        self.document_xml = file_to_xml(f'{self.directory}/visio/document.xml', self.zip_file_contents)
+        self.document_xml_rels = file_to_xml(f'{self.directory}/visio/_rels/document.xml.rels', self.zip_file_contents)
 
     def load_master_pages(self):
         # get data from /visio/masters folder
         master_rel_path = f'{self.directory}/visio/masters/_rels/masters.xml.rels'
 
-        master_rels_data = file_to_xml(master_rel_path)
+        master_rels_data = file_to_xml(master_rel_path, self.zip_file_contents)
         master_rels = master_rels_data.getroot() if master_rels_data else []
         if self.debug:
             print(f"Master Relationships({master_rel_path})", VisioFile.pretty_print_element(master_rels))
@@ -196,7 +242,7 @@ class VisioFile:
 
         # load masters.xml file
         masters_path = f'{self.directory}/visio/masters/masters.xml'
-        masters_xml = file_to_xml(masters_path)  # contains more info about master page (i.e. Name, Icon)
+        masters_xml = file_to_xml(masters_path, self.zip_file_contents)  # contains more info about master page (i.e. Name, Icon)
         self.masters_xml = masters_xml.getroot() if masters_xml else []
 
         # for each master page, create the Page object
@@ -209,7 +255,7 @@ class VisioFile:
 
             master_path = relid_to_path[rel_id]
 
-            master_page = Page(file_to_xml(master_path), master_path, master_name, master_id, rel_id, self)
+            master_page = Page(file_to_xml(master_path, self.zip_file_contents), master_path, master_name, master_id, rel_id, self)
             master_page.master_unique_id = master_unique_id
             master_page.master_base_id = master_base_id
             self.master_pages.append(master_page)
@@ -1023,33 +1069,33 @@ class VisioFile:
         if not self.file_open:
             raise VisioFileNotOpen("Unable to save a file after being closed or outside of 'with' block.")
         # write pages.xml.rels
-        xml_to_file(self.pages_xml_rels, f'{self.directory}/visio/pages/_rels/pages.xml.rels')
+        xml_to_file(self.pages_xml_rels, f'{self.directory}/visio/pages/_rels/pages.xml.rels', self.zip_file_contents)
 
         # write pages.xml file - in case pages added removed
-        xml_to_file(self.pages_xml, self._pages_filename())
+        xml_to_file(self.pages_xml, self._pages_filename(), self.zip_file_contents)
 
         # write the master pages to file
         for page in self.master_pages:  # type: Page
-            xml_to_file(page.xml, page.filename)
+            xml_to_file(page.xml, page.filename, self.zip_file_contents)
 
         # write the pages to file
         for page in self.pages:  # type: Page
-            xml_to_file(page.xml, page.filename)
+            xml_to_file(page.xml, page.filename, self.zip_file_contents)
             if page.rels_xml_filename:
-                xml_to_file(page.rels_xml, page.rels_xml_filename)
+                xml_to_file(page.rels_xml, page.rels_xml_filename, self.zip_file_contents)
 
         # write [content_Types].xml
-        xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml')
+        xml_to_file(self.content_types_xml, f'{self.directory}/[Content_Types].xml', self.zip_file_contents)
 
         # write app.xml
         if self.app_xml is not None:
-            xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml')
+            xml_to_file(self.app_xml, f'{self.directory}/docProps/app.xml', self.zip_file_contents)
 
         # write document.xml
-        xml_to_file(self.document_xml, f'{self.directory}/visio/document.xml')
+        xml_to_file(self.document_xml, f'{self.directory}/visio/document.xml', self.zip_file_contents)
 
         # write document.xml.rels
-        xml_to_file(self.document_xml_rels, f'{self.directory}/visio/_rels/document.xml.rels')
+        xml_to_file(self.document_xml_rels, f'{self.directory}/visio/_rels/document.xml.rels', self.zip_file_contents)
 
         # wrap up files into zip and rename to vsdx
         base_filename = self.filename[:-5]  # remove ".vsdx" from end
@@ -1058,6 +1104,12 @@ class VisioFile:
             if directory:
                 if not os.path.exists(directory):
                     os.mkdir(directory)
+        
+        # write content from zip_file_contents to zip file directory
+        if self.zip_file_contents:
+            self._save_zip_file_contents_to_disk(new_filename or base_filename + '.zip')
+            return
+
         shutil.make_archive(base_filename, 'zip', self.directory)
 
         if not new_filename:
