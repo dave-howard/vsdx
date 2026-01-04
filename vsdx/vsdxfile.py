@@ -38,31 +38,17 @@ ET.register_namespace('', cont_types_namespace[1:-1])
 
 def file_to_xml(filename: str, zip_file_contents: dict = None) -> ET.ElementTree:
     """Import a file as an ElementTree"""
-    try:
-        if zip_file_contents and zip_file_contents.get(filename):
-            print(f'loading {filename} from zip_file_contents')
-            content : io.BytesIO = zip_file_contents[filename]
-            print(f'content type={type(content)}')
-            tree = ET.parse(io.BytesIO(content.getvalue()))
-            return tree
-        tree = ET.parse(filename)
+    if filename in zip_file_contents:
+        content : io.BytesIO = zip_file_contents[filename]
+        tree = ET.parse(io.BytesIO(content.getvalue()))
         return tree
-    except FileNotFoundError:
-        pass  # return None
 
 
 def xml_to_file(xml: ET.ElementTree, filename: str, zip_file_contents: dict = None):
-    """Save an ElementTree to a file or zip_file_contents"""
-    if zip_file_contents:
-        file : io.BytesIO = io.BytesIO()
-        print(f'befoe writing {filename} file={file} {len(file.getvalue())}')
-        xml.write(file, xml_declaration=True, method='xml', encoding='UTF-8')
-        print(f'after writing {filename} file={file} {len(file.getvalue())}')
-        zip_file_contents[filename] = io.BytesIO(file.getvalue())
-        print(f'saved {filename} to zip_file_contents\n{zip_file_contents[filename].getvalue()[:100]}')
-    else:
-        xml.write(filename, xml_declaration=True, method='xml', encoding='UTF-8')
-        print(f'saved {filename} to file')
+    """Save an ElementTree to zip_file_contents"""
+    file : io.BytesIO = io.BytesIO()
+    xml.write(file, xml_declaration=True, method='xml', encoding='UTF-8')
+    zip_file_contents[filename] = io.BytesIO(file.getvalue())
 
 
 class VisioFileNotOpen(BaseException):

@@ -35,16 +35,6 @@ def test_invalid_file_type():
         print(type(error), error)  # expect to get here
 
 
-def test_file_closure():
-    filename = os.path.join(basedir, 'test1.vsdx')
-    directory = f"./{filename.rsplit('.', 1)[0]}"
-    with VisioFile(filename):
-        # confirm directory exists
-        assert os.path.exists(directory)
-    # confirm directory is gone
-    assert not os.path.exists(directory)
-
-
 @pytest.mark.parametrize("filename", [
     "test1.vsdx",
     "diagram_with_macro.vsdm",
