@@ -131,33 +131,23 @@ class VisioFile:
         with zipfile.ZipFile(self.filename, "r") as zip_ref:
             for file_path in zip_ref.namelist():
                 path = f"{self.directory}/{file_path}"
-                print(f"file_path:{path}")
                 if not path.endswith('/'):  # ignore directories
                     content = zip_ref.read(file_path)
                     self.zip_file_contents[path] = io.BytesIO(content)
-                #print(f"path={path} content type={type(self.zip_file_contents.get(path))}")
-        print(f'_load_zip_file_contents_to_memory() zip_file_contents={self.zip_file_contents.keys()}')
 
     def _save_zip_file_contents_to_disk(self, save_filename: str):
         """Save the zip_file_contents to disk"""
-        print(f'_save_zip_file_contents_to_memory() zip_file_contents={self.zip_file_contents.keys()}')
         with zipfile.ZipFile(save_filename, "w") as zipf:
             for file_path, file_content in self.zip_file_contents.items(): # type: tuple(str, io.BytesIO)
                 file_path_in_zip : str = file_path.replace(self.directory+'/', '')
-                print(f'writing {file_path_in_zip} to zip file')
-                try:
-                    if file_path_in_zip.endswith('.xml') or file_path_in_zip.endswith('.rels'):
-                        zipf.writestr(file_path_in_zip, file_content.read().decode('utf-8'))
-                    else:
-                        zipf.writestr(file_path_in_zip, file_content.read())
-                except Exception as e:
-                    print(f'Error writing {file_path_in_zip} to zip file: {e}')
-                    raise e
+                
+                if file_path_in_zip.endswith('.xml') or file_path_in_zip.endswith('.rels'):
+                    zipf.writestr(file_path_in_zip, file_content.read().decode('utf-8'))
+                else:
+                    zipf.writestr(file_path_in_zip, file_content.read())
 
     def open_vsdx_file(self):
         self._load_zip_file_contents_to_memory()
-        with zipfile.ZipFile(self.filename, "r") as zip_ref:
-            zip_ref.extractall(self.directory)
 
         # load each page file into an ElementTree object
         self.load_pages()
@@ -321,8 +311,7 @@ class VisioFile:
                 self._remove_page_from_app_xml(page.name)
 
                 # remove page<index>.xml file
-                print(self.pages[index].filename)
-                os.remove(self.pages[index].filename)
+                self.zip_file_contents.pop(self.pages[index].filename)
                 del self.pages[index]
 
 

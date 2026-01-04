@@ -63,7 +63,7 @@ class Page:
     def set_name(self, value: str):
         from .vsdxfile import file_to_xml  # to break circular imports - is this really needed?
         pages_filename = self.vis._pages_filename()  # pages contains Page name, width, height, mapped to Id
-        pages = file_to_xml(pages_filename)  # this contains a list of pages with rel_id and filename
+        pages = file_to_xml(pages_filename, self.vis.zip_file_contents)  # this contains a list of pages with rel_id and filename
         page = pages.getroot().find(f"{namespace}Page[{self.index_num + 1}]")
         if page:
             page.attrib['Name'] = value
