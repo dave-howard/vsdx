@@ -32,3 +32,4 @@ from .formulae import calc_value
 from .vsdxfile import VisioFile
 from .media import Media
 from .geometry import Geometry, GeometryRow, GeometryCell
+from .foreign_data import ForeignData
