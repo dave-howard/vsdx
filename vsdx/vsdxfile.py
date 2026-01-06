@@ -179,7 +179,9 @@ class VisioFile:
             page_path = page_dir + relid_page_dict.get(rel_id, None)
             page_id = page.attrib.get('ID')
 
-            new_page = Page(file_to_xml(page_path, self.zip_file_contents), page_path, page_name, page_id, rel_id, self)
+            background = page.attrib.get("Background") == "1"
+            new_page = Page(file_to_xml(page_path, self.zip_file_contents), page_path, page_name, page_id, rel_id, background, self)
+
             # look for visio/pages/_rels/page3.xml.rels
             base_page_file_name = page_path.split('/')[-1]
             page_rels_path = rel_dir+base_page_file_name+'.rels'
@@ -230,8 +232,9 @@ class VisioFile:
             master_base_id = master.attrib.get('BaseID')
 
             master_path = relid_to_path[rel_id]
+            background = master.attrib.get("Background") == "1"
 
-            master_page = Page(file_to_xml(master_path, self.zip_file_contents), master_path, master_name, master_id, rel_id, self)
+            master_page = Page(file_to_xml(master_path, self.zip_file_contents), master_path, master_name, master_id, rel_id, background, self)
             master_page.master_unique_id = master_unique_id
             master_page.master_base_id = master_base_id
             self.master_pages.append(master_page)
