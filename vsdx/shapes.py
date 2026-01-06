@@ -672,11 +672,14 @@ class Shape:
 
     @text.setter
     def text(self, value):
-        text_element = self.xml.find(f"{namespace}Text")
+        tag = f"{namespace}Text"
+        text_element = self.xml.find(tag)
         if isinstance(text_element, Element):  # if there is a Text element then clear out and set contents
             Shape.clear_all_text_from_xml(text_element)
-            text_element.text = value
-        # todo: create new Text element if not found
+        else:
+            text_element = Element(tag)
+            self.xml.append(text_element)
+        text_element.text = value
 
     @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
                             details="Use Shape.child_shapes property to access shapes within a shape")
