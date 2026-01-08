@@ -652,30 +652,30 @@ class Shape:
                     if v is not None:
                         c.value = v
 
-    @staticmethod
-    def clear_all_text_from_xml(x: Element):
-        x.text = ''
-        x.tail = ''
-        for i in x:
-            Shape.clear_all_text_from_xml(i)
-
     @property
     def text(self):
         # return contents of Text element, or Master shape (if referenced), or empty string
         text_element = self.xml.find(f"{namespace}Text")
 
         if isinstance(text_element, Element):
-            return "".join(text_element.itertext())  # get all text from <Text> sub elements
+            return (
+                (text_element.text or "") +
+                "".join(ET.tostring(e, encoding="unicode") for e in text_element)
+            )
         elif self.master_page_ID and self.master_shape and self.master_shape.text:
             return self.master_shape.text  # get text from master shape
         return ""
 
     @text.setter
     def text(self, value):
+
         text_element = self.xml.find(f"{namespace}Text")
         if isinstance(text_element, Element):  # if there is a Text element then clear out and set contents
-            Shape.clear_all_text_from_xml(text_element)
-            text_element.text = value
+            wrapper = ET.fromstring(f"<wrapper>{value}</wrapper>")
+            text_element.clear()
+            text_element.text = wrapper.text
+            for child in wrapper:
+                text_element.append(child)
         # todo: create new Text element if not found
 
     @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
