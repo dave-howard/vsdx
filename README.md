@@ -56,6 +56,9 @@ examples in the form of pytest tests.
 ----
 
 ###  Change Log
+- v0.6.1: Create directory of files in memory rather than in working directory when extracting vsdx
+- v0.5.21: Add support for Python 3.14, remove support for 3.7 (GitHub actions no longer support ubuntu-latest / 3.7)
+- v0.5.20: Note support for Python 3.13
 - v0.5.19: Fix Page.is_master_page prop and add tests
 - v0.5.18: Add support for reading (not creating/saving) .vsdm files (macro-enabled)
 - v0.5.17: Fix bug with adding multiple connectors to a vsdx with no existing master files/rels

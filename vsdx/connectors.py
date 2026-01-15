@@ -38,7 +38,10 @@ class Connect:
             connector_shape.text = ''  # clear text used to find shape
             if not os.path.exists(page.vis._masters_folder):
                 # Add masters folder to directory if not already present
-                shutil.copytree(media._media_vsdx._masters_folder, page.vis._masters_folder)
+                for file_name, file in media._media_vsdx.zip_file_contents.items():
+                    if file_name.startswith(media._media_vsdx._masters_folder):
+                        new_file_name = file_name.replace(media._media_vsdx._masters_folder, page.vis._masters_folder)
+                        page.vis.zip_file_contents[new_file_name] = file
                 page.vis.load_master_pages()  # load copied master page files into VisioFile object
                 # add new master to document relationship
                 page.vis._add_document_rel(rel_type="http://schemas.microsoft.com/visio/2010/relationships/masters",
@@ -94,7 +97,7 @@ class Connect:
                 page.vis._add_titles_of_parts_item(connector_shape.shape_name)
 
             # copy style used by new connector shape
-            if not page.vis._get_style_by_id(connector_shape.master_shape.line_style_id):
+            if not isinstance(page.vis._get_style_by_id(connector_shape.master_shape.line_style_id), Element):
                 # assume same if is ok, todo: use names for match and increment IDs
                 media_style = media._media_vsdx._get_style_by_id(connector_shape.master_shape.line_style_id)
                 page.vis._style_sheets().append(media_style)

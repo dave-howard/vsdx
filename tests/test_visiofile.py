@@ -1,6 +1,10 @@
 """Pytest Tests for VisioFile class"""
 import os
+import io
+
 import pytest
+from xml.etree.ElementTree import Element
+import xml.etree.ElementTree as ET
 
 from vsdx import ext_prop_namespace
 from vsdx import namespace
@@ -11,6 +15,8 @@ from vsdx import Page
 from vsdx import PagePosition
 from vsdx import Shape
 from vsdx import VisioFile
+from vsdx.vsdxfile import file_to_xml
+
 
 # code to get basedir of this test file in either linux/windows
 basedir = os.path.dirname(os.path.relpath(__file__))
@@ -27,16 +33,6 @@ def test_invalid_file_type():
             assert False  # don't expect to get here
     except TypeError as error:
         print(type(error), error)  # expect to get here
-
-
-def test_file_closure():
-    filename = os.path.join(basedir, 'test1.vsdx')
-    directory = f"./{filename.rsplit('.', 1)[0]}"
-    with VisioFile(filename):
-        # confirm directory exists
-        assert os.path.exists(directory)
-    # confirm directory is gone
-    assert not os.path.exists(directory)
 
 
 @pytest.mark.parametrize("filename", [
@@ -187,7 +183,7 @@ def test_remove_page_by_page_index(filename: str, page_name: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         print(f"Found {len(vis.pages)} pages, {sorted([p.name for p in vis.pages])}")
         for page in list(vis.pages):
-            print(f"page.name='{page.name}' page.page_name='{page.page_name}' index:{page.index_num}")
+            print(f"page.name='{page.name}' index:{page.index_num}")
             if page_name in page.name:
                 print(f"Removing page index {page.index_num}")
                 vis.remove_page_by_index(page.index_num)
@@ -220,7 +216,7 @@ def test_remove_page_by_name(filename: str, page_name: str):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         print(f"Found {len(vis.pages)} pages, {sorted([p.name for p in vis.pages])}")
         for page in list(vis.pages):
-            print(f"page.name='{page.name}' page.page_name='{page.page_name}' index:{page.index_num}")
+            print(f"page.name='{page.name}' index:{page.index_num}")
             if page_name != page.name:
                 expected_page_names.append(page.name)
         vis.remove_page_by_name(page_name)
@@ -447,7 +443,7 @@ def test_vis_copy_shape(filename: str, shape_name: str):
         page.set_max_ids()
         new_shape = vis.copy_shape(shape=s.xml, page=page)
 
-        assert new_shape  # check copy_shape returns xml
+        assert isinstance(new_shape, Element)  # check copy_shape returns xml
 
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         assert int(new_shape.attrib.get('ID')) > int(s.ID)
@@ -480,12 +476,13 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
         print(f"Found shape id:{s.ID}")
 
         new_shape = vis.copy_shape(shape=s.xml, page=page2)
-        assert new_shape  # check copy_shape returns xml
+        assert isinstance(new_shape, Element)  # check copy_shape returns xml
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         page2_new_shape_id = new_shape.attrib['ID']
 
         new_shape = vis.copy_shape(shape=s.xml, page=page3)
-        assert new_shape  # check copy_shape returns xml
+        assert isinstance(new_shape, Element)  # check copy_shape returns xml
+        print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         print(f"created new shape {type(new_shape)} {new_shape} {new_shape.attrib['ID']}")
         page3_new_shape_id = new_shape.attrib['ID']
 
@@ -501,3 +498,19 @@ def test_copy_shape_other_page(filename: str, shape_name: str):
         s = page3.find_shape_by_id(page3_new_shape_id)
         assert s
         assert s.text == shape_text
+
+
+def test_load_zip_file_contents():
+    with VisioFile(os.path.join(basedir, 'test1.vsdx')) as vis:
+        assert vis.zip_file_contents
+        assert len(vis.zip_file_contents) > 0
+        for file_path, file_content in vis.zip_file_contents.items():
+            print(f"file_path:{file_path} file_content:{type(file_content)}")
+            assert file_content
+            assert isinstance(file_content, io.BytesIO)
+
+            # validate we can load xml
+            if file_path.endswith('.xml'):
+                xml = file_to_xml(file_path, vis.zip_file_contents)
+                print(f"xml={type(xml)}")
+                assert isinstance(xml, ET.ElementTree)

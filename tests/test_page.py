@@ -639,5 +639,5 @@ def test_page_has_page_sheet_xml(filename):
 def test_master_page_has_sheet_xml(filename):
     with VisioFile(os.path.join(basedir, filename)) as vis:
         for page in vis.master_pages:
-            print(page.page_id, page.page_name)
+            print(page.page_id, page.name)
             assert page._pagesheet_xml is not None

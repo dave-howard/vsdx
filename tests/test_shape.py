@@ -606,9 +606,9 @@ def test_find_shapes_by_regex(filename: str, regex: str, expected_shape_ids: lis
     so we expect IDs=[2,5,6]
     """
     with VisioFile(os.path.join(basedir, filename)) as vis:
-        shapes = vis.pages[0].shapes[0]  # type: Page
-        assert len(shapes.find_shapes_by_regex('')) == len(shapes.all_shapes)
-        fil_shapes = shapes.find_shapes_by_regex(regex)
+        child = vis.pages[0]._shapes[0]  # type: Shape
+        assert len(child.find_shapes_by_regex('')) == len(child.all_shapes)
+        fil_shapes = child.find_shapes_by_regex(regex)
         assert [shp.ID for shp in fil_shapes] == expected_shape_ids
 
 

@@ -721,8 +721,8 @@ class Shape:
         else:  # a Shapes
             parent_element = self.xml
 
-        if parent_element:
-            shapes = [Shape(xml=shape, parent=self, page=self.page) for shape in parent_element if 'Shape' in shape.tag]
+        if isinstance(parent_element, Element):
+            shapes = [Shape(xml=shape, parent=self, page=self.page) for shape in parent_element.findall(f"{namespace}Shape")]
         else:
             shapes = []
 

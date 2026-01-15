@@ -82,7 +82,7 @@ def test_jinja_calc(filename: str, context: dict):
                           ("test_jinja_loop.vsdx", {"date": datetime.now(), "scenario": "Scenario Three", "test_list":[1,2,3,4,5,6]}),
                           ])
 def test_basic_jinja_loop(filename: str, context: dict):
-    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_test_basic_jinja.vsdx')
+    out_file = os.path.join(basedir, 'out', f'{filename[:-5]}_{context["scenario"]}_test_basic_jinja_loop.vsdx')
     with VisioFile(os.path.join(basedir, filename)) as vis:
         page = vis.pages[0]
 

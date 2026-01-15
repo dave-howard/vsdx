@@ -6,3 +6,4 @@
 /docs/_build/
 /tests/out/
 __pycache__/
+settings.json
