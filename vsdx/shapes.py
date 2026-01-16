@@ -698,6 +698,27 @@ class Shape:
             text_element.text = value
         # todo: create new Text element if not found
 
+    @property
+    def layer(self):
+        layer_id = self.cell_value('LayerMember')
+        if layer_id:
+            layer = self.page.get_layer_by_id(layer_id)
+            return layer
+        
+    @layer.setter
+    def layer(self, layer: vsdx.Layer):
+        self.set_cell_value('LayerMember', str(layer.id))
+
+    def set_layer(self, layer_id: str):
+        """Set the layer for this shape.
+        
+        :param layer: Can be a Layer object, layer name (str), or layer ID (int/str)
+        :type layer: Layer, str, or int
+        """
+        if self.page.get_layer_by_id(layer_id) is None:
+            raise ValueError(f"Layer with ID '{layer_id}' not found on page")  
+        self.set_cell_value('LayerMember', layer_id)
+
     @deprecation.deprecated(deprecated_in="0.5.0", removed_in="1.0.0", current_version=vsdx.__version__,
                             details="Use Shape.child_shapes property to access shapes within a shape")
     def sub_shapes(self) -> List[Shape]:

@@ -668,3 +668,51 @@ def test_set_shape_line_color(filename: str, page_index: int, shape_text: str, c
             assert shape.text_color == expected_colour
         elif color_param == "fill":
             assert shape.fill_color == expected_colour
+
+@pytest.mark.parametrize("filename, shape_id, expected_layer_id",
+                         [
+                             ("test13_layers.vsdx", "1", "0"),
+                             ("test13_layers.vsdx", "2", None),
+                             ("test13_layers.vsdx", "3", "1"),
+                         ])
+def test_get_shape_layer_id(filename: str, shape_id: str, expected_layer_id: str | None):
+    """Test to get the layer name of a shape that has a Layer section."""
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[0]
+        shape = page.find_shape_by_id(shape_id)
+        if expected_layer_id is None:
+            assert shape.layer is None
+        else:
+            assert shape.layer is not None
+            assert shape.layer.id == expected_layer_id
+
+
+def test_set_shape_layer():
+    """Test setting a shape's layer using different input types."""
+    filename = "test13_layers.vsdx"
+    out_file = os.path.join(basedir, 'out', 'test13_layers_change_layer.vsdx')
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[0]
+        
+        # Get a shape that initially has no layer
+        shape = page.find_shape_by_id("2")
+        assert shape.layer is None
+        
+        # Set layer by Layer object
+        layer = page.layers[0]
+        shape.set_layer(layer.id)
+        assert shape.layer is not None
+        assert shape.layer.id == layer.id
+        
+        # Invalid layer ID should raise ValueError
+        with pytest.raises(ValueError, match="not found"):
+            shape.set_layer("999")
+
+        # Save and reload to verify persistence
+        vis.save_vsdx(out_file)
+    
+    with VisioFile(out_file) as vis:
+        page = vis.pages[0]
+        shape = page.find_shape_by_id("2")
+        assert shape.layer is not None
+        assert shape.layer.id == layer.id
