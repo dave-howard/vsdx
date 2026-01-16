@@ -25,6 +25,8 @@ __version__ = "0.6.1"
 from .shapes import Cell
 from .connectors import Connect
 from .shapes import DataProperty
+from .pages import Layer
+from .pages import GenericCell
 from .pages import Page
 from .pages import PagePosition
 from .shapes import Shape

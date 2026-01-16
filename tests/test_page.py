@@ -641,3 +641,111 @@ def test_master_page_has_sheet_xml(filename):
         for page in vis.master_pages:
             print(page.page_id, page.name)
             assert page._pagesheet_xml is not None
+
+
+def test_get_page_layers():
+    """Test that Page.layers property returns layer information from PageSheet."""
+    # Use test13_layers which has a pages.xml with Layer section
+    filename = "test13_layers.vsdx"
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[0]
+        layers = page.layers
+        assert isinstance(layers, list)
+        assert len(layers) == 3
+        # Check first layer
+        from vsdx.pages import Layer
+        assert isinstance(layers[0], Layer)
+        assert layers[0].id == "0"
+        assert layers[0].name == "Layer 1"
+        assert layers[0].name_univ == "Layer 1"
+        assert layers[0].visible is True
+        # Check second layer
+        assert isinstance(layers[1], Layer)
+        assert layers[1].id == "1"
+        assert layers[1].name == "Layer 2"
+        assert layers[1].name_univ == "Layer 2"
+        assert layers[1].visible is True
+        # Check third layer
+        assert isinstance(layers[2], Layer)
+        assert layers[2].id == "3"
+        assert layers[2].name == "Layer 4"
+        assert layers[2].name_univ == "Layer 4"
+        assert layers[2].visible is True
+
+
+def test_add_layer_to_page():
+    """Test adding a new layer to a page."""
+    filename = "test13_layers.vsdx"
+    out_file = os.path.join(basedir, 'out', 'test13_layers_add_layer.vsdx')
+    
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[0]
+        
+        # Get initial layer count
+        initial_count = len(page.layers)
+        assert initial_count == 3
+        
+        # Add a new layer
+        new_layer = page.add_layer(
+            name="Test Layer",
+            color="128",
+            visible=True,
+            printable=False,
+            lock=True
+        )
+        
+        # Verify the layer was created
+        assert new_layer is not None
+        assert new_layer.name == "Test Layer"
+        assert new_layer.color == "128"
+        assert new_layer.visible is True
+        assert new_layer.print is False
+        assert new_layer.lock is True
+        assert new_layer.id == "4"  # Should be the third layer (0, 1, 2)
+        
+        # Verify it's in the layers list
+        layers = page.layers
+        assert len(layers) == initial_count + 1
+        assert layers[3].name == "Test Layer"
+        
+        # Save and reload to verify persistence
+        vis.save_vsdx(out_file)
+    
+    with VisioFile(out_file) as vis:
+        page = vis.pages[0]
+        layers = page.layers
+        assert len(layers) == initial_count + 1
+        assert layers[3].name == "Test Layer"
+        assert layers[3].color == "128"
+        assert layers[3].lock is True
+
+
+def test_get_layer_by_id():
+    """Test getting a layer by its ID."""
+    filename = "test13_layers.vsdx"
+    
+    with VisioFile(os.path.join(basedir, filename)) as vis:
+        page = vis.pages[0]
+        
+        # Get layer by ID
+        layer = page.get_layer_by_id("0")
+        assert layer is not None
+        assert layer.name == "Layer 1"
+        
+        layer = page.get_layer_by_id("1")
+        assert layer is not None
+        assert layer.name == "Layer 2"
+
+        layer = page.get_layer_by_id("3")
+        assert layer is not None
+        assert layer.name == "Layer 4"
+
+        # Layer that was deleted
+        layer = page.get_layer_by_id("2")
+        assert layer is None
+        
+        # Non-existent layer
+        layer = page.get_layer_by_id("99")
+        assert layer is None
+
+

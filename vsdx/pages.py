@@ -18,6 +18,127 @@ from .shapes import Shape
 from vsdx import namespace, pretty_print_element
 
 
+class GenericCell:
+    """Represents a Cell element in a Layer's xml Row"""
+    def __init__(self, xml: ET.Element):
+        self.xml = xml
+
+    @property
+    def value(self):
+        return self.xml.attrib.get('V')
+
+    @value.setter
+    def value(self, value: str):
+        self.xml.attrib['V'] = str(value)
+
+    @property
+    def name(self):
+        return self.xml.attrib.get('N')
+
+    def __repr__(self):
+        return f"LayerCell: name={self.name} val={self.value}"
+
+
+class Layer:
+    """Represents a layer in a Visio page.
+    
+    Layers are used to organize shapes on a page. Each layer has properties
+    like name, color, visibility, and other attributes.
+    """
+    
+    def __init__(self, xml: ET.Element, page: Page):
+        """Initialize a Layer from a Row element in the Layer section.
+        
+        :param xml: The Row element from the Layer section
+        :type xml: ET.Element
+        :param page: The page this layer belongs to
+        :type page: Page
+        """
+        self.xml = xml
+        self.page = page
+        self.cells = {}
+        
+        # Parse all cells in this row
+        for cell_xml in xml.findall(f'{namespace}Cell'):
+            cell = GenericCell(xml=cell_xml)
+            if cell.name:
+                self.cells[cell.name] = cell
+    
+    def __repr__(self):
+        return f"<Layer id={self.id} name={self.name} visible={self.visible} color={self.color}>"
+    
+    @property
+    def id(self) -> str:
+        """Get the layer ID (IX attribute from the Row element)."""
+        return self.xml.attrib.get('IX', '')
+    
+    @property
+    def name(self) -> str:
+        """Get the layer name."""
+        cell = self.cells.get('Name')
+        return cell.value if cell else ''
+    
+    @property
+    def name_univ(self) -> str:
+        """Get the layer universal name."""
+        cell = self.cells.get('NameUniv')
+        return cell.value if cell else ''
+    
+    @property
+    def color(self) -> str:
+        """Get the layer color."""
+        cell = self.cells.get('Color')
+        return cell.value if cell else ''
+    
+    @property
+    def status(self) -> str:
+        """Get the layer status."""
+        cell = self.cells.get('Status')
+        return cell.value if cell else ''
+    
+    @property
+    def visible(self) -> bool:
+        """Get whether the layer is visible."""
+        cell = self.cells.get('Visible')
+        return cell.value == '1' if cell else False
+    
+    @property
+    def print(self) -> bool:
+        """Get whether the layer is printable."""
+        cell = self.cells.get('Print')
+        return cell.value == '1' if cell else False
+    
+    @property
+    def active(self) -> bool:
+        """Get whether the layer is active."""
+        cell = self.cells.get('Active')
+        return cell.value == '1' if cell else False
+    
+    @property
+    def lock(self) -> bool:
+        """Get whether the layer is locked."""
+        cell = self.cells.get('Lock')
+        return cell.value == '1' if cell else False
+    
+    @property
+    def snap(self) -> bool:
+        """Get whether snap is enabled for the layer."""
+        cell = self.cells.get('Snap')
+        return cell.value == '1' if cell else False
+    
+    @property
+    def glue(self) -> bool:
+        """Get whether glue is enabled for the layer."""
+        cell = self.cells.get('Glue')
+        return cell.value == '1' if cell else False
+    
+    @property
+    def color_trans(self) -> str:
+        """Get the layer color transparency."""
+        cell = self.cells.get('ColorTrans')
+        return cell.value if cell else ''
+
+
 class PagePosition(IntEnum):
     FIRST =  0
     LAST  = -1
@@ -130,6 +251,108 @@ class Page:
     def height(self, value):
         value = float(value)
         self._pagesheet_xml.find(f'{namespace}Cell[@N="PageHeight"]').attrib['V'] = str(value)
+
+    @property
+    def layers(self) -> List[Layer]:
+        """Return a list of Layer objects from the PageSheet's Layer section.
+        
+        Each layer is represented as a Layer object with properties like name, color, visible, etc.
+        
+        :return: List of Layer objects
+        :rtype: List[Layer]
+        """
+        layers = []
+        page_sheet = self._pagesheet_xml
+        if page_sheet is not None:
+            layer_section = page_sheet.find(f'{namespace}Section[@N="Layer"]')
+            if layer_section is not None:
+                for row in layer_section.findall(f'{namespace}Row'):
+                    # Only create Layer if 'Name' cell has a non-empty value
+                    name_cell = row.find(f'{namespace}Cell[@N="Name"]')
+                    if name_cell is None or name_cell.attrib.get('V', '').strip() == '':
+                        continue
+                    layer = Layer(xml=row, page=self)
+                    layers.append(layer)
+        return layers
+
+    def add_layer(self, name: str, color: str = '0', visible: bool = True, 
+                  printable: bool = True, active: bool = False, 
+                  lock: bool = False, snap: bool = True, glue: bool = True) -> Layer:
+        """Add a new layer to the page.
+        
+        :param name: The name of the layer
+        :type name: str
+        :param color: The color value for the layer (default: '0')
+        :type color: str
+        :param visible: Whether the layer is visible (default: True)
+        :type visible: bool
+        :param printable: Whether the layer is printable (default: True)
+        :type printable: bool
+        :param active: Whether the layer is active (default: False)
+        :type active: bool
+        :param lock: Whether the layer is locked (default: False)
+        :type lock: bool
+        :param snap: Whether snap is enabled for the layer (default: True)
+        :type snap: bool
+        :param glue: Whether glue is enabled for the layer (default: True)
+        :type glue: bool
+        :return: The newly created Layer object
+        :rtype: Layer
+        """
+        page_sheet = self._pagesheet_xml
+        if page_sheet is None:
+            raise ValueError("Page does not have a PageSheet")
+        
+        # Find or create Layer section
+        layer_section = page_sheet.find(f'{namespace}Section[@N="Layer"]')
+        if layer_section is None:
+            layer_section = ET.fromstring(f'<Section xmlns="{namespace[1:-1]}" N="Layer"/>')
+            page_sheet.append(layer_section)
+        
+        # Determine the next IX value
+        existing_rows = layer_section.findall(f'{namespace}Row')
+        next_ix = len(existing_rows)
+        
+        # Create new Row element
+        row_xml = ET.fromstring(f'<Row xmlns="{namespace[1:-1]}" IX="{next_ix}"/>')
+        
+        # Add cells to the row
+        cells_data = [
+            ('Name', name),
+            ('Color', color),
+            ('Status', '0'),
+            ('Visible', '1' if visible else '0'),
+            ('Print', '1' if printable else '0'),
+            ('Active', '1' if active else '0'),
+            ('Lock', '1' if lock else '0'),
+            ('Snap', '1' if snap else '0'),
+            ('Glue', '1' if glue else '0'),
+            ('NameUniv', name),
+            ('ColorTrans', '0')
+        ]
+        
+        for cell_name, cell_value in cells_data:
+            cell_xml = ET.fromstring(f'<Cell xmlns="{namespace[1:-1]}" N="{cell_name}" V="{cell_value}"/>')
+            row_xml.append(cell_xml)
+        
+        # Add row to layer section
+        layer_section.append(row_xml)
+        
+        # Create and return Layer object
+        return Layer(xml=row_xml, page=self)
+
+    def get_layer_by_id(self, layer_id: str) -> Layer | None:
+        """Get a layer by its ID (IX attribute).
+        
+        :param layer_id: The ID of the layer to find
+        :type layer_id: str
+        :return: The Layer object with the specified ID, or None if not found
+        :rtype: Layer or None if layer doesn't exist
+        """
+        for layer in self.layers:
+            if layer.id == layer_id:
+                return layer
+        return None
 
     @property
     def xml(self):
